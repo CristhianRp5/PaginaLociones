@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pour Elle - Aromes De Dieu</title>    <link rel="stylesheet" href="../css/style.css">
+    <link rel="stylesheet" href="../css/navbar.css">
+    <link rel="stylesheet" href="../css/para_ellas.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
+</head>
+<body>
+    <!-- Contenedor para la navbar -->
+    <div id="navbar-container"></div>
+
+    <main class="catalogo-main">
+        <header class="catalogo-header">
+            <h1>Pour Elle</h1>
+            <p>Explora nuestra exquisita colección de fragancias para damas</p>
+        </header>
+        
+        <div class="filtros-container">
+            <button class="filtros-toggle" aria-label="Mostrar filtros">
+                <i class="fas fa-sliders-h"></i> Filtrar Fragancias
+            </button>
+            <div class="filtros-panel">
+                <div class="filtro-grupo">
+                    <h3>Rango de Precio</h3>
+                    <div class="precio-range">
+                        <div class="slider-container">
+                            <input type="range" id="precio-min" min="0" max="200" value="0">
+                            <input type="range" id="precio-max" min="0" max="200" value="200">
+                        </div>
+                        <div class="precio-valores">
+                            <div class="precio-valor">
+                                <span>Mínimo:</span>
+                                <span>$<span id="precio-min-valor">0</span></span>
+                            </div>
+                            <div class="precio-valor">
+                                <span>Máximo:</span>
+                                <span>$<span id="precio-max-valor">200</span></span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="filtro-grupo">
+                    <h3>Notas de Fragancia</h3>
+                    <div class="notas-filtro">
+                        <label class="checkbox-container">
+                            <input type="checkbox" value="florales">
+                            <span class="checkmark"></span>
+                            <span class="label-text">Florales</span>
+                        </label>
+                        <label class="checkbox-container">
+                            <input type="checkbox" value="dulces">
+                            <span class="checkmark"></span>
+                            <span class="label-text">Dulces</span>
+                        </label>
+                        <label class="checkbox-container">
+                            <input type="checkbox" value="citricos">
+                            <span class="checkmark"></span>
+                            <span class="label-text">Cítricos</span>
+                        </label>
+                        <label class="checkbox-container">
+                            <input type="checkbox" value="orientales">
+                            <span class="checkmark"></span>
+                            <span class="label-text">Orientales</span>
+                        </label>
+                    </div>
+                </div>
+                <button class="limpiar-filtros">
+                    <i class="fas fa-undo"></i>
+                    Limpiar Filtros
+                </button>
+            </div>
+        </div>
+
+        <section class="productos-grid">
+            <!-- Los productos se cargarán dinámicamente aquí -->
+        </section>
+    </main>
+
+    <!-- Modal de Vista Rápida -->
+    <div id="modal-vista-rapida" class="modal">
+        <div class="modal-content">
+            <span class="cerrar-modal">&times;</span>
+            <div class="modal-producto-info">
+                <!-- El contenido se llenará con JavaScript -->
+            </div>
+        </div>
+    </div>
+
+    <script src="../js/navbar.js"></script>
+    <script src="../js/para_ellas.js"></script>
+    <script>
+        // Cargar la navbar
+        document.addEventListener('DOMContentLoaded', function() {
+            fetch('../html/navbar.html')
+                .then(response => response.text())
+                .then(data => {
+                    document.getElementById('navbar-container').innerHTML = data;
+                    if (typeof initNavbar === 'function') {
+                        setTimeout(initNavbar, 100);
+                    }
+                });
+        });
+    </script>
+</body>
+</html>

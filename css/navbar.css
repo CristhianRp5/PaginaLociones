@@ -1,0 +1,632 @@
+/* Estilos para la navbar estilo Dior */
+.navbar {
+    background: white;
+    padding: 1rem;
+    position: fixed;
+    width: 100%;
+    top: 0;
+    left: 0;
+    z-index: 1000;
+    border-bottom: 1px solid rgba(0,0,0,0.1);
+    height: clamp(60px, 10vh, 80px);
+}
+
+.navbar-container {
+    display: grid;
+    grid-template-columns: auto 1fr auto;
+    align-items: center;
+    gap: clamp(1rem, 3vw, 2rem);
+    padding: 0 clamp(1rem, 3vw, 2rem);
+    max-width: 1400px;
+    margin: 0 auto;
+}
+
+/* Logo más prominente */
+.navbar-logo {
+    font-family: "Times New Roman", serif;
+    font-size: clamp(1.5rem, 4vw, 2.5rem);
+    color: #1a1a1a;
+    text-decoration: none;
+    text-align: center;
+    font-weight: 500;
+    letter-spacing: clamp(3px, 0.5vw, 6px);
+    grid-column: 2;
+    white-space: nowrap;
+    transition: all 0.3s ease;
+    position: relative;
+    padding: clamp(0.3rem, 1vw, 0.5rem) clamp(0.5rem, 2vw, 1rem);
+    text-transform: uppercase;
+}
+
+.navbar-logo:before, .navbar-logo:after {
+    content: '';
+    position: absolute;
+    width: 30px;
+    height: 1px;
+    background: #1a1a1a;
+    top: 50%;
+    transform: translateY(-50%);
+    opacity: 0;
+    transition: all 0.3s ease;
+}
+
+.navbar-logo:before {
+    left: -40px;
+}
+
+.navbar-logo:after {
+    right: -40px;
+}
+
+.navbar-logo:hover:before, .navbar-logo:hover:after {
+    opacity: 1;
+}
+
+/* Botón hamburguesa más sutil */
+.navbar-menu-toggle {
+    width: 30px;
+    height: 30px;
+    background: transparent;
+    border: none;
+    cursor: pointer;
+    padding: 5px;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    align-items: center;
+    position: relative;
+    z-index: 1001;
+}
+
+.navbar-menu-toggle span {
+    display: block;
+    width: 24px;
+    height: 2px;
+    background-color: #000;
+    margin: 2px 0;
+    transition: transform 0.3s ease-in-out, opacity 0.3s ease-in-out;
+    transform-origin: center;
+}
+
+/* Asegurar que las líneas del menú sean visibles */
+.navbar-menu-toggle span:nth-child(1) { margin-top: 0; }
+.navbar-menu-toggle span:nth-child(3) { margin-bottom: 0; }
+
+/* Animación más suave para el botón hamburguesa */
+.navbar-menu-toggle.active span:nth-child(1) {
+    transform: translateY(7px) rotate(45deg);
+}
+
+.navbar-menu-toggle.active span:nth-child(2) {
+    opacity: 0;
+    transform: scale(0);
+}
+
+.navbar-menu-toggle.active span:nth-child(3) {
+    transform: translateY(-7px) rotate(-45deg);
+}
+
+/* Menú derecho más sutil */
+.navbar-right {
+    grid-column: 3;
+    display: flex;
+    align-items: center;
+    gap: clamp(0.5rem, 1vw, 1rem);
+    font-size: 0.85rem;
+    justify-self: end;
+}
+
+.navbar-menu {
+    display: flex;
+    gap: clamp(0.5rem, 1.5vw, 1rem);
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+
+.navbar-menu a {
+    color: #666;
+    text-decoration: none;
+    font-size: clamp(0.75rem, 1.2vw, 0.85rem);
+    padding: 0.3rem 0.5rem;
+    transition: color 0.3s ease;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+/* Botón de búsqueda más sutil */
+.navbar-search {
+    width: clamp(28px, 4vw, 32px);
+    height: clamp(28px, 4vw, 32px);
+    padding: 0.3rem;
+    background: transparent;
+    border: none;
+    cursor: pointer;
+    color: #666;
+}
+
+.navbar-search svg {
+    width: 16px;
+    height: 16px;
+    stroke-width: 2;
+}
+
+/* Versión desktop */
+@media screen and (min-width: 769px) {
+    .navbar-menu {
+        display: flex;
+        gap: 2rem;
+        margin: 0;
+        padding: 0;
+        list-style: none;
+    }
+
+    .navbar-menu a {
+        color: #1a1a1a;
+        text-decoration: none;
+        font-size: clamp(0.9rem, 1.5vw, 1.1rem);
+        padding: 0.5rem;
+        transition: color 0.3s ease;
+        white-space: nowrap;
+    }
+
+    .navbar-menu a:after {
+        content: '';
+        position: absolute;
+        bottom: 0;
+        left: 0;
+        width: 0;
+        height: 1px;
+        background: #1a1a1a;
+        transition: width 0.3s ease;
+    }
+
+    .navbar-menu a:hover {
+        opacity: 1;
+    }
+
+    .navbar-menu a:hover:after {
+        width: 100%;
+    }
+}
+
+/* Versión móvil */
+@media screen and (max-width: 768px) {
+    .navbar-menu {
+        display: none; /* Ocultar menú en móvil, solo mostrar hamburguesa */
+    }
+    
+    .navbar-logo {
+        text-align: center;
+        flex-grow: 1;
+    }
+    
+    .navbar-right {
+        display: flex;
+        align-items: center;
+    }
+}
+
+/* Ajuste para pantallas muy pequeñas */
+@media screen and (max-width: 380px) {
+    .navbar-logo {
+        font-size: clamp(1rem, 4vw, 1.5rem);
+        letter-spacing: 2px;
+    }
+    
+    .navbar-menu-toggle {
+        width: 25px;
+        height: 25px;
+    }
+    
+    .navbar-search {
+        width: 30px;
+        height: 30px;
+    }
+}
+
+/* Botón hamburguesa */
+.navbar-menu-toggle {
+    width: 30px;
+    height: 30px;
+    background: transparent;
+    border: none;
+    cursor: pointer;
+    padding: 5px;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    align-items: center;
+    position: relative;
+    z-index: 1001;
+}
+
+.navbar-menu-toggle span {
+    display: block;
+    width: 24px;
+    height: 2px;
+    background-color: #000;
+    margin: 2px 0;
+    transition: transform 0.3s ease-in-out, opacity 0.3s ease-in-out;
+    transform-origin: center;
+}
+
+/* Asegurar que las líneas del menú sean visibles */
+.navbar-menu-toggle span:nth-child(1) { margin-top: 0; }
+.navbar-menu-toggle span:nth-child(3) { margin-bottom: 0; }
+
+/* Animación más suave para el botón hamburguesa */
+.navbar-menu-toggle.active span:nth-child(1) {
+    transform: translateY(7px) rotate(45deg);
+}
+
+.navbar-menu-toggle.active span:nth-child(2) {
+    opacity: 0;
+    transform: scale(0);
+}
+
+.navbar-menu-toggle.active span:nth-child(3) {
+    transform: translateY(-7px) rotate(-45deg);
+}
+
+/* Asegurarse que el botón sea visible en móvil */
+@media screen and (max-width: 768px) {
+    .navbar-menu-toggle {
+        display: flex;
+    }
+    
+    .navbar-menu {
+        display: none;
+    }
+}
+
+/* Ocultar en desktop */
+@media screen and (min-width: 769px) {
+    .navbar-menu-toggle {
+        display: none;
+    }
+    
+    .navbar-menu {
+        display: flex;
+    }
+}
+
+/* Ajustes del contenedor de la navbar */
+.navbar-container {
+    display: grid;
+    grid-template-columns: auto 1fr auto;
+    align-items: center;
+    gap: 1rem;
+    padding: 0 1rem;
+    max-width: 1400px;
+    margin: 0 auto;
+}
+
+/* Resto de estilos de la navbar */
+.navbar {
+    background: white;
+    padding: 1rem;
+    position: fixed;
+    width: 100%;
+    top: 0;
+    left: 0;
+    z-index: 1000;
+    border-bottom: 1px solid rgba(0,0,0,0.1);
+    height: clamp(60px, 10vh, 80px);
+}
+
+/* Ajuste para el contenedor del botón */
+.navbar-menu-toggle {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+}
+
+.navbar-logo {
+    font-size: 2rem;
+    color: black;
+    text-decoration: none;
+    font-weight: bold;
+    text-align: center;
+    font-family: "Times New Roman", serif;
+    letter-spacing: 2px;
+}
+
+.navbar-menu {
+    list-style: none;
+    display: flex;
+    gap: 2rem;
+    margin: 0;
+    padding: 0;
+    justify-content: flex-end;
+}
+
+.navbar-menu li a {
+    color: black;
+    text-decoration: none;
+    font-size: 0.9rem;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    transition: color 0.3s;
+}
+
+.navbar-menu li a:hover {
+    color: #666;
+}
+
+.navbar-search {
+    background: none;
+    border: none;
+    cursor: pointer;
+    width: clamp(35px, 5vw, 45px);
+    height: clamp(35px, 5vw, 45px);
+    padding: clamp(0.3rem, 1vw, 0.5rem);
+}
+
+/* Overlay con efecto de cristal elegante */
+.overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(255, 255, 255, 0.2);
+    opacity: 0;
+    visibility: hidden;
+    transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+    z-index: 999;
+    backdrop-filter: blur(5px);
+    background-color: rgba(255, 255, 255, 0.8);
+    transition: opacity 0.4s ease, visibility 0.4s ease;
+}
+
+.overlay.active {
+    opacity: 1;
+    visibility: visible;
+}
+
+/* Menú lateral elegante */
+.sidebar-menu {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: min(85vw, 350px); /* Ajuste responsivo del ancho */
+    height: 100%;
+    background: white;
+    z-index: 1001;
+    transform: translateX(-100%);
+    transition: transform 0.3s ease-in-out;
+    padding: clamp(1rem, 3vw, 2rem);
+    box-shadow: 2px 0 8px rgba(0,0,0,0.1);
+    overflow-y: auto;
+}
+
+.sidebar-menu.active {
+    transform: translateX(0);
+}
+
+/* Botón de cierre elegante */
+.sidebar-close {
+    position: absolute;
+    top: 1rem;
+    right: 1rem;
+    background: transparent;
+    border: none;
+    font-size: clamp(1.5rem, 4vw, 2rem);
+    cursor: pointer;
+    padding: 0.5rem;
+    width: 40px;
+    height: 40px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+/* Estilos para los elementos del menú lateral */
+.sidebar-menu ul {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+
+.sidebar-menu ul li {
+    margin: clamp(0.5rem, 2vh, 1rem) 0;
+}
+
+.sidebar-menu a {
+    color: #1a1a1a;
+    text-decoration: none;
+    font-size: clamp(1rem, 2.5vw, 1.2rem);
+    display: block;
+    padding: 0.5rem 0;
+    transition: color 0.3s ease;
+}
+
+.submenu-toggle {
+    padding: 0.5rem;
+    background: transparent;
+    border: none;
+    font-size: 1.2rem;
+    cursor: pointer;
+    transition: transform 0.3s ease;
+}
+
+.sidebar-submenu {
+    padding-left: 1rem;
+    max-height: 0;
+    overflow: hidden;
+    transition: max-height 0.3s ease-out;
+}
+
+.sidebar-submenu.active {
+    max-height: 200px;
+}
+
+/* Botones de categoría elegantes */
+.category-buttons {
+    margin-top: clamp(1.5rem, 4vh, 3rem);
+    display: flex;
+    flex-direction: column;
+    gap: 0.8rem;
+}
+
+.category-button {
+    padding: clamp(0.5rem, 2vh, 1rem);
+    font-size: clamp(0.9rem, 2.5vw, 1.1rem);
+    border: 1px solid #ddd;
+    background: white;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.category-button:hover {
+    background: rgba(0, 0, 0, 0.03);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+}
+
+.category-button.active {
+    background: #1a1a1a;
+    color: white;
+}
+
+/* Switch de accesibilidad elegante */
+.accessibility {
+    margin-top: clamp(1.5rem, 4vh, 3rem);
+    padding: clamp(0.8rem, 2vh, 1.5rem);
+    background: #f5f5f5;
+    border-radius: 8px;
+}
+
+.accessibility span {
+    font-size: clamp(0.8rem, 2vw, 1rem);
+}
+
+/* Media queries específicos para el menú lateral */
+@media (max-height: 600px) {
+    .sidebar-menu {
+        padding-top: 3rem;
+    }
+
+    .sidebar-menu ul li {
+        margin: 0.3rem 0;
+    }
+
+    .category-buttons {
+        margin-top: 1rem;
+    }
+
+    .accessibility {
+        margin-top: 1rem;
+    }
+}
+
+@media (max-width: 380px) {
+    .sidebar-menu {
+        width: 100vw;
+        padding: 1rem;
+    }
+
+    .sidebar-menu a {
+        font-size: 1rem;
+    }
+
+    .category-button {
+        padding: 0.5rem;
+        font-size: 0.9rem;
+    }
+}
+
+/* Mejoras de accesibilidad táctil */
+@media (hover: none) {
+    .sidebar-menu a,
+    .submenu-toggle,
+    .category-button {
+        padding: min(1rem, 4vh);
+    }
+
+    .sidebar-close {
+        padding: 0.8rem;
+    }
+}
+
+/* Animaciones suaves */
+@keyframes fadeInLeft {
+    from {
+        opacity: 0;
+        transform: translateX(-20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateX(0);
+    }
+}
+
+.sidebar-menu.active ul li {
+    animation: fadeInLeft 0.3s ease-out forwards;
+    animation-delay: calc(0.1s * var(--item-index));
+    opacity: 0;
+}
+
+/* Estilos para animaciones y transiciones */
+.sidebar-menu {
+    transform: translateX(-100%);
+    transition: transform 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+    will-change: transform;
+}
+
+.sidebar-menu ul {
+    opacity: 0;
+    transform: translateX(-20px);
+    transition: opacity 0.3s ease, transform 0.3s ease;
+}
+
+.sidebar-menu.active ul {
+    opacity: 1;
+    transform: translateX(0);
+}
+
+.sidebar-submenu {
+    max-height: 0;
+    overflow: hidden;
+    transition: max-height 0.3s ease-out;
+}
+
+.sidebar-submenu.active {
+    max-height: 500px; /* Ajustar según el contenido */
+    transition: max-height 0.5s ease-in;
+}
+
+/* Mejorar la accesibilidad visual */
+.navbar-menu a:focus,
+.sidebar-menu a:focus,
+.navbar-menu-toggle:focus,
+.sidebar-close:focus,
+.category-button:focus {
+    outline: 2px solid #007bff;
+    outline-offset: 2px;
+}
+
+/* Modo alto contraste */
+@media (forced-colors: active) {
+    .navbar,
+    .sidebar-menu {
+        border: 1px solid CanvasText;
+    }
+    
+    .navbar-menu-toggle span {
+        background-color: CanvasText;
+    }
+}
+
+/* Preferencias de movimiento reducido */
+@media (prefers-reduced-motion: reduce) {
+    .sidebar-menu,
+    .sidebar-menu ul,
+    .sidebar-submenu,
+    .overlay,
+    .navbar-menu-toggle span {
+        transition: none;
+    }
+}

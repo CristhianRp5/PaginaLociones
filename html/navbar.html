@@ -1,0 +1,78 @@
+<!-- Overlay para el menú lateral -->
+<div class="overlay" role="presentation"></div>
+
+<!-- Menú lateral -->
+<div id="sidebar-menu" class="sidebar-menu" role="navigation" aria-label="Menú principal">
+    <button class="sidebar-close" aria-label="Cerrar menú">×</button>
+    <ul role="menu">
+        <li role="none"><a href="#noticias" role="menuitem">Noticias</a></li>
+        <li role="none">
+            <a href="#perfumes" role="menuitem">Perfumes</a>
+            <button class="submenu-toggle" aria-label="Abrir submenú de perfumes" aria-expanded="false">›</button>
+            <ul class="sidebar-submenu" role="menu" aria-label="Submenú de perfumes">
+                <li role="none"><a href="#mujer" role="menuitem">Mujer</a></li>
+                <li role="none"><a href="#hombre" role="menuitem">Hombre</a></li>
+                <li role="none"><a href="#unisex" role="menuitem">Unisex</a></li>
+            </ul>
+        </li>
+        <li role="none">
+            <a href="#maquillaje" role="menuitem">Maquillaje</a>
+            <button class="submenu-toggle" aria-label="Abrir submenú de maquillaje" aria-expanded="false">›</button>
+            <ul class="sidebar-submenu" role="menu" aria-label="Submenú de maquillaje">
+                <li role="none"><a href="#rostro" role="menuitem">Rostro</a></li>
+                <li role="none"><a href="#ojos" role="menuitem">Ojos</a></li>
+                <li role="none"><a href="#labios" role="menuitem">Labios</a></li>
+            </ul>
+        </li>
+        <li role="none">
+            <a href="#tratamiento" role="menuitem">Tratamiento</a>
+            <button class="submenu-toggle" aria-label="Abrir submenú de tratamiento" aria-expanded="false">›</button>
+            <ul class="sidebar-submenu" role="menu" aria-label="Submenú de tratamiento">
+                <li role="none"><a href="#cremas" role="menuitem">Cremas</a></li>
+                <li role="none"><a href="#serums" role="menuitem">Serums</a></li>
+            </ul>
+        </li>
+        <li role="none"><a href="#arte-regalar" role="menuitem">El Arte de Regalar</a></li>
+        <li role="none"><a href="#compromisos" role="menuitem">Nuestros Compromisos</a></li>
+    </ul>
+
+    <div class="category-buttons" role="group" aria-label="Categorías principales">
+        <button class="category-button active" aria-pressed="true">Moda y Accesorios</button>
+        <button class="category-button" aria-pressed="false">Perfume y Belleza</button>
+    </div>
+
+    <!-- Switch de accesibilidad -->
+    <div class="accessibility" role="group">
+        <span id="contrast-label">Accesibilidad: Mejor contraste</span>
+        <label class="switch">
+            <input type="checkbox" aria-labelledby="contrast-label">
+            <span class="slider round"></span>
+        </label>
+    </div>
+</div>
+
+<!-- Navbar global -->
+<nav class="navbar" role="navigation" aria-label="Navegación global">
+    <div class="navbar-container">
+        <button class="navbar-menu-toggle" aria-label="Menú principal" aria-expanded="false" aria-controls="sidebar-menu">
+            <span></span>
+            <span></span>
+            <span></span>        </button>
+        <a href="/index.html" class="navbar-logo" aria-label="AROMES DE DIEU - Página principal">AROMES DE DIEU</a>
+        <div class="navbar-right">            <ul class="navbar-menu" role="menubar">
+                <li role="none"><a href="/index.html" role="menuitem">Inicio</a></li>
+                <li role="none"><a href="/html/productos.html" role="menuitem">Productos</a></li>
+                <li role="none"><a href="html/fragancias.html" role="menuitem">Fragancias</a></li>
+                <li role="none"><a href="html/novedades.html" role="menuitem">Novedades</a></li>
+                <li role="none"><a href="html/contacto.html" role="menuitem">Contacto</a></li>
+            </ul>
+            <button class="navbar-search" aria-label="Buscar">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+                    <circle cx="11" cy="11" r="8"></circle>
+                    <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+                </svg>
+            </button>
+        </div>
+    </div>
+</nav>
+<script src="../js/navbar.js"></script>
