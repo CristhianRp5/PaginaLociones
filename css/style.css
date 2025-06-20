@@ -3,19 +3,15 @@ body {
     font-family: Arial, sans-serif;
     margin: 0;
     padding: 0;
-    background: #fff;
-}
-
-/* Ajuste para la navbar fija */
-body {
-    padding-top: 80px; /* Altura de la navbar */
+    background: #000;
+    overflow-x: hidden;
 }
 
 /* Contenedor principal */
 .container {
     max-width: 1400px;
     margin: 0 auto;
-    padding: 0 2rem;
+    padding: 0;
 }
 
 /* Tipografía */
@@ -23,22 +19,13 @@ h1, h2, h3, h4, h5, h6 {
     font-family: "Times New Roman", serif;
 }
 
-/* Estilos generales */
-body {
-    margin: 0;
-    padding: 0;
-    font-family: 'Times New Roman', serif;
-    background: #fff;
-    color: #1a1a1a;
-    overflow-x: hidden;
-}
-
 /* Video Showcase */
 .video-showcase {
     padding: 0;
-    margin-top: 60px; /* Ajustado para la navbar */
+    margin: 0;
     width: 100%;
     background: #000;
+    position: relative;
 }
 
 /* Contenedor del video principal */
@@ -47,18 +34,16 @@ body {
     width: 100%;
     height: 100vh;
     overflow: hidden;
+    margin: 0;
+    padding: 0;
 }
 
 .video-background {
     position: absolute;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%);
-    min-width: 100%;
-    min-height: 100%;
-    width: auto;
-    height: auto;
-    z-index: 0;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
     object-fit: cover;
 }
 
@@ -68,28 +53,21 @@ body {
     left: 50%;
     transform: translate(-50%, -50%);
     text-align: center;
-    color: white;
+    color: #fff;
     z-index: 2;
-    width: 90%;
-    max-width: 1200px;
 }
 
 .video-content h2 {
-    font-size: clamp(3rem, 8vw, 5rem);
+    font-size: 4rem;
     margin: 0;
-    letter-spacing: 0.3em;
-    font-weight: 300;
+    letter-spacing: 4px;
     text-transform: uppercase;
-    line-height: 1.2;
-    opacity: 0.9;
 }
 
 .video-content p {
-    font-size: clamp(1.2rem, 2vw, 1.8rem);
-    margin-top: 2rem;
-    letter-spacing: 0.2em;
-    font-weight: 300;
-    opacity: 0.8;
+    font-size: 1.5rem;
+    margin-top: 1rem;
+    letter-spacing: 2px;
 }
 
 /* Grid de videos secundarios */

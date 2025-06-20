@@ -1,0 +1,310 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Verificación Panel Admin</title>
+    
+    <!-- Fuentes -->
+    <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;1,300;1,400&family=Montserrat:wght@200;300;400;500;600&family=Italiana&display=swap" rel="stylesheet">
+    
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    
+    <!-- Supabase -->
+    <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+    
+    <style>
+        body {
+            font-family: 'Montserrat', sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 2rem;
+            background: #F5F5F0;
+        }
+        
+        .test-section {
+            background: white;
+            padding: 1rem;
+            margin: 1rem 0;
+            border-radius: 8px;
+            border-left: 4px solid #B8860B;
+        }
+        
+        .success { color: #28a745; }
+        .warning { color: #ffc107; }
+        .error { color: #dc3545; }
+        
+        button {
+            background: #B8860B;
+            color: white;
+            border: none;
+            padding: 0.5rem 1rem;
+            border-radius: 4px;
+            cursor: pointer;
+            margin: 0.5rem 0;
+        }
+        
+        button:hover {
+            background: #D4AF37;
+        }
+        
+        #testForm {
+            background: white;
+            padding: 2rem;
+            border-radius: 8px;
+            margin: 1rem 0;
+        }
+        
+        .form-group {
+            margin: 1rem 0;
+        }
+        
+        label {
+            display: block;
+            margin-bottom: 0.5rem;
+            font-weight: 500;
+        }
+        
+        input, select, textarea {
+            width: 100%;
+            padding: 0.5rem;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-family: inherit;
+        }
+        
+        .image-preview {
+            margin: 1rem 0;
+            text-align: center;
+        }
+        
+        .image-preview img {
+            max-width: 200px;
+            max-height: 200px;
+            border-radius: 8px;
+        }
+    </style>
+</head>
+<body>
+    <h1><i class="fas fa-cogs"></i> Verificación Panel de Administración</h1>
+    
+    <div class="test-section">
+        <h2>Tests de Conexión</h2>
+        <div id="connectionTests">Ejecutando tests...</div>
+    </div>
+    
+    <div class="test-section">
+        <h2>Test de Carga de Imagen</h2>
+        
+        <!-- Test de imagen por URL -->
+        <div>
+            <h3>Imagen por URL</h3>
+            <input type="url" id="urlTest" placeholder="https://via.placeholder.com/300x400" value="https://via.placeholder.com/300x400/B8860B/FFFFFF?text=Test+Image">
+            <button onclick="testImageUrl()">Probar URL</button>
+        </div>
+        
+        <!-- Test de imagen por archivo -->
+        <div>
+            <h3>Imagen por Archivo</h3>
+            <input type="file" id="fileTest" accept="image/*" onchange="testImageFile(this)">
+        </div>
+        
+        <div id="imagePreview" class="image-preview" style="display: none;">
+            <img id="previewImg" src="" alt="Vista previa">
+            <p id="imageInfo"></p>
+        </div>
+    </div>
+    
+    <div class="test-section">
+        <h2>Test de Guardado de Producto</h2>
+        <form id="testForm">
+            <div class="form-group">
+                <label for="nombre">Nombre del Producto:</label>
+                <input type="text" id="nombre" name="nombre" value="Producto de Prueba" required>
+            </div>
+            
+            <div class="form-group">
+                <label for="marca">Marca:</label>
+                <input type="text" id="marca" name="marca" value="Marca Test" required>
+            </div>
+            
+            <div class="form-group">
+                <label for="precio">Precio:</label>
+                <input type="number" id="precio" name="precio" value="75000" required>
+            </div>
+            
+            <div class="form-group">
+                <label for="categoria">Categoría:</label>
+                <select id="categoria" name="categoria" required>
+                    <option value="para-ellos">Para Ellos</option>
+                    <option value="para-ellas">Para Ellas</option>
+                    <option value="unisex">Unisex</option>
+                </select>
+            </div>
+            
+            <div class="form-group">
+                <label for="descripcion">Descripción:</label>
+                <textarea id="descripcion" name="descripcion">Este es un producto de prueba para verificar la funcionalidad del panel de administración.</textarea>
+            </div>
+            
+            <button type="submit">Guardar Producto de Prueba</button>
+        </form>
+        
+        <div id="saveResult"></div>
+    </div>
+    
+    <!-- JavaScript -->
+    <script src="js/supabase-config.js"></script>
+    <script>
+        let testImageData = null;
+        let testImageType = 'url';
+        
+        window.addEventListener('DOMContentLoaded', async () => {
+            await runConnectionTests();
+            setupTestForm();
+        });
+        
+        async function runConnectionTests() {
+            const testsDiv = document.getElementById('connectionTests');
+            let results = '';
+            
+            try {
+                // Test 1: Supabase JS
+                results += '<p class="success"><i class="fas fa-check"></i> Supabase JS cargado correctamente</p>';
+                
+                // Test 2: Configuración
+                if (typeof initSupabase === 'function') {
+                    const initialized = initSupabase();
+                    results += `<p class="${initialized ? 'success' : 'warning'}">
+                        <i class="fas fa-${initialized ? 'check' : 'exclamation-triangle'}"></i> 
+                        Inicialización de Supabase: ${initialized ? 'Exitosa' : 'Falló'}
+                    </p>`;
+                } else {
+                    results += '<p class="error"><i class="fas fa-times"></i> Función initSupabase no disponible</p>';
+                }
+                
+                // Test 3: ProductosService
+                if (typeof ProductosService !== 'undefined') {
+                    results += '<p class="success"><i class="fas fa-check"></i> ProductosService disponible</p>';
+                    
+                    // Test 4: Conexión a base de datos
+                    if (typeof testSupabaseConnection === 'function') {
+                        const connected = await testSupabaseConnection();
+                        results += `<p class="${connected ? 'success' : 'error'}">
+                            <i class="fas fa-${connected ? 'check' : 'times'}"></i> 
+                            Conexión a base de datos: ${connected ? 'Exitosa' : 'Falló'}
+                        </p>`;
+                    }
+                    
+                    // Test 5: Obtener productos
+                    try {
+                        const productos = await ProductosService.obtenerProductos();
+                        results += `<p class="success"><i class="fas fa-check"></i> Productos obtenidos: ${productos.length}</p>`;
+                    } catch (error) {
+                        results += `<p class="warning"><i class="fas fa-exclamation-triangle"></i> Error obteniendo productos: ${error.message}</p>`;
+                    }
+                } else {
+                    results += '<p class="error"><i class="fas fa-times"></i> ProductosService no disponible</p>';
+                }
+                
+            } catch (error) {
+                results += `<p class="error"><i class="fas fa-times"></i> Error general: ${error.message}</p>`;
+            }
+            
+            testsDiv.innerHTML = results;
+        }
+        
+        function testImageUrl() {
+            const urlInput = document.getElementById('urlTest');
+            const preview = document.getElementById('imagePreview');
+            const previewImg = document.getElementById('previewImg');
+            const imageInfo = document.getElementById('imageInfo');
+            
+            if (urlInput.value) {
+                const testImg = new Image();
+                testImg.onload = () => {
+                    previewImg.src = urlInput.value;
+                    preview.style.display = 'block';
+                    testImageData = urlInput.value;
+                    testImageType = 'url';
+                    imageInfo.innerHTML = `<span class="success">✅ URL válida: ${testImg.width}x${testImg.height}px</span>`;
+                };
+                testImg.onerror = () => {
+                    imageInfo.innerHTML = '<span class="error">❌ Error cargando imagen desde URL</span>';
+                };
+                testImg.src = urlInput.value;
+            }
+        }
+        
+        function testImageFile(input) {
+            const file = input.files[0];
+            const preview = document.getElementById('imagePreview');
+            const previewImg = document.getElementById('previewImg');
+            const imageInfo = document.getElementById('imageInfo');
+            
+            if (file) {
+                if (file.size > 5 * 1024 * 1024) {
+                    imageInfo.innerHTML = '<span class="error">❌ Archivo demasiado grande (máx. 5MB)</span>';
+                    return;
+                }
+                
+                if (!file.type.startsWith('image/')) {
+                    imageInfo.innerHTML = '<span class="error">❌ Tipo de archivo no válido</span>';
+                    return;
+                }
+                
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    previewImg.src = e.target.result;
+                    preview.style.display = 'block';
+                    testImageData = e.target.result;
+                    testImageType = 'file';
+                    imageInfo.innerHTML = `<span class="success">✅ Archivo válido: ${file.name} (${(file.size/1024).toFixed(1)}KB)</span>`;
+                };
+                reader.readAsDataURL(file);
+            }
+        }
+        
+        function setupTestForm() {
+            const form = document.getElementById('testForm');
+            form.addEventListener('submit', async (e) => {
+                e.preventDefault();
+                
+                const resultDiv = document.getElementById('saveResult');
+                resultDiv.innerHTML = '<p class="warning"><i class="fas fa-spinner fa-spin"></i> Guardando producto...</p>';
+                
+                try {
+                    const formData = new FormData(form);
+                    const productData = {
+                        nombre: formData.get('nombre'),
+                        marca: formData.get('marca'),
+                        precio: parseInt(formData.get('precio')),
+                        categoria: formData.get('categoria'),
+                        descripcion: formData.get('descripcion'),
+                        imagen_url: testImageData,
+                        activo: true
+                    };
+                    
+                    console.log('Datos del producto a guardar:', productData);
+                    
+                    if (typeof ProductosService !== 'undefined') {
+                        const result = await ProductosService.crearProducto(productData);
+                        if (result) {
+                            resultDiv.innerHTML = `<p class="success"><i class="fas fa-check"></i> Producto guardado exitosamente. ID: ${result.id}</p>`;
+                        } else {
+                            resultDiv.innerHTML = '<p class="error"><i class="fas fa-times"></i> Error: ProductosService.crearProducto devolvió null</p>';
+                        }
+                    } else {
+                        resultDiv.innerHTML = '<p class="error"><i class="fas fa-times"></i> ProductosService no disponible</p>';
+                    }
+                    
+                } catch (error) {
+                    resultDiv.innerHTML = `<p class="error"><i class="fas fa-times"></i> Error guardando producto: ${error.message}</p>`;
+                    console.error('Error:', error);
+                }
+            });
+        }
+    </script>
+</body>
+</html>

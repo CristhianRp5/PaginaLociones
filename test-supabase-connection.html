@@ -1,0 +1,237 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Conexión Supabase - Guardar Producto</title>
+    <style>
+        body { font-family: Arial, sans-serif; padding: 20px; line-height: 1.6; }
+        .test-box { margin: 15px 0; padding: 15px; border: 1px solid #ddd; border-radius: 8px; }
+        .success { background-color: #d4edda; color: #155724; border-color: #c3e6cb; }
+        .error { background-color: #f8d7da; color: #721c24; border-color: #f5c6cb; }
+        .warning { background-color: #fff3cd; color: #856404; border-color: #ffeaa7; }
+        .info { background-color: #d1ecf1; color: #0c5460; border-color: #bee5eb; }
+        button { padding: 10px 20px; margin: 5px; cursor: pointer; border: none; border-radius: 4px; background: #007bff; color: white; }
+        button:hover { background: #0056b3; }
+        pre { background: #f8f9fa; padding: 10px; border-radius: 4px; overflow-x: auto; font-size: 12px; }
+        .log { background: #000; color: #0f0; padding: 10px; border-radius: 4px; font-family: monospace; font-size: 12px; height: 300px; overflow-y: auto; }
+    </style>
+</head>
+<body>
+    <h1>🧪 Test Conexión Supabase - Guardar Producto</h1>
+    
+    <div class="test-box">
+        <h3>Pruebas de Conexión</h3>
+        <button onclick="testBasicConnection()">1. Test Conexión Básica</button>
+        <button onclick="testTableStructure()">2. Test Estructura Tabla</button>
+        <button onclick="testReadProducts()">3. Test Leer Productos</button>
+        <button onclick="testCreateProduct()">4. Test Crear Producto</button>
+        <button onclick="runAllTests()">🚀 Ejecutar Todos</button>
+    </div>
+    
+    <div id="results" class="test-box">
+        <h4>Resultados:</h4>
+        <div id="status">Esperando tests...</div>
+    </div>
+    
+    <div class="test-box">
+        <h4>Log de Consola:</h4>
+        <div id="consoleLog" class="log"></div>
+    </div>
+
+    <!-- Scripts -->
+    <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+    <script src="../js/supabase-config.js"></script>
+
+    <script>
+        let logContent = '';
+        
+        function log(message) {
+            const timestamp = new Date().toLocaleTimeString();
+            logContent += `[${timestamp}] ${message}\n`;
+            document.getElementById('consoleLog').textContent = logContent;
+            console.log(message);
+        }
+        
+        function updateStatus(message, type = 'info') {
+            const statusDiv = document.getElementById('status');
+            statusDiv.className = type;
+            statusDiv.innerHTML = message;
+            log(message);
+        }
+        
+        async function testBasicConnection() {
+            log('🔍 Test 1: Conexión Básica');
+            
+            try {
+                // Verificar variables globales
+                const hasSupabase = typeof window.supabase !== 'undefined';
+                const hasInitFunction = typeof initSupabase === 'function';
+                const hasClient = typeof supabaseClient !== 'undefined';
+                
+                log(`- window.supabase: ${hasSupabase ? '✅' : '❌'}`);
+                log(`- initSupabase function: ${hasInitFunction ? '✅' : '❌'}`);
+                log(`- supabaseClient: ${hasClient ? '✅' : '❌'}`);
+                
+                if (!hasSupabase) {
+                    throw new Error('Supabase library no cargada');
+                }
+                
+                if (!hasInitFunction) {
+                    throw new Error('initSupabase function no disponible');
+                }
+                
+                // Intentar inicializar
+                if (!hasClient) {
+                    log('🔄 Inicializando Supabase...');
+                    const initialized = initSupabase();
+                    log(`Inicialización: ${initialized ? '✅' : '❌'}`);
+                    
+                    if (!initialized) {
+                        throw new Error('No se pudo inicializar Supabase');
+                    }
+                }
+                
+                if (supabaseClient) {
+                    log(`✅ Cliente disponible: ${supabaseClient.supabaseUrl}`);
+                    updateStatus('✅ Conexión básica OK', 'success');
+                } else {
+                    throw new Error('Cliente no disponible después de inicialización');
+                }
+                
+            } catch (error) {
+                log(`❌ Error: ${error.message}`);
+                updateStatus(`❌ Error en conexión básica: ${error.message}`, 'error');
+            }
+        }
+        
+        async function testTableStructure() {
+            log('🔍 Test 2: Estructura de Tabla');
+            
+            try {
+                if (!supabaseClient) {
+                    throw new Error('Cliente no disponible');
+                }
+                
+                // Obtener información de la tabla
+                const { data, error } = await supabaseClient
+                    .from('productos')
+                    .select('*')
+                    .limit(1);
+                    
+                if (error) {
+                    throw new Error(`Error accediendo tabla: ${error.message}`);
+                }
+                
+                if (data && data.length > 0) {
+                    const columns = Object.keys(data[0]);
+                    log(`✅ Tabla accesible, columnas: ${columns.join(', ')}`);
+                    updateStatus(`✅ Estructura tabla OK - ${columns.length} columnas`, 'success');
+                } else {
+                    log('⚠️ Tabla vacía pero accesible');
+                    updateStatus('⚠️ Tabla vacía pero accesible', 'warning');
+                }
+                
+            } catch (error) {
+                log(`❌ Error: ${error.message}`);
+                updateStatus(`❌ Error en estructura: ${error.message}`, 'error');
+            }
+        }
+        
+        async function testReadProducts() {
+            log('🔍 Test 3: Leer Productos');
+            
+            try {
+                if (!supabaseClient) {
+                    throw new Error('Cliente no disponible');
+                }
+                
+                const { data, error } = await supabaseClient
+                    .from('productos')
+                    .select('id, nombre, marca, precio')
+                    .limit(5);
+                    
+                if (error) {
+                    throw new Error(`Error leyendo: ${error.message}`);
+                }
+                
+                log(`✅ Leídos ${data.length} productos`);
+                if (data.length > 0) {
+                    log(`Ejemplo: ${data[0].nombre} - ${data[0].marca}`);
+                }
+                updateStatus(`✅ Lectura OK - ${data.length} productos`, 'success');
+                
+            } catch (error) {
+                log(`❌ Error: ${error.message}`);
+                updateStatus(`❌ Error en lectura: ${error.message}`, 'error');
+            }
+        }
+        
+        async function testCreateProduct() {
+            log('🔍 Test 4: Crear Producto');
+            
+            try {
+                if (!supabaseClient) {
+                    throw new Error('Cliente no disponible');
+                }
+                
+                const testProduct = {
+                    nombre: `Test Product ${new Date().getTime()}`,
+                    marca: 'Test Brand',
+                    precio: 99999,
+                    categoria: 'para-ellos'
+                };
+                
+                log(`💾 Creando producto: ${testProduct.nombre}`);
+                
+                const { data, error } = await supabaseClient
+                    .from('productos')
+                    .insert([testProduct])
+                    .select()
+                    .single();
+                    
+                if (error) {
+                    throw new Error(`Error creando: ${error.message}`);
+                }
+                
+                log(`✅ Producto creado con ID: ${data.id}`);
+                updateStatus(`✅ Creación OK - ID: ${data.id}`, 'success');
+                
+                // Opcional: eliminar el producto de prueba
+                log('🗑️ Eliminando producto de prueba...');
+                await supabaseClient.from('productos').delete().eq('id', data.id);
+                log('✅ Producto de prueba eliminado');
+                
+            } catch (error) {
+                log(`❌ Error: ${error.message}`);
+                updateStatus(`❌ Error en creación: ${error.message}`, 'error');
+            }
+        }
+        
+        async function runAllTests() {
+            log('🚀 Ejecutando todos los tests...');
+            updateStatus('🚀 Ejecutando tests...', 'info');
+            
+            await testBasicConnection();
+            await new Promise(resolve => setTimeout(resolve, 500));
+            
+            await testTableStructure();
+            await new Promise(resolve => setTimeout(resolve, 500));
+            
+            await testReadProducts();
+            await new Promise(resolve => setTimeout(resolve, 500));
+            
+            await testCreateProduct();
+            
+            log('✅ Todos los tests completados');
+            updateStatus('✅ Todos los tests completados', 'success');
+        }
+        
+        // Auto-inicializar
+        setTimeout(() => {
+            log('🚀 Inicializando tests automáticamente...');
+            testBasicConnection();
+        }, 1000);
+    </script>
+</body>
+</html>

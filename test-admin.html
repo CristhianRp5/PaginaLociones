@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Admin Panel</title>
+    <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+</head>
+<body>
+    <h1>Test Panel de Administración</h1>
+    <div id="status">Inicializando...</div>
+    
+    <script src="js/supabase-config.js"></script>
+    <script>
+        window.addEventListener('DOMContentLoaded', async () => {
+            const statusDiv = document.getElementById('status');
+            
+            try {
+                // Test 1: Supabase
+                statusDiv.innerHTML += '<br>✅ Supabase JS cargado';
+                
+                // Test 2: Configuración
+                if (typeof initSupabase === 'function') {
+                    const initialized = initSupabase();
+                    statusDiv.innerHTML += `<br>${initialized ? '✅' : '⚠️'} Supabase inicializado: ${initialized}`;
+                } else {
+                    statusDiv.innerHTML += '<br>❌ initSupabase no disponible';
+                }
+                
+                // Test 3: ProductosService
+                if (typeof ProductosService !== 'undefined') {
+                    statusDiv.innerHTML += '<br>✅ ProductosService disponible';
+                    
+                    // Test 4: Obtener productos
+                    try {
+                        const productos = await ProductosService.obtenerProductos();
+                        statusDiv.innerHTML += `<br>✅ Productos obtenidos: ${productos.length}`;
+                    } catch (error) {
+                        statusDiv.innerHTML += `<br>⚠️ Error obteniendo productos: ${error.message}`;
+                    }
+                    
+                    // Test 5: Crear producto de prueba
+                    try {
+                        const testProduct = {
+                            nombre: 'Test Product',
+                            marca: 'Test Brand',
+                            precio: 50000,
+                            categoria: 'para-ellos',
+                            descripcion: 'Producto de prueba',
+                            imagen_url: 'https://via.placeholder.com/300x400',
+                            activo: true
+                        };
+                        
+                        const result = await ProductosService.crearProducto(testProduct);
+                        if (result) {
+                            statusDiv.innerHTML += '<br>✅ Crear producto: OK';
+                        } else {
+                            statusDiv.innerHTML += '<br>⚠️ Crear producto: Falló silenciosamente';
+                        }
+                    } catch (error) {
+                        statusDiv.innerHTML += `<br>❌ Error creando producto: ${error.message}`;
+                    }
+                } else {
+                    statusDiv.innerHTML += '<br>❌ ProductosService no disponible';
+                }
+                
+            } catch (error) {
+                statusDiv.innerHTML += `<br>❌ Error general: ${error.message}`;
+            }
+        });
+    </script>
+</body>
+</html>

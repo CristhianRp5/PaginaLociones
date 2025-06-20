@@ -3,105 +3,159 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Pour Lui -- Aromes De Dieu</title>    <link rel="stylesheet" href="../css/style.css">
+    <title>Pour Lui - Aromes De Dieu</title>
+    <link rel="stylesheet" href="../css/style.css">
     <link rel="stylesheet" href="../css/navbar.css">
     <link rel="stylesheet" href="../css/para_ellos.css">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;1,300;1,400&family=Montserrat:wght@200;300;400&family=Italiana&display=swap" rel="stylesheet">
 </head>
 <body>
-    <!-- Contenedor para la navbar -->
+    <!-- Navbar container -->
     <div id="navbar-container"></div>
 
-    <main class="catalogo-main">
-        <header class="catalogo-header">
-            <h1>Pour Lui</h1>
-            <p>Descubre nuestra exclusiva colección de fragancias para caballeros</p>
-        </header>
-          <div class="filtros-container">
-            <button class="filtros-toggle" aria-label="Mostrar filtros">
-                <i class="fas fa-sliders-h"></i> Filtrar Fragancias
-            </button>
-            <div class="filtros-panel">
-                <div class="filtro-grupo">
-                    <h3>Rango de Precio</h3>
-                    <div class="precio-range">
-                        <div class="slider-container">
-                            <input type="range" id="precio-min" min="0" max="200" value="0">
-                            <input type="range" id="precio-max" min="0" max="200" value="200">
-                        </div>
-                        <div class="precio-valores">
-                            <div class="precio-valor">
-                                <span>Mínimo:</span>
-                                <span>$<span id="precio-min-valor">0</span></span>
+    <main class="magazine-main">
+        <!-- Collection Grid -->
+        <section class="collection-grid">
+            <div class="grid-title">
+                <h1>Fragancias Pour Homme</h1>
+                <p>Nuestra selección exclusiva de perfumes masculinos</p>
+            </div>              <!-- Search and Filter Section -->
+            <div class="index-header">
+                <!-- Search Bar -->                <!-- Combined Search and Price Filter -->
+                <div class="search-and-filters-container">
+                    <!-- Search Bar -->
+                    <div class="search-container">                        <div class="search-wrapper">
+                            <input type="text" 
+                                   id="searchInput" 
+                                   class="search-input" 
+                                   placeholder="Buscar fragancia o marca...">
+                            <div class="search-icon">
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <circle cx="11" cy="11" r="8"></circle>
+                                    <path d="m21 21-4.35-4.35"></path>
+                                </svg>
                             </div>
-                            <div class="precio-valor">
-                                <span>Máximo:</span>
-                                <span>$<span id="precio-max-valor">200</span></span>
-                            </div>
+                            <button class="clear-search" id="clearSearch" style="display: none;">
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <line x1="18" y1="6" x2="6" y2="18"></line>
+                                    <line x1="6" y1="6" x2="18" y2="18"></line>
+                                </svg>
+                            </button>
                         </div>
                     </div>
-                </div>
-                <div class="filtro-grupo">
-                    <h3>Notas de Fragancia</h3>
-                    <div class="notas-filtro">
-                        <label class="checkbox-container">
-                            <input type="checkbox" value="citricos">
-                            <span class="checkmark"></span>
-                            <span class="label-text">Cítricos</span>
-                        </label>
-                        <label class="checkbox-container">
-                            <input type="checkbox" value="amaderados">
-                            <span class="checkmark"></span>
-                            <span class="label-text">Amaderados</span>
-                        </label>
-                        <label class="checkbox-container">
-                            <input type="checkbox" value="especiados">
-                            <span class="checkmark"></span>
-                            <span class="label-text">Especiados</span>
-                        </label>
-                        <label class="checkbox-container">
-                            <input type="checkbox" value="frescos">
-                            <span class="checkmark"></span>
-                            <span class="label-text">Frescos</span>
-                        </label>
+
+                    <!-- Price Filter Inline -->
+                    <div class="price-filter-inline">
+                        <div class="price-filter-header-inline">
+                            <span class="price-label">Precio</span>
+                            <span class="price-range-display" id="priceRangeDisplay">$250K - $780K</span>
+                        </div>
+                        <div class="price-slider-container">
+                            <div class="price-slider-track">
+                                <div class="price-slider-range" id="priceSliderRange"></div>
+                            </div>
+                            <input type="range" 
+                                   id="minPriceSlider" 
+                                   class="price-slider price-slider-min" 
+                                   min="250000" 
+                                   max="780000" 
+                                   value="250000" 
+                                   step="10000">
+                            <input type="range" 
+                                   id="maxPriceSlider" 
+                                   class="price-slider price-slider-max" 
+                                   min="250000" 
+                                   max="780000" 
+                                   value="780000" 
+                                   step="10000">
+                        </div>
+                        <button class="reset-price-filter-inline" id="resetPriceFilter">Reset</button>
                     </div>
                 </div>
-                <button class="limpiar-filtros">
-                    <i class="fas fa-undo"></i>
-                    Limpiar Filtros
-                </button>
+
+                <!-- Search Results -->
+                <div class="search-results-count" id="searchResults" style="display: none;"></div>                <!-- Filter Buttons -->
+                <div class="index-filters">
+                    <button class="index-filter active" data-category="all">Todas las Fragancias</button>
+                    <button class="index-filter" data-category="designer">Marcas de Diseñador Clásicas</button>
+                    <button class="index-filter" data-category="arabic">Marcas Árabes</button>
+                    <button class="index-filter" data-category="contemporary">Perfumería Contemporánea</button>
+                </div>
+
+                <!-- Dynamic Filters -->
+                <div class="dynamic-filters">
+                    <div class="brand-filters filter-section">
+                        <!-- Filtros de marca se generarán dinámicamente -->
+                    </div>
+                    <div class="subcategory-filters filter-section">
+                        <!-- Filtros de subcategoría se generarán dinámicamente -->
+                    </div>
+                </div>            <!-- Product Grid -->
+            <div class="index-grid">
+                <!-- Los productos se cargarán dinámicamente aquí -->
+            </div>
+
+            <!-- Pagination Controls -->
+            <div class="pagination-container">
+                <div class="pagination-info">
+                    <span id="paginationInfo">Mostrando 1-12 de 44 fragancias</span>
+                </div>
+                <div class="pagination-controls">
+                    <button class="pagination-btn prev" id="prevPage" disabled>
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <polyline points="15,18 9,12 15,6"></polyline>
+                        </svg>
+                        Anterior
+                    </button>
+                    
+                    <div class="pagination-numbers" id="paginationNumbers">
+                        <!-- Los números de página se generarán dinámicamente -->
+                    </div>
+                    
+                    <button class="pagination-btn next" id="nextPage">
+                        Siguiente
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <polyline points="9,18 15,12 9,6"></polyline>
+                        </svg>
+                    </button>
+                </div>
+            </div>
+        </section><!-- Quick View Modal -->
+        <div class="quick-view-modal">
+            <div class="modal-content">
+                <button class="close-modal" aria-label="Cerrar">×</button>
+                <div class="modal-body">
+                    <!-- El contenido del modal se generará dinámicamente -->
+                </div>
             </div>
         </div>
-
-        <section class="productos-grid">
-            <!-- Los productos se cargarán dinámicamente aquí -->
-        </section>
     </main>
 
-    <!-- Modal de Vista Rápida -->
-    <div id="modal-vista-rapida" class="modal">
-        <div class="modal-content">
-            <span class="cerrar-modal">&times;</span>
-            <div class="modal-producto-info">
-                <!-- El contenido se llenará con JavaScript -->
-            </div>
-        </div>
-    </div>
-
-    <script src="../js/navbar.js"></script>
-    <script src="../js/para_ellos.js"></script>
+    <!-- Scripts -->
     <script>
-        // Cargar la navbar
+        // Asegurar que los recursos se carguen
+        window.addEventListener('load', function() {
+            document.body.classList.add('resources-loaded');
+        });        // Cargar la navbar
         document.addEventListener('DOMContentLoaded', function() {
-            fetch('../html/navbar.html')
+            fetch('navbar.html')
                 .then(response => response.text())
                 .then(data => {
                     document.getElementById('navbar-container').innerHTML = data;
-                    if (typeof initNavbar === 'function') {
-                        setTimeout(initNavbar, 100);
-                    }
-                });
-        });
-    </script>
+                    // Inicializar navbar después de un pequeño delay
+                    setTimeout(() => {
+                        if (typeof initNavbar === 'function') {
+                            initNavbar();
+                        }
+                    }, 150);
+                })
+                .catch(error => console.error('Error cargando navbar:', error));
+        });    </script>
+    <!-- Supabase CDN -->
+    <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+    <!-- Scripts de la aplicación -->
+    <script src="../js/supabase-config.js"></script>
+    <script src="../js/navbar.js"></script>
+    <script src="../js/para_ellos.js"></script>
 </body>
 </html>

@@ -18,11 +18,10 @@
             <div class="category-container">
                 <!-- Para Ellos -->                <div class="category-item category-men">                    <div class="category-image">
                         <img src="../IMAGENES/PARA_ELLOS.png" alt="Colección para Caballeros" class="category-img">
-                    </div>
-                    <div class="category-content">
+                    </div>                    <div class="category-content">
                         <h2>Pour Lui</h2>
                         <p>Descubre la colección para caballeros</p>
-                        <a href="/html/para_ellos.html" class="btn-catalogue">Ver Catálogo</a>
+                        <a href="para_ellos.html" class="btn-catalogue">Ver Catálogo</a>
                     </div>
                 </div>
 
@@ -33,7 +32,7 @@
                     <div class="category-content">
                         <h2>Pour Elle</h2>
                         <p>Explora la colección para damas</p>
-                        <a href="/html/para_ellas.html" class="btn-catalogue">Ver Catálogo</a>
+                        <a href="para_ellas.html" class="btn-catalogue">Ver Catálogo</a>
                     </div>
                 </div>
             </div>
@@ -45,7 +44,7 @@
     <script>
         // Cargar la navbar
         document.addEventListener('DOMContentLoaded', function() {
-            fetch('../html/navbar.html')
+            fetch('navbar.html')
                 .then(response => response.text())
                 .then(data => {
                     document.getElementById('navbar-container').innerHTML = data;

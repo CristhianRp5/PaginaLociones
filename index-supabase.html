@@ -1,0 +1,392 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Perfumería Premium - Con Supabase</title>
+    
+    <!-- Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;500;600;700&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
+    
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    
+    <!-- CSS -->
+    <link rel="stylesheet" href="css/navbar.css">
+    <link rel="stylesheet" href="css/style.css">
+    
+    <!-- Supabase -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+</head>
+<body>
+    <!-- Navbar -->
+    <div id="navbar-container"></div>
+
+    <!-- Hero Section -->
+    <section class="hero">
+        <div class="hero-content">
+            <h1 class="hero-title">Perfumería Premium</h1>
+            <p class="hero-subtitle">Descubre fragancias excepcionales con nuestra nueva experiencia digital</p>
+            
+            <!-- Indicador de Supabase -->
+            <div class="supabase-status">
+                <div id="db-status" class="status-indicator">
+                    <i class="fas fa-database"></i>
+                    <span>Conectando a base de datos...</span>
+                </div>
+            </div>
+            
+            <div class="hero-buttons">
+                <a href="html/catalogo-supabase.html" class="btn-primary">
+                    <i class="fas fa-search"></i>
+                    Explorar Catálogo
+                </a>
+                <button onclick="showSupabaseSetup()" class="btn-secondary">
+                    <i class="fas fa-cog"></i>
+                    Configurar Supabase
+                </button>
+            </div>
+        </div>
+        
+        <!-- Videos de fondo -->
+        <div class="hero-videos">
+            <video autoplay muted loop>
+                <source src="VIDEOS/Video1_index.mp4" type="video/mp4">
+            </video>
+        </div>
+    </section>
+
+    <!-- Sección de Características -->
+    <section class="features-section">
+        <div class="container">
+            <h2 class="section-title">Nueva Experiencia Digital</h2>
+            <div class="features-grid">
+                <div class="feature-card">
+                    <div class="feature-icon">
+                        <i class="fas fa-database"></i>
+                    </div>
+                    <h3>Base de Datos en Tiempo Real</h3>
+                    <p>Productos actualizados instantáneamente desde Supabase</p>
+                </div>
+                
+                <div class="feature-card">
+                    <div class="feature-icon">
+                        <i class="fas fa-search"></i>
+                    </div>
+                    <h3>Búsqueda Avanzada</h3>
+                    <p>Encuentra fragancias por nombre, marca, notas o precio</p>
+                </div>
+                
+                <div class="feature-card">
+                    <div class="feature-icon">
+                        <i class="fas fa-filter"></i>
+                    </div>
+                    <h3>Filtros Inteligentes</h3>
+                    <p>Filtra por categorías, precios y características específicas</p>
+                </div>
+                
+                <div class="feature-card">
+                    <div class="feature-icon">
+                        <i class="fas fa-mobile-alt"></i>
+                    </div>
+                    <h3>Totalmente Responsive</h3>
+                    <p>Experiencia perfecta en todos los dispositivos</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Sección de Categorías -->
+    <section class="categories-section">
+        <div class="container">
+            <h2 class="section-title">Explora por Categorías</h2>
+            <div class="categories-grid">
+                <a href="html/para_ellos.html" class="category-card">
+                    <img src="PARA_ELLOS.png" alt="Para Ellos">
+                    <div class="category-overlay">
+                        <h3>Para Ellos</h3>
+                        <p>Fragancias masculinas sofisticadas</p>
+                    </div>
+                </a>
+                
+                <a href="html/para_ellas.html" class="category-card">
+                    <img src="PARA_ELLAS.png" alt="Para Ellas">
+                    <div class="category-overlay">
+                        <h3>Para Ellas</h3>
+                        <p>Fragancias femeninas elegantes</p>
+                    </div>
+                </a>
+            </div>
+        </div>
+    </section>
+
+    <!-- Sección de Estado de Migración -->
+    <section class="migration-status" id="migration-section" style="display: none;">
+        <div class="container">
+            <div class="migration-card">
+                <h3><i class="fas fa-info-circle"></i> Estado de la Migración</h3>
+                <div id="migration-info">
+                    <p>Verificando estado de la base de datos...</p>
+                </div>
+                <div class="migration-actions">
+                    <button onclick="checkMigrationStatus()" class="btn-info">
+                        <i class="fas fa-sync"></i>
+                        Verificar Estado
+                    </button>
+                    <button onclick="showSupabaseSetup()" class="btn-primary">
+                        <i class="fas fa-cog"></i>
+                        Configurar
+                    </button>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer class="footer">
+        <div class="container">
+            <div class="footer-content">
+                <div class="footer-section">
+                    <h4>Perfumería Premium</h4>
+                    <p>Fragancias excepcionales para momentos especiales</p>
+                </div>
+                
+                <div class="footer-section">
+                    <h4>Tecnología</h4>
+                    <ul>
+                        <li><i class="fas fa-check"></i> Supabase Database</li>
+                        <li><i class="fas fa-check"></i> Real-time Updates</li>
+                        <li><i class="fas fa-check"></i> Advanced Filtering</li>
+                        <li><i class="fas fa-check"></i> Mobile Responsive</li>
+                    </ul>
+                </div>
+                
+                <div class="footer-section">
+                    <h4>Enlaces Rápidos</h4>
+                    <ul>
+                        <li><a href="html/catalogo-supabase.html">Catálogo Completo</a></li>
+                        <li><a href="html/para_ellos.html">Para Ellos</a></li>
+                        <li><a href="html/para_ellas.html">Para Ellas</a></li>
+                        <li><a href="html/contacto.html">Contacto</a></li>
+                    </ul>
+                </div>
+            </div>
+            
+            <div class="footer-bottom">
+                <p>&copy; 2024 Perfumería Premium. Todos los derechos reservados.</p>
+                <div class="footer-tech">
+                    <span>Powered by <strong>Supabase</strong></span>
+                </div>
+            </div>
+        </div>
+    </footer>
+
+    <!-- Scripts -->
+    <script src="js/navbar.js"></script>
+    <script src="js/supabase-config.js"></script>
+    <script src="js/supabase-setup.js"></script>
+    <script src="js/migration.js"></script>
+
+    <style>
+        /* Estilos adicionales para la nueva funcionalidad */
+        .supabase-status {
+            margin: 20px 0;
+        }
+        
+        .status-indicator {
+            display: inline-flex;
+            align-items: center;
+            gap: 10px;
+            padding: 10px 20px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 25px;
+            backdrop-filter: blur(10px);
+            color: white;
+            font-size: 14px;
+            transition: all 0.3s ease;
+        }
+        
+        .status-indicator.connected {
+            background: rgba(39, 174, 96, 0.2);
+            border: 1px solid rgba(39, 174, 96, 0.3);
+        }
+        
+        .status-indicator.error {
+            background: rgba(231, 76, 60, 0.2);
+            border: 1px solid rgba(231, 76, 60, 0.3);
+        }
+        
+        .features-section {
+            padding: 80px 0;
+            background: #f8f9fa;
+        }
+        
+        .features-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 30px;
+            margin-top: 50px;
+        }
+        
+        .feature-card {
+            background: white;
+            padding: 40px 30px;
+            border-radius: 15px;
+            text-align: center;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+            transition: transform 0.3s ease;
+        }
+        
+        .feature-card:hover {
+            transform: translateY(-10px);
+        }
+        
+        .feature-icon {
+            width: 80px;
+            height: 80px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 20px;
+            color: white;
+            font-size: 30px;
+        }
+        
+        .migration-status {
+            padding: 40px 0;
+            background: #e8f4fd;
+        }
+        
+        .migration-card {
+            background: white;
+            padding: 30px;
+            border-radius: 15px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+            text-align: center;
+        }
+        
+        .migration-actions {
+            margin-top: 20px;
+            display: flex;
+            gap: 15px;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+        
+        .btn-info {
+            background: #17a2b8;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 500;
+            transition: background 0.3s;
+        }
+        
+        .btn-info:hover {
+            background: #138496;
+        }
+        
+        .footer-tech {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        @media (max-width: 768px) {
+            .features-grid {
+                grid-template-columns: 1fr;
+                gap: 20px;
+            }
+            
+            .migration-actions {
+                flex-direction: column;
+            }
+        }
+    </style>
+
+    <script>
+        // Verificar estado de Supabase al cargar la página
+        document.addEventListener('DOMContentLoaded', async function() {
+            const statusEl = document.getElementById('db-status');
+            const migrationSection = document.getElementById('migration-section');
+            
+            try {
+                // Intentar inicializar Supabase
+                const initialized = initSupabase();
+                
+                if (initialized && supabaseClient) {
+                    // Probar conexión
+                    const { data, error } = await supabaseClient
+                        .from('productos')
+                        .select('count')
+                        .limit(1);
+                    
+                    if (!error) {
+                        statusEl.innerHTML = '<i class="fas fa-database"></i><span>Base de datos conectada</span>';
+                        statusEl.classList.add('connected');
+                    } else {
+                        throw new Error('Tablas no encontradas');
+                    }
+                } else {
+                    throw new Error('Supabase no configurado');
+                }
+            } catch (error) {
+                statusEl.innerHTML = '<i class="fas fa-exclamation-triangle"></i><span>Configuración requerida</span>';
+                statusEl.classList.add('error');
+                migrationSection.style.display = 'block';
+                
+                // Mostrar información de migración
+                document.getElementById('migration-info').innerHTML = `
+                    <p><strong>Estado:</strong> ${error.message}</p>
+                    <p>Para una experiencia completa, configura Supabase para gestión dinámica de productos.</p>
+                `;
+            }
+        });
+        
+        async function checkMigrationStatus() {
+            const migrationInfo = document.getElementById('migration-info');
+            migrationInfo.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Verificando...';
+            
+            try {
+                if (!supabaseClient) {
+                    throw new Error('Supabase no configurado');
+                }
+                
+                // Verificar tablas
+                const { data: productos, error: prodError } = await supabaseClient
+                    .from('productos')
+                    .select('count');
+                    
+                const { data: categorias, error: catError } = await supabaseClient
+                    .from('categorias')
+                    .select('count');
+                    
+                const { data: marcas, error: marcError } = await supabaseClient
+                    .from('marcas')
+                    .select('count');
+                
+                if (prodError || catError || marcError) {
+                    migrationInfo.innerHTML = `
+                        <p><strong>Estado:</strong> Tablas incompletas</p>
+                        <p>Algunas tablas no existen. Ejecuta el SQL de configuración.</p>
+                    `;
+                } else {
+                    migrationInfo.innerHTML = `
+                        <p><strong>Estado:</strong> ✅ Base de datos configurada</p>
+                        <p>Productos: ${productos?.length || 0} | Categorías: ${categorias?.length || 0} | Marcas: ${marcas?.length || 0}</p>
+                    `;
+                }
+            } catch (error) {
+                migrationInfo.innerHTML = `
+                    <p><strong>Error:</strong> ${error.message}</p>
+                    <p>Configura Supabase primero.</p>
+                `;
+            }
+        }
+    </script>
+</body>
+</html>

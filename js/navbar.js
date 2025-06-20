@@ -1,81 +1,131 @@
-// Esperar a que el contenido de la navbar se cargue
-// Función para inicializar la navegación
+// Variables globales
+let initAttempts = 0;
+const MAX_ATTEMPTS = 10;
+let navbarInitialized = false;
+
+// Función principal de inicialización de la navbar
 function initNavbar() {
-    console.log('Inicializando navbar');
-    
-    function setupNavigation() {
-        const menuToggle = document.querySelector('.navbar-menu-toggle');
-        const sidebarMenu = document.querySelector('#sidebar-menu');
-        const overlay = document.querySelector('.overlay');
-        const closeButton = document.querySelector('.sidebar-close');
-        const submenuToggles = document.querySelectorAll('.submenu-toggle');
-
-        // Verificar que los elementos existen
-        if (!menuToggle || !sidebarMenu || !overlay || !closeButton) {
-            console.error('Elementos del menú no encontrados, reintentando...');
-            setTimeout(setupNavigation, 100); // Reintentar si los elementos no están listos
-            return;
-        }
-
-        console.log('Elementos del menú encontrados, configurando eventos');
-
-        // Función para abrir el menú
-        function openMenu() {
-            console.log('Abriendo menú');
-            sidebarMenu.classList.add('active');
-            overlay.classList.add('active');
-            menuToggle.classList.add('active');
-            menuToggle.setAttribute('aria-expanded', 'true');
-            document.body.style.overflow = 'hidden';
-        }
-
-        // Función para cerrar el menú
-        function closeMenu() {
-            console.log('Cerrando menú');
-            sidebarMenu.classList.remove('active');
-            overlay.classList.remove('active');
-            menuToggle.classList.remove('active');
-            menuToggle.setAttribute('aria-expanded', 'false');
-            document.body.style.overflow = '';
-        }
-
-        // Event listeners
-        menuToggle.addEventListener('click', function(e) {
-            e.preventDefault();
-            e.stopPropagation();
-            console.log('Click en menú toggle');
-            if (sidebarMenu.classList.contains('active')) {
-                closeMenu();
-            } else {
-                openMenu();
-            }
-        });
-
-        closeButton.addEventListener('click', closeMenu);
-        overlay.addEventListener('click', closeMenu);
-
-        // Manejar submenús
-        submenuToggles.forEach(toggle => {
-            toggle.addEventListener('click', function(e) {
-                e.preventDefault();
-                e.stopPropagation();
-                const submenu = this.nextElementSibling;
-                const isExpanded = this.getAttribute('aria-expanded') === 'true';
-                this.setAttribute('aria-expanded', !isExpanded);
-                submenu.classList.toggle('active');
-            });
-        });
-
-        // Cerrar con Escape
-        document.addEventListener('keydown', function(e) {
-            if (e.key === 'Escape' && sidebarMenu.classList.contains('active')) {
-                closeMenu();
-            }
-        });
-
-        console.log('Navegación inicializada correctamente');
+    console.log('Iniciando inicialización de navbar');
+    if (navbarInitialized) {
+        console.log('La navbar ya está inicializada');
+        return;
     }
 
-    // Iniciar la configuración
-    setupNavigation();
+    const navbar = document.querySelector('.navbar');
+    const hamburgerMenu = document.querySelector('.hamburger-menu');
+    const navbarMenu = document.querySelector('.navbar-menu');
+
+    if (!navbar || !hamburgerMenu || !navbarMenu) {
+        console.log('Elementos de navbar no encontrados, reintentando...');
+        initAttempts++;
+        if (initAttempts < MAX_ATTEMPTS) {
+            setTimeout(initNavbar, 100);
+        }
+        return;
+    }
+
+    console.log('Elementos de navbar encontrados, configurando eventos');    // Toggle del menú hamburguesa
+    hamburgerMenu.addEventListener('click', function(e) {
+        e.preventDefault();
+        console.log('Hamburger menu clicked!');
+        hamburgerMenu.classList.toggle('active');
+        navbarMenu.classList.toggle('active');
+        document.body.style.overflow = hamburgerMenu.classList.contains('active') ? 'hidden' : '';
+        console.log('Hamburger active:', hamburgerMenu.classList.contains('active'));
+        console.log('Menu active:', navbarMenu.classList.contains('active'));
+    });    // Cerrar menú al hacer click en enlaces finales (que no tienen submenús)
+    navbarMenu.querySelectorAll('a').forEach(link => {
+        link.addEventListener('click', (e) => {
+            const parentLi = link.closest('li');
+            const hasSubmenu = parentLi && parentLi.classList.contains('has-submenu');
+            
+            // Solo cerrar el menú si el enlace no tiene submenú Y no es un enlace placeholder (#)
+            if (!hasSubmenu && link.getAttribute('href') !== '#') {
+                hamburgerMenu.classList.remove('active');
+                navbarMenu.classList.remove('active');
+                document.body.style.overflow = '';
+            }
+        });
+    });    // Manejar submenús
+    document.querySelectorAll('.has-submenu').forEach(item => {
+        const link = item.querySelector('a');
+        const submenu = item.querySelector('.submenu');
+        
+        if (link && submenu) {
+            link.addEventListener('click', function(e) {
+                if (window.innerWidth <= 768) {
+                    e.preventDefault();
+                    
+                    // Cerrar otros submenús abiertos
+                    document.querySelectorAll('.has-submenu.active').forEach(openItem => {
+                        if (openItem !== item) {
+                            openItem.classList.remove('active');
+                        }
+                    });
+                    
+                    // Toggle del submenú actual
+                    item.classList.toggle('active');
+                    
+                    // Actualizar aria-expanded
+                    const isExpanded = item.classList.contains('active');
+                    link.setAttribute('aria-expanded', isExpanded);
+                    
+                    console.log('Submenu toggled:', link.textContent, 'Active:', isExpanded);
+                }
+            });
+        }
+    });    // Cerrar submenús al hacer click fuera de ellos
+    document.addEventListener('click', function(e) {
+        if (window.innerWidth <= 768 && navbarMenu.classList.contains('active')) {
+            const clickedElement = e.target;
+            const isInsideSubmenu = clickedElement.closest('.has-submenu');
+            
+            if (!isInsideSubmenu) {
+                // Cerrar todos los submenús abiertos
+                document.querySelectorAll('.has-submenu.active').forEach(item => {
+                    item.classList.remove('active');
+                    const link = item.querySelector('a');
+                    if (link) {
+                        link.setAttribute('aria-expanded', 'false');
+                    }
+                });
+            }
+        }
+    });
+
+    navbarInitialized = true;
+    console.log('✓ Navbar inicializada correctamente');
 }
+
+// Event listener para cuando el DOM esté listo
+document.addEventListener('DOMContentLoaded', () => {
+    console.log('DOM Content Loaded - Intentando inicializar navbar');
+    
+    // Intentar inicializar la navbar inmediatamente
+    initNavbar();
+
+    // Si no se inicializó en el primer intento, crear un observer para detectar cambios
+    if (!navbarInitialized) {
+        console.log('Primera inicialización falló, creando observer');
+        const observer = new MutationObserver((mutations) => {
+            if (!navbarInitialized) {
+                console.log('Cambio detectado en DOM, reintentando inicialización');
+                initNavbar();
+            } else {
+                observer.disconnect();
+            }
+        });
+
+        observer.observe(document.body, { 
+            childList: true,
+            subtree: true 
+        });
+    }
+});
+
+// Función adicional para inicialización manual si es necesario
+window.forceInitNavbar = function() {
+    navbarInitialized = false;
+    initAttempts = 0;
+    initNavbar();
+};
