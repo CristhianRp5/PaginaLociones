@@ -456,19 +456,33 @@ class ProductosService {    // Obtener todos los productos
                 console.warn(`⚠️ Precio ${precioValidado} es negativo, ajustando a ${PRECIO_MIN}`);
                 precioValidado = PRECIO_MIN;
             }
-            
-            // Validar imagen_url (debe ser string o null)
+              // Validar y procesar imagen (URL o base64)
             let imagenUrl = null;
+            let imagenBase64 = null;
+            
             if (producto.imagen_url) {
                 if (typeof producto.imagen_url === 'string') {
-                    imagenUrl = producto.imagen_url.trim();
+                    const imagenTrimmed = producto.imagen_url.trim();
+                    
                     // Validar que no sea una cadena vacía
-                    if (imagenUrl === '') {
+                    if (imagenTrimmed === '') {
                         imagenUrl = null;
+                        imagenBase64 = null;
+                    } else if (imagenTrimmed.startsWith('data:image/')) {
+                        // Es una imagen base64
+                        imagenBase64 = imagenTrimmed;
+                        imagenUrl = null;
+                        console.log('🖼️ Imagen base64 detectada:', `${imagenBase64.substring(0, 50)}... (${imagenBase64.length} caracteres)`);
+                    } else {
+                        // Es una URL normal
+                        imagenUrl = imagenTrimmed;
+                        imagenBase64 = null;
+                        console.log('🔗 URL de imagen detectada:', imagenUrl);
                     }
                 } else {
                     console.warn('⚠️ imagen_url no es string, ignorando:', typeof producto.imagen_url);
                     imagenUrl = null;
+                    imagenBase64 = null;
                 }
             }
             
@@ -493,10 +507,15 @@ class ProductosService {    // Obtener todos los productos
             if (producto.subcategoria && typeof producto.subcategoria === 'string') {
                 productDataBasic.subcategoria = producto.subcategoria.trim();
             }
-              // Agregar imagen solo si es válida
+              // Agregar imágenes solo si son válidas
             if (imagenUrl) {
                 productDataBasic.imagen_url = imagenUrl;
-                console.log(`🖼️ Imagen agregada al producto: ${imagenUrl.startsWith('data:image/') ? 'Base64 (' + (imagenUrl.length / 1024).toFixed(1) + 'KB)' : 'URL'}`);
+                console.log('🔗 Agregando URL de imagen al producto');
+            }
+            
+            if (imagenBase64) {
+                productDataBasic.imagen = imagenBase64;
+                console.log('🖼️ Agregando imagen base64 al producto');
             }
             
             console.log('📤 Enviando datos básicos a Supabase:', productDataBasic);
@@ -679,9 +698,29 @@ class ProductosService {    // Obtener todos los productos
             if (producto.notas !== undefined) {
                 productData.notas = producto.notas;
             }
-              if (producto.imagen_url !== undefined) {
-                productData.imagen_url = producto.imagen_url;
-                console.log(`🖼️ Imagen actualizada: ${producto.imagen_url ? (producto.imagen_url.startsWith('data:image/') ? 'Base64 (' + (producto.imagen_url.length / 1024).toFixed(1) + 'KB)' : 'URL') : 'Eliminada'}`);
+              // Manejar imágenes (URL o base64)
+            if (producto.imagen_url !== undefined) {
+                if (typeof producto.imagen_url === 'string') {
+                    const imagenTrimmed = producto.imagen_url.trim();
+                    
+                    if (imagenTrimmed === '') {
+                        productData.imagen_url = null;
+                        productData.imagen = null;
+                    } else if (imagenTrimmed.startsWith('data:image/')) {
+                        // Es una imagen base64 - guardar en columna 'imagen'
+                        productData.imagen = imagenTrimmed;
+                        productData.imagen_url = null;
+                        console.log('🖼️ Actualizando con imagen base64');
+                    } else {
+                        // Es una URL normal - guardar en columna 'imagen_url'
+                        productData.imagen_url = imagenTrimmed;
+                        productData.imagen = null;
+                        console.log('🔗 Actualizando con URL de imagen');
+                    }
+                } else {
+                    productData.imagen_url = null;
+                    productData.imagen = null;
+                }
             }
             
             console.log('📤 Enviando datos básicos de actualización a Supabase:', productData);
@@ -863,62 +902,6 @@ class ProductosService {    // Obtener todos los productos
         } catch (error) {
             console.error('❌ Error en deleteProductSimple:', error);
             throw error;
-        }
-    }
-
-    // Función optimizada para recarga rápida (sin filtros complejos)
-    static async obtenerProductosRapido() {
-        if (!supabaseClient) {
-            console.warn('Supabase no configurado, usando datos locales');
-            return this.obtenerProductosLocales();
-        }
-
-        try {
-            console.log('⚡ Obteniendo productos con consulta rápida...');
-            
-            // Consulta simple sin filtros complejos para evitar timeouts
-            const { data, error } = await supabaseClient
-                .from('productos')
-                .select('id, nombre, marca, precio, categoria, imagen_url, imagen, estado, descuento, activo, created_at')
-                .order('id', { ascending: false })
-                .limit(50); // Limitar para evitar consultas muy pesadas
-
-            if (error) {
-                console.warn('Error en consulta rápida, intentando sin nuevas columnas:', error);
-                
-                // Fallback sin columnas estado/descuento
-                const { data: fallbackData, error: fallbackError } = await supabaseClient
-                    .from('productos')
-                    .select('id, nombre, marca, precio, categoria, imagen_url, imagen, activo, created_at')
-                    .order('id', { ascending: false })
-                    .limit(50);
-
-                if (fallbackError) {
-                    console.error('Error en fallback rápido:', fallbackError);
-                    return this.obtenerProductosLocales();
-                }
-
-                // Normalizar productos sin estado/descuento
-                return (fallbackData || []).map(producto => ({
-                    ...producto,
-                    estado: 'disponible',
-                    descuento: 0
-                }));
-            }
-
-            // Normalizar productos con todas las columnas
-            const productosNormalizados = (data || []).map(producto => ({
-                ...producto,
-                estado: producto.estado || 'disponible',
-                descuento: producto.descuento || 0
-            }));
-
-            console.log(`⚡ Consulta rápida exitosa: ${productosNormalizados.length} productos`);
-            return productosNormalizados;
-
-        } catch (error) {
-            console.error('Error crítico en obtenerProductosRapido:', error);
-            return this.obtenerProductosLocales();
         }
     }
 

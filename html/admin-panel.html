@@ -120,11 +120,9 @@
                         </button>
                         <button onclick="testImageUpload()" class="btn btn-secondary" style="margin: 5px;">
                             📷 Test Subida Imagen
-                        </button>                        <button onclick="testImageUpload()" class="btn btn-secondary" style="margin: 5px;">
-                            🖼️ Test Subida Imagen
                         </button>
-                        <button onclick="testOptimizedReload()" class="btn btn-secondary" style="margin: 5px;">
-                            ⚡ Test Recarga Rápida
+                        <button onclick="testImageUpload()" class="btn btn-secondary" style="margin: 5px;">
+                            🖼️ Test Subida Imagen
                         </button>
                         <div id="debugOutput" style="margin-top: 10px; padding: 10px; background: #fff; border: 1px solid #ddd; border-radius: 3px; font-family: monospace; font-size: 12px; max-height: 200px; overflow-y: auto;"></div>
                     </div>
@@ -561,37 +559,6 @@
             }
         };
         
-        window.testOptimizedReload = async function() {
-            const output = document.getElementById('debugOutput');
-            if (output) output.textContent = 'Probando recarga optimizada...\n';
-            
-            try {
-                const startTime = performance.now();
-                
-                if (adminPanel && typeof adminPanel.loadProductosRapido === 'function') {
-                    await adminPanel.loadProductosRapido();
-                    const endTime = performance.now();
-                    const duration = Math.round(endTime - startTime);
-                    
-                    if (output) output.textContent += `✅ Recarga rápida exitosa en ${duration}ms\n`;
-                    if (output) output.textContent += `📦 Productos cargados: ${adminPanel.productos.length}\n`;
-                    
-                    // Actualizar vista si estoy en productos
-                    if (adminPanel.currentSection === 'productos') {
-                        await adminPanel.loadProductsData();
-                        if (output) output.textContent += `🎨 Vista de productos actualizada\n`;
-                    }
-                    
-                } else {
-                    if (output) output.textContent += 'ERROR: loadProductosRapido no disponible.\n';
-                }
-                
-            } catch (error) {
-                if (output) output.textContent += `ERROR: ${error.message}\n`;
-                console.error('❌ Error en test de recarga rápida:', error);
-            }
-        };
-
         // Funciones globales para eventos del formulario
         window.handleEstadoChange = function() {
             if (window.adminPanel) {

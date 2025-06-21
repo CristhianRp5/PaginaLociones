@@ -257,15 +257,6 @@ class AdminPanel {
                 this.validatePrice(e.target);
             });
         }
-        
-        // Configurar evento para carga de archivo de imagen
-        const imagenFileInput = document.getElementById('imagen_file');
-        if (imagenFileInput) {
-            imagenFileInput.addEventListener('change', (e) => {
-                console.log('📁 Archivo seleccionado, procesando...');
-                this.previewImageFromFile(e.target);
-            });
-        }
     }
 
     // Mostrar sección
@@ -681,12 +672,29 @@ class AdminPanel {
                 result = await this.updateProduct(productId, productData);
             } else {
                 result = await this.saveProduct(productData);
-            }            if (result) {
+            }
+
+            if (result) {
                 // Limpiar formulario después del éxito
                 e.target.reset();
                 
-                // Limpiar imagen y datos relacionados de forma eficiente
-                this.clearImageInputs();
+                // Limpiar imagen y datos relacionados
+                this.clearImageInputs(); 
+                this.imageData = null;
+                this.imageType = 'url';
+                
+                // Reactivar tab por defecto (URL)
+                const urlTab = document.querySelector('.tab-btn[data-tab="url"]');
+                const fileTab = document.querySelector('.tab-btn[data-tab="file"]');
+                const urlContent = document.getElementById('url-tab');
+                const fileContent = document.getElementById('file-tab');
+                
+                if (urlTab && fileTab && urlContent && fileContent) {
+                    urlTab.classList.add('active');
+                    fileTab.classList.remove('active');
+                    urlContent.classList.add('active');
+                    fileContent.classList.remove('active');
+                }
                 
                 // Restaurar modo agregar si estábamos editando
                 if (isEditMode) {
@@ -896,9 +904,10 @@ class AdminPanel {
             // Verificar si la eliminación fue exitosa
             if (eliminationSuccessful) {
                 console.log('🎉 Eliminación confirmada como exitosa');
-                  // Forzar recarga de productos para sincronizar el estado
-                console.log('🔄 Recargando productos para sincronizar (método rápido)...');
-                await this.loadProductosRapido();
+                
+                // Forzar recarga de productos para sincronizar el estado
+                console.log('🔄 Recargando productos para sincronizar...');
+                await this.loadProductos();
                 
                 // Actualizar vista si estamos en la sección de productos
                 if (this.currentSection === 'productos') {
@@ -919,10 +928,11 @@ class AdminPanel {
             
         } catch (error) {
             console.error('❌ Error eliminando producto:', error);
-              // Independientemente del error, intentar recargar productos para sincronizar estado
+            
+            // Independientemente del error, intentar recargar productos para sincronizar estado
             try {
-                console.log('🔄 Recargando productos después del error para sincronizar (método rápido)...');
-                await this.loadProductosRapido();
+                console.log('🔄 Recargando productos después del error para sincronizar...');
+                await this.loadProductos();
                 if (this.currentSection === 'productos') {
                     await this.loadProductsData();
                 }
@@ -957,25 +967,6 @@ class AdminPanel {
             
         } finally {
             this.showLoading(false);
-        }
-    }
-
-    // Cargar productos con consulta optimizada (para recarga rápida después de eliminar)
-    async loadProductosRapido() {
-        try {
-            console.log('⚡ Cargando productos con consulta optimizada...');
-            
-            if (typeof ProductosService !== 'undefined' && typeof ProductosService.obtenerProductosRapido === 'function') {
-                this.productos = await ProductosService.obtenerProductosRapido();
-                console.log(`⚡ ${this.productos.length} productos cargados rápidamente`);
-            } else {
-                console.warn('⚠️ ProductosService.obtenerProductosRapido no disponible, usando método normal');
-                await this.loadProductos();
-            }
-        } catch (error) {
-            console.error('❌ Error cargando productos rápidamente:', error);
-            // Fallback al método normal
-            await this.loadProductos();
         }
     }
 
@@ -1198,7 +1189,8 @@ class AdminPanel {
             previewImg.alt = 'Cargando archivo...';
             previewImg.style.opacity = '0.5';
         }
-          const reader = new FileReader();
+        
+        const reader = new FileReader();
         reader.onload = (e) => {
             const imageData = e.target.result;
             console.log(`✅ Archivo leído exitosamente`);
@@ -1226,12 +1218,9 @@ class AdminPanel {
             
             // Verificar que los datos se guardaron correctamente
             if (this.imageData && this.imageType === 'file') {
-                console.log(`✅ Imagen lista para enviar - Estado interno actualizado correctamente`);
-                console.log(`🔄 Variables globales: imageData=${this.imageData ? 'SET' : 'NULL'}, imageType=${this.imageType}`);
+                console.log(`✅ Imagen lista para enviar`);
             } else {
-                console.error(`❌ Error guardando datos de imagen - Estado inconsistente`);
-                console.error(`   - this.imageData: ${this.imageData ? 'SET' : 'NULL'}`);
-                console.error(`   - this.imageType: ${this.imageType}`);
+                console.error(`❌ Error guardando datos de imagen`);
             }
         };
         

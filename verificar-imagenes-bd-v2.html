@@ -1,0 +1,388 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Verificar Imágenes BD</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+        }
+        .title {
+            color: #333;
+            border-bottom: 2px solid #007bff;
+            padding-bottom: 10px;
+            margin-bottom: 20px;
+        }
+        .btn {
+            background: #007bff;
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        .btn:hover {
+            background: #0056b3;
+        }
+        .btn-success {
+            background: #28a745;
+        }
+        .btn-danger {
+            background: #dc3545;
+        }
+        .table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 20px 0;
+        }
+        .table th, .table td {
+            border: 1px solid #ddd;
+            padding: 8px;
+            text-align: left;
+        }
+        .table th {
+            background: #f8f9fa;
+            font-weight: bold;
+        }
+        .table tr:nth-child(even) {
+            background: #f9f9f9;
+        }
+        .status {
+            padding: 10px;
+            border-radius: 4px;
+            margin: 10px 0;
+        }
+        .status.success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        .status.error {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+        .status.warning {
+            background: #fff3cd;
+            color: #856404;
+            border: 1px solid #ffeaa7;
+        }
+        .preview-small {
+            max-width: 50px;
+            max-height: 50px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
+        .log {
+            background: #f8f9fa;
+            border: 1px solid #e9ecef;
+            padding: 15px;
+            border-radius: 4px;
+            font-family: monospace;
+            font-size: 12px;
+            max-height: 300px;
+            overflow-y: auto;
+            white-space: pre-wrap;
+        }
+        .badge {
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 12px;
+            font-weight: bold;
+        }
+        .badge-success {
+            background: #28a745;
+            color: white;
+        }
+        .badge-warning {
+            background: #ffc107;
+            color: #212529;
+        }
+        .badge-danger {
+            background: #dc3545;
+            color: white;
+        }
+        .badge-info {
+            background: #17a2b8;
+            color: white;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1 class="title">🖼️ Verificador de Imágenes en Base de Datos</h1>
+        
+        <div class="status" id="status">
+            <strong>Estado:</strong> Listo para verificar
+        </div>
+
+        <div style="margin: 20px 0;">
+            <button class="btn btn-success" onclick="loadAllProducts()">📊 Cargar Todos los Productos</button>
+            <button class="btn" onclick="analyzeImages()">🔍 Analizar Imágenes</button>
+            <button class="btn btn-danger" onclick="clearResults()">🧹 Limpiar</button>
+        </div>
+
+        <div id="summary" class="container" style="display: none;">
+            <h3>📈 Resumen de Imágenes</h3>
+            <div id="summaryContent"></div>
+        </div>
+
+        <div id="products" class="container" style="display: none;">
+            <h3>📦 Productos y sus Imágenes</h3>
+            <div id="productsContent"></div>
+        </div>
+
+        <div class="container">
+            <h3>📋 Log de Actividades</h3>
+            <div id="log" class="log">Esperando verificación...\n</div>
+        </div>
+    </div>
+
+    <!-- Supabase -->
+    <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+    <script src="../js/supabase-config.js"></script>
+
+    <script>
+        let allProducts = [];
+
+        // Inicializar
+        document.addEventListener('DOMContentLoaded', function() {
+            log('🚀 Inicializando verificador de imágenes...');
+            
+            if (initSupabase()) {
+                log('✅ Supabase inicializado correctamente');
+                updateStatus('Conectado a Supabase', 'success');
+            } else {
+                log('❌ Error inicializando Supabase');
+                updateStatus('Error de conexión', 'error');
+            }
+        });
+
+        async function loadAllProducts() {
+            log('📦 Cargando todos los productos...');
+            updateStatus('Cargando productos...', 'warning');
+            
+            try {
+                const productos = await ProductosService.obtenerProductos();
+                allProducts = productos;
+                
+                log(`✅ ${productos.length} productos cargados exitosamente`);
+                updateStatus(`${productos.length} productos cargados`, 'success');
+                
+                displayProducts(productos);
+                
+            } catch (error) {
+                log(`❌ Error cargando productos: ${error.message}`);
+                updateStatus('Error cargando productos: ' + error.message, 'error');
+            }
+        }
+
+        function displayProducts(productos) {
+            const container = document.getElementById('productsContent');
+            
+            if (productos.length === 0) {
+                container.innerHTML = '<p>No se encontraron productos.</p>';
+                document.getElementById('products').style.display = 'block';
+                return;
+            }
+            
+            let html = `
+                <table class="table">
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>Nombre</th>
+                            <th>Marca</th>
+                            <th>Precio</th>
+                            <th>Imagen URL</th>
+                            <th>Imagen Base64</th>
+                            <th>Preview</th>
+                            <th>Estado</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+            `;
+            
+            productos.forEach(producto => {
+                const hasUrl = producto.imagen_url ? true : false;
+                const hasBase64 = producto.imagen && producto.imagen.startsWith('data:image/') ? true : false;
+                const urlLength = producto.imagen_url ? producto.imagen_url.length : 0;
+                const base64Length = producto.imagen ? producto.imagen.length : 0;
+                
+                let statusBadge = '';
+                let previewHtml = '';
+                
+                if (hasBase64) {
+                    statusBadge = '<span class="badge badge-success">Base64 OK</span>';
+                    previewHtml = `<img src="${producto.imagen}" class="preview-small" alt="Preview">`;
+                } else if (hasUrl) {
+                    statusBadge = '<span class="badge badge-info">URL OK</span>';
+                    previewHtml = `<img src="${producto.imagen_url}" class="preview-small" alt="Preview" onerror="this.style.display='none'">`;
+                } else {
+                    statusBadge = '<span class="badge badge-warning">Sin Imagen</span>';
+                    previewHtml = '<span style="color: #6c757d;">N/A</span>';
+                }
+                
+                // Verificar si hay datos duplicados (URL y Base64 a la vez)
+                if (hasUrl && hasBase64) {
+                    statusBadge = '<span class="badge badge-danger">Duplicado</span>';
+                }
+                
+                html += `
+                    <tr>
+                        <td>${producto.id}</td>
+                        <td>${producto.nombre}</td>
+                        <td>${producto.marca}</td>
+                        <td>$${producto.precio.toLocaleString()}</td>
+                        <td>
+                            ${hasUrl ? 
+                                `<span class="badge badge-info">${urlLength} chars</span><br>
+                                 <small>${producto.imagen_url.substring(0, 30)}...</small>` : 
+                                '<span style="color: #6c757d;">-</span>'
+                            }
+                        </td>
+                        <td>
+                            ${hasBase64 ? 
+                                `<span class="badge badge-success">${base64Length} chars</span><br>
+                                 <small>data:image/...</small>` : 
+                                '<span style="color: #6c757d;">-</span>'
+                            }
+                        </td>
+                        <td>${previewHtml}</td>
+                        <td>${statusBadge}</td>
+                    </tr>
+                `;
+            });
+            
+            html += `
+                    </tbody>
+                </table>
+            `;
+            
+            container.innerHTML = html;
+            document.getElementById('products').style.display = 'block';
+        }
+
+        function analyzeImages() {
+            if (allProducts.length === 0) {
+                log('⚠️ No hay productos cargados. Carga los productos primero.');
+                updateStatus('No hay productos para analizar', 'warning');
+                return;
+            }
+            
+            log('🔍 Analizando imágenes...');
+            
+            let totalProducts = allProducts.length;
+            let withUrl = 0;
+            let withBase64 = 0;
+            let withBoth = 0;
+            let withNone = 0;
+            let invalidBase64 = 0;
+            let duplicates = 0;
+            
+            allProducts.forEach(producto => {
+                const hasUrl = producto.imagen_url ? true : false;
+                const hasBase64 = producto.imagen && producto.imagen.startsWith('data:image/') ? true : false;
+                const hasInvalidBase64 = producto.imagen && !producto.imagen.startsWith('data:image/') ? true : false;
+                
+                if (hasUrl) withUrl++;
+                if (hasBase64) withBase64++;
+                if (hasInvalidBase64) invalidBase64++;
+                
+                if (hasUrl && hasBase64) {
+                    withBoth++;
+                    duplicates++;
+                } else if (!hasUrl && !hasBase64 && !hasInvalidBase64) {
+                    withNone++;
+                }
+            });
+            
+            log(`📊 Análisis completado:`);
+            log(`   - Total productos: ${totalProducts}`);
+            log(`   - Con URL: ${withUrl}`);
+            log(`   - Con Base64: ${withBase64}`);
+            log(`   - Con ambos (duplicados): ${withBoth}`);
+            log(`   - Sin imagen: ${withNone}`);
+            log(`   - Base64 inválido: ${invalidBase64}`);
+            
+            const summaryHtml = `
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px;">
+                    <div style="background: #e7f3ff; padding: 15px; border-radius: 4px;">
+                        <h4 style="margin: 0 0 10px 0; color: #0066cc;">Total Productos</h4>
+                        <div style="font-size: 24px; font-weight: bold; color: #0066cc;">${totalProducts}</div>
+                    </div>
+                    <div style="background: #e7f8e7; padding: 15px; border-radius: 4px;">
+                        <h4 style="margin: 0 0 10px 0; color: #28a745;">Con URL</h4>
+                        <div style="font-size: 24px; font-weight: bold; color: #28a745;">${withUrl}</div>
+                    </div>
+                    <div style="background: #e8f4f8; padding: 15px; border-radius: 4px;">
+                        <h4 style="margin: 0 0 10px 0; color: #17a2b8;">Con Base64</h4>
+                        <div style="font-size: 24px; font-weight: bold; color: #17a2b8;">${withBase64}</div>
+                    </div>
+                    <div style="background: ${withBoth > 0 ? '#f8e8e8' : '#f8f9fa'}; padding: 15px; border-radius: 4px;">
+                        <h4 style="margin: 0 0 10px 0; color: ${withBoth > 0 ? '#dc3545' : '#6c757d'};">Duplicados</h4>
+                        <div style="font-size: 24px; font-weight: bold; color: ${withBoth > 0 ? '#dc3545' : '#6c757d'};">${withBoth}</div>
+                    </div>
+                    <div style="background: #fff8e7; padding: 15px; border-radius: 4px;">
+                        <h4 style="margin: 0 0 10px 0; color: #ffc107;">Sin Imagen</h4>
+                        <div style="font-size: 24px; font-weight: bold; color: #ffc107;">${withNone}</div>
+                    </div>
+                    <div style="background: ${invalidBase64 > 0 ? '#f8e8e8' : '#f8f9fa'}; padding: 15px; border-radius: 4px;">
+                        <h4 style="margin: 0 0 10px 0; color: ${invalidBase64 > 0 ? '#dc3545' : '#6c757d'};">Base64 Inválido</h4>
+                        <div style="font-size: 24px; font-weight: bold; color: ${invalidBase64 > 0 ? '#dc3545' : '#6c757d'};">${invalidBase64}</div>
+                    </div>
+                </div>
+                
+                <div style="margin-top: 20px;">
+                    <h4>🔍 Diagnóstico:</h4>
+                    <ul>
+                        ${withBoth > 0 ? '<li style="color: #dc3545;">⚠️ Hay productos con imágenes duplicadas (URL y Base64)</li>' : ''}
+                        ${invalidBase64 > 0 ? '<li style="color: #dc3545;">❌ Hay productos con Base64 inválido</li>' : ''}
+                        ${withNone > 0 ? '<li style="color: #ffc107;">📝 Hay productos sin imagen</li>' : ''}
+                        ${(withBoth === 0 && invalidBase64 === 0) ? '<li style="color: #28a745;">✅ No se detectaron problemas graves</li>' : ''}
+                    </ul>
+                </div>
+            `;
+            
+            document.getElementById('summaryContent').innerHTML = summaryHtml;
+            document.getElementById('summary').style.display = 'block';
+            
+            updateStatus('Análisis completado', 'success');
+        }
+
+        function clearResults() {
+            document.getElementById('products').style.display = 'none';
+            document.getElementById('summary').style.display = 'none';
+            document.getElementById('log').textContent = 'Log limpiado...\n';
+            allProducts = [];
+            updateStatus('Resultados limpiados', 'success');
+        }
+
+        function updateStatus(message, type) {
+            const statusElement = document.getElementById('status');
+            statusElement.innerHTML = `<strong>Estado:</strong> ${message}`;
+            statusElement.className = `status ${type}`;
+        }
+
+        function log(message) {
+            const logElement = document.getElementById('log');
+            const timestamp = new Date().toLocaleTimeString();
+            logElement.textContent += `[${timestamp}] ${message}\n`;
+            logElement.scrollTop = logElement.scrollHeight;
+        }
+    </script>
+</body>
+</html>
