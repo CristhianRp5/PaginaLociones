@@ -1,0 +1,505 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Avanzado - Eliminación de Productos</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 1000px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .test-section {
+            margin: 20px 0;
+            padding: 20px;
+            border: 2px solid #ddd;
+            border-radius: 8px;
+            background: #f9f9f9;
+        }
+        .test-section h3 {
+            margin-top: 0;
+            color: #333;
+        }
+        button {
+            background-color: #007bff;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            margin: 5px;
+            font-size: 14px;
+        }
+        button:hover {
+            background-color: #0056b3;
+        }
+        button.danger {
+            background-color: #dc3545;
+        }
+        button.danger:hover {
+            background-color: #c82333;
+        }
+        button.warning {
+            background-color: #fd7e14;
+        }
+        button.warning:hover {
+            background-color: #e06500;
+        }
+        button.success {
+            background-color: #28a745;
+        }
+        button.success:hover {
+            background-color: #218838;
+        }
+        .log {
+            background: #222;
+            color: #0f0;
+            padding: 15px;
+            border-radius: 5px;
+            font-family: monospace;
+            max-height: 500px;
+            overflow-y: auto;
+            margin: 10px 0;
+            font-size: 12px;
+            line-height: 1.4;
+        }
+        .products-list {
+            margin: 20px 0;
+        }
+        .product-item {
+            background: white;
+            border: 1px solid #ddd;
+            padding: 15px;
+            margin: 10px 0;
+            border-radius: 5px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .product-info {
+            flex: 1;
+        }
+        .product-actions {
+            display: flex;
+            gap: 5px;
+            flex-wrap: wrap;
+        }
+        .status {
+            padding: 5px 10px;
+            border-radius: 15px;
+            font-size: 12px;
+            font-weight: bold;
+        }
+        .status.success {
+            background: #d4edda;
+            color: #155724;
+        }
+        .status.error {
+            background: #f8d7da;
+            color: #721c24;
+        }
+        .status.warning {
+            background: #fff3cd;
+            color: #856404;
+        }
+        .method-buttons {
+            display: flex;
+            gap: 5px;
+            flex-wrap: wrap;
+            margin-top: 5px;
+        }
+        .method-buttons button {
+            font-size: 11px;
+            padding: 5px 10px;
+        }
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin: 15px 0;
+        }
+        .stat-card {
+            background: #e9ecef;
+            padding: 15px;
+            border-radius: 8px;
+            text-align: center;
+        }
+        .stat-number {
+            font-size: 24px;
+            font-weight: bold;
+            color: #007bff;
+        }
+        .error-highlight {
+            background-color: #ffebee !important;
+            border-left: 4px solid #f44336;
+        }
+        .success-highlight {
+            background-color: #e8f5e8 !important;
+            border-left: 4px solid #4caf50;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🧪 Test Avanzado - Eliminación de Productos</h1>
+        <p>Esta página prueba exhaustivamente la funcionalidad de eliminar productos con múltiples métodos y verificaciones.</p>
+
+        <div class="test-section">
+            <h3>🔗 Estado de Conexión</h3>
+            <div id="connectionStatus">Verificando...</div>
+            <button onclick="testConnection()">Verificar Conexión</button>
+            <button onclick="testSupabaseDirectly()" class="warning">Test Supabase Directo</button>
+        </div>
+
+        <div class="test-section">
+            <h3>📊 Estadísticas</h3>
+            <div class="stats" id="stats">
+                <div class="stat-card">
+                    <div class="stat-number" id="totalProducts">0</div>
+                    <div>Total Productos</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-number" id="eliminationsAttempted">0</div>
+                    <div>Eliminaciones Intentadas</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-number" id="eliminationsSuccessful">0</div>
+                    <div>Eliminaciones Exitosas</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-number" id="eliminationsFailed">0</div>
+                    <div>Eliminaciones Fallidas</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="test-section">
+            <h3>📦 Lista de Productos</h3>
+            <button onclick="loadProducts()">🔄 Recargar Productos</button>
+            <button onclick="createTestProduct()" class="success">➕ Crear Producto de Prueba</button>
+            <button onclick="createMultipleTestProducts()" class="warning">➕ Crear 3 Productos de Prueba</button>
+            <div id="productsList" class="products-list"></div>
+        </div>
+
+        <div class="test-section">
+            <h3>🗑️ Resultados de Eliminación</h3>
+            <div id="deleteResults"></div>
+        </div>
+
+        <div class="test-section">
+            <h3>📋 Log de Actividad Detallado</h3>
+            <button onclick="clearLog()">🧹 Limpiar Log</button>
+            <button onclick="exportLog()" class="warning">📁 Exportar Log</button>
+            <div id="log" class="log"></div>
+        </div>
+    </div>
+
+    <!-- Dependencias -->
+    <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+    <script src="../js/supabase-config.js"></script>
+
+    <script>
+        let testProducts = [];
+        let stats = {
+            eliminationsAttempted: 0,
+            eliminationsSuccessful: 0,
+            eliminationsFailed: 0
+        };
+        
+        function log(message, type = 'info') {
+            const logElement = document.getElementById('log');
+            const timestamp = new Date().toLocaleTimeString();
+            const typeIcon = type === 'error' ? '❌' : type === 'success' ? '✅' : type === 'warning' ? '⚠️' : 'ℹ️';
+            logElement.innerHTML += `[${timestamp}] ${typeIcon} ${message}\n`;
+            logElement.scrollTop = logElement.scrollHeight;
+            console.log(`${typeIcon} ${message}`);
+        }
+
+        function clearLog() {
+            document.getElementById('log').innerHTML = '';
+        }
+
+        function exportLog() {
+            const logContent = document.getElementById('log').textContent;
+            const blob = new Blob([logContent], { type: 'text/plain' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `delete-test-log-${new Date().toISOString().replace(/[:.]/g, '-')}.txt`;
+            a.click();
+            URL.revokeObjectURL(url);
+        }
+
+        function setStatus(elementId, message, type = 'info') {
+            const element = document.getElementById(elementId);
+            element.innerHTML = `<span class="status ${type}">${message}</span>`;
+        }
+
+        function updateStats() {
+            document.getElementById('totalProducts').textContent = testProducts.length;
+            document.getElementById('eliminationsAttempted').textContent = stats.eliminationsAttempted;
+            document.getElementById('eliminationsSuccessful').textContent = stats.eliminationsSuccessful;
+            document.getElementById('eliminationsFailed').textContent = stats.eliminationsFailed;
+        }
+
+        async function testConnection() {
+            log('🔍 Verificando conexión completa a Supabase...');
+            
+            try {
+                // Inicializar Supabase
+                const initialized = initSupabase();
+                if (!initialized) {
+                    throw new Error('No se pudo inicializar Supabase');
+                }
+                
+                // Verificar ProductosService
+                if (typeof ProductosService === 'undefined') {
+                    throw new Error('ProductosService no está disponible');
+                }
+                
+                // Probar conexión con una consulta simple
+                const productos = await ProductosService.obtenerProductos();
+                
+                log(`✅ Conexión exitosa. ${productos.length} productos encontrados.`, 'success');
+                setStatus('connectionStatus', 'Conexión exitosa ✅', 'success');
+                
+                // Verificar funciones de eliminación
+                if (typeof ProductosService.deleteProduct === 'function') {
+                    log('✅ Función deleteProduct disponible', 'success');
+                } else {
+                    log('❌ Función deleteProduct NO disponible', 'error');
+                }
+                
+                if (typeof ProductosService.deleteProductSimple === 'function') {
+                    log('✅ Función deleteProductSimple disponible', 'success');
+                } else {
+                    log('❌ Función deleteProductSimple NO disponible', 'error');
+                }
+                
+            } catch (error) {
+                log(`❌ Error de conexión: ${error.message}`, 'error');
+                setStatus('connectionStatus', `Error: ${error.message}`, 'error');
+            }
+        }
+
+        async function testSupabaseDirectly() {
+            log('🔧 Probando Supabase directamente...');
+            
+            try {
+                if (!supabaseClient) {
+                    throw new Error('supabaseClient no está disponible');
+                }
+                
+                // Probar consulta directa
+                const { data, error } = await supabaseClient
+                    .from('productos')
+                    .select('id, nombre')
+                    .limit(5);
+                
+                if (error) {
+                    throw new Error(`Error Supabase: ${error.message}`);
+                }
+                
+                log(`✅ Supabase directo OK. Primeros 5 productos: ${data.map(p => p.nombre).join(', ')}`, 'success');
+                
+            } catch (error) {
+                log(`❌ Error en Supabase directo: ${error.message}`, 'error');
+            }
+        }
+
+        async function loadProducts() {
+            log('📦 Cargando productos...');
+            
+            try {
+                const productos = await ProductosService.obtenerProductos();
+                testProducts = productos;
+                
+                log(`✅ ${productos.length} productos cargados.`, 'success');
+                displayProducts(productos);
+                updateStats();
+                
+            } catch (error) {
+                log(`❌ Error cargando productos: ${error.message}`, 'error');
+                setStatus('productsList', `Error: ${error.message}`, 'error');
+            }
+        }
+
+        function displayProducts(productos) {
+            const listElement = document.getElementById('productsList');
+            
+            if (productos.length === 0) {
+                listElement.innerHTML = '<p>No hay productos disponibles.</p>';
+                return;
+            }
+
+            listElement.innerHTML = productos.map((product, index) => `
+                <div class="product-item" id="product-${product.id}">
+                    <div class="product-info">
+                        <strong>${product.nombre}</strong><br>
+                        <small>ID: ${product.id} | Precio: $${product.precio?.toLocaleString() || 'N/A'} | Marca: ${product.marca || 'N/A'}</small>
+                        <div class="method-buttons">
+                            <button class="danger" onclick="deleteProductMethod(${product.id}, '${product.nombre}', 'normal')">
+                                🗑️ Normal
+                            </button>
+                            <button class="warning" onclick="deleteProductMethod(${product.id}, '${product.nombre}', 'simple')">
+                                🗑️ Simple
+                            </button>
+                            <button onclick="deleteProductMethod(${product.id}, '${product.nombre}', 'both')">
+                                🗑️ Ambos
+                            </button>
+                            <button onclick="verifyProductExists(${product.id})" style="background-color: #6c757d;">
+                                🔍 Verificar
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        async function verifyProductExists(productId) {
+            log(`🔍 Verificando existencia del producto ID: ${productId}`);
+            
+            try {
+                const { data, error } = await supabaseClient
+                    .from('productos')
+                    .select('id, nombre')
+                    .eq('id', productId)
+                    .single();
+                
+                if (error) {
+                    if (error.code === 'PGRST116') {
+                        log(`❌ Producto ${productId} NO existe en la base de datos`, 'warning');
+                    } else {
+                        log(`❌ Error verificando producto: ${error.message}`, 'error');
+                    }
+                } else {
+                    log(`✅ Producto ${productId} SÍ existe: ${data.nombre}`, 'success');
+                }
+                
+            } catch (error) {
+                log(`❌ Error en verificación: ${error.message}`, 'error');
+            }
+        }
+
+        async function deleteProductMethod(productId, productName, method) {
+            const confirmMsg = `¿Eliminar "${productName}" con método ${method}?`;
+            if (!confirm(confirmMsg)) return;
+            
+            stats.eliminationsAttempted++;
+            updateStats();
+            
+            log(`🗑️ Eliminando producto: ${productName} (ID: ${productId}) - Método: ${method}`);
+            
+            const productElement = document.getElementById(`product-${productId}`);
+            const resultsElement = document.getElementById('deleteResults');
+            
+            try {
+                let result;
+                
+                if (method === 'normal') {
+                    result = await ProductosService.deleteProduct(productId);
+                } else if (method === 'simple') {
+                    result = await ProductosService.deleteProductSimple(productId);
+                } else if (method === 'both') {
+                    try {
+                        result = await ProductosService.deleteProduct(productId);
+                    } catch (normalError) {
+                        log(`⚠️ Método normal falló: ${normalError.message}`, 'warning');
+                        result = await ProductosService.deleteProductSimple(productId);
+                    }
+                }
+                
+                if (result && result.success) {
+                    log(`✅ Eliminación exitosa con método ${method}: ${result.message}`, 'success');
+                    stats.eliminationsSuccessful++;
+                    
+                    if (productElement) {
+                        productElement.classList.add('success-highlight');
+                        setTimeout(() => productElement.remove(), 2000);
+                    }
+                    
+                    resultsElement.innerHTML += `<div class="status success">✅ ${productName} eliminado exitosamente (${method})</div>`;
+                    
+                    // Verificar que realmente se eliminó
+                    setTimeout(() => verifyProductExists(productId), 1000);
+                    
+                } else {
+                    throw new Error('No se recibió confirmación de eliminación exitosa');
+                }
+                
+            } catch (error) {
+                log(`❌ Error eliminando con método ${method}: ${error.message}`, 'error');
+                stats.eliminationsFailed++;
+                
+                if (productElement) {
+                    productElement.classList.add('error-highlight');
+                }
+                
+                resultsElement.innerHTML += `<div class="status error">❌ Error eliminando ${productName} (${method}): ${error.message}</div>`;
+            }
+            
+            updateStats();
+            
+            // Recargar productos después de 2 segundos
+            setTimeout(() => loadProducts(), 2000);
+        }
+
+        async function createTestProduct() {
+            log('➕ Creando producto de prueba...');
+            
+            try {
+                const testProduct = {
+                    nombre: `Test Product ${Date.now()}`,
+                    descripcion: 'Producto creado para pruebas de eliminación',
+                    precio: Math.floor(Math.random() * 100000) + 10000,
+                    marca: 'Test Brand',
+                    categoria: 'para-ellos',
+                    subcategoria: 'test',
+                    imagen_url: 'https://via.placeholder.com/300x300?text=Test+Product',
+                    activo: true,
+                    estado: 'disponible',
+                    descuento: 0
+                };
+                
+                const result = await ProductosService.crearProducto(testProduct);
+                
+                if (result) {
+                    log(`✅ Producto de prueba creado: ${result.nombre} (ID: ${result.id})`, 'success');
+                    await loadProducts();
+                } else {
+                    throw new Error('No se recibió confirmación de creación');
+                }
+                
+            } catch (error) {
+                log(`❌ Error creando producto de prueba: ${error.message}`, 'error');
+            }
+        }
+
+        async function createMultipleTestProducts() {
+            log('➕ Creando múltiples productos de prueba...');
+            
+            for (let i = 0; i < 3; i++) {
+                await createTestProduct();
+                await new Promise(resolve => setTimeout(resolve, 500)); // Esperar entre creaciones
+            }
+        }
+
+        // Inicializar al cargar la página
+        window.addEventListener('load', async () => {
+            log('🚀 Inicializando test avanzado de eliminación...');
+            await testConnection();
+            await loadProducts();
+            updateStats();
+        });
+    </script>
+</body>
+</html>

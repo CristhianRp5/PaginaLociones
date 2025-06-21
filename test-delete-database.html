@@ -1,0 +1,555 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Eliminación Base de Datos</title>
+    <style>
+        body { 
+            font-family: Arial, sans-serif; 
+            max-width: 1200px; 
+            margin: 0 auto; 
+            padding: 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+        }
+        .container { 
+            background: white; 
+            padding: 30px; 
+            border-radius: 15px; 
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+        }
+        .test-section { 
+            background: #f8f9fa; 
+            padding: 20px; 
+            margin: 20px 0; 
+            border-radius: 10px; 
+            border-left: 4px solid #007bff;
+        }
+        .btn { 
+            background: #007bff; 
+            color: white; 
+            border: none; 
+            padding: 12px 20px; 
+            border-radius: 5px; 
+            cursor: pointer; 
+            margin: 5px;
+            font-size: 14px;
+        }
+        .btn:hover { background: #0056b3; }
+        .btn-danger { background: #dc3545; }
+        .btn-danger:hover { background: #c82333; }
+        .btn-success { background: #28a745; }
+        .btn-success:hover { background: #218838; }
+        .log { 
+            background: #1a1a1a; 
+            color: #00ff00; 
+            padding: 15px; 
+            border-radius: 5px; 
+            font-family: 'Courier New', monospace; 
+            font-size: 12px; 
+            max-height: 400px; 
+            overflow-y: auto; 
+            margin-top: 10px;
+        }
+        .products-list {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            gap: 15px;
+            margin-top: 20px;
+        }
+        .product-card {
+            background: white;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            padding: 15px;
+            position: relative;
+        }
+        .product-card.test-product {
+            border-left: 4px solid #ff6b6b;
+            background: #fff5f5;
+        }
+        .delete-btn {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            background: #dc3545;
+            color: white;
+            border: none;
+            border-radius: 50%;
+            width: 30px;
+            height: 30px;
+            cursor: pointer;
+            font-size: 12px;
+        }
+        .status {
+            padding: 5px 10px;
+            border-radius: 15px;
+            font-size: 12px;
+            margin-left: 10px;
+        }
+        .status.success { background: #d4edda; color: #155724; }
+        .status.error { background: #f8d7da; color: #721c24; }
+        .status.warning { background: #fff3cd; color: #856404; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔍 Diagnóstico de Eliminación en Base de Datos</h1>
+        <p>Esta herramienta nos ayudará a identificar por qué los productos no se eliminan realmente de la base de datos.</p>
+
+        <div class="test-section">
+            <h3>🧪 1. Crear Producto de Prueba</h3>
+            <p>Primero creamos un producto específico para probar la eliminación:</p>
+            <button class="btn" onclick="crearProductoPrueba()">Crear Producto de Prueba</button>
+            <span id="createStatus"></span>
+        </div>
+
+        <div class="test-section">
+            <h3>📋 2. Listar Productos Actuales</h3>
+            <p>Ver todos los productos en la base de datos:</p>
+            <button class="btn" onclick="listarProductos()">Listar Productos</button>
+            <button class="btn btn-success" onclick="listarProductos(true)">Refrescar desde DB</button>
+            <span id="listStatus"></span>
+            <div id="productsList" class="products-list"></div>
+        </div>
+
+        <div class="test-section">
+            <h3>🗑️ 3. Probar Eliminación Directa</h3>
+            <p>Eliminar usando comandos directos de Supabase:</p>
+            <input type="number" id="deleteId" placeholder="ID del producto a eliminar" style="padding: 8px; margin-right: 10px;">
+            <button class="btn btn-danger" onclick="eliminarDirecto()">Eliminar Directo</button>
+            <button class="btn btn-danger" onclick="eliminarConSQL()">Eliminar con SQL Raw</button>
+            <span id="deleteStatus"></span>
+        </div>
+
+        <div class="test-section">
+            <h3>🔍 4. Verificar Políticas RLS</h3>
+            <p>Revisar políticas de seguridad de Row Level Security:</p>
+            <button class="btn" onclick="verificarRLS()">Verificar RLS</button>
+            <button class="btn" onclick="verificarPermisos()">Verificar Permisos</button>
+            <span id="rlsStatus"></span>
+        </div>
+
+        <div class="test-section">
+            <h3>📊 5. Información de la Tabla</h3>
+            <p>Obtener información detallada sobre la estructura de la tabla:</p>
+            <button class="btn" onclick="obtenerInfoTabla()">Info de Tabla</button>
+            <span id="tableStatus"></span>
+        </div>
+
+        <div id="logContainer">
+            <h3>📝 Log de Actividad</h3>
+            <div id="testLog" class="log"></div>
+        </div>
+    </div>
+
+    <!-- Incluir Supabase -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="js/supabase-config.js"></script>
+    
+    <script>
+        let testProductId = null;
+
+        function log(message, type = 'info') {
+            const logElement = document.getElementById('testLog');
+            const timestamp = new Date().toLocaleTimeString();
+            const icon = type === 'error' ? '❌' : type === 'success' ? '✅' : type === 'warning' ? '⚠️' : 'ℹ️';
+            
+            logElement.innerHTML += `[${timestamp}] ${icon} ${message}\n`;
+            logElement.scrollTop = logElement.scrollHeight;
+            console.log(`${icon} ${message}`);
+        }
+
+        function updateStatus(elementId, message, type = 'info') {
+            const element = document.getElementById(elementId);
+            element.innerHTML = `<span class="status ${type}">${message}</span>`;
+        }
+
+        async function crearProductoPrueba() {
+            try {
+                log('🧪 Creando producto de prueba...');
+                updateStatus('createStatus', 'Creando...', 'warning');
+
+                const testProduct = {
+                    nombre: `Test Delete ${Date.now()}`,
+                    marca: 'Test Brand',
+                    precio: 50000,
+                    categoria: 'para-ellos',
+                    descripcion: 'Producto creado específicamente para probar eliminación',
+                    activo: true,
+                    estado: 'disponible'
+                };
+
+                const result = await ProductosService.crearProducto(testProduct);
+                testProductId = result.id;
+                
+                log(`✅ Producto de prueba creado con ID: ${testProductId}`);
+                updateStatus('createStatus', `Creado ID: ${testProductId}`, 'success');
+                
+                // Listar productos automáticamente
+                await listarProductos();
+                
+            } catch (error) {
+                log(`❌ Error creando producto de prueba: ${error.message}`, 'error');
+                updateStatus('createStatus', 'Error al crear', 'error');
+            }
+        }
+
+        async function listarProductos(forceRefresh = false) {
+            try {
+                log(`📋 ${forceRefresh ? 'Refrescando' : 'Listando'} productos...`);
+                updateStatus('listStatus', 'Cargando...', 'warning');
+
+                let productos;
+                if (forceRefresh) {
+                    // Consulta directa a Supabase sin caché
+                    const { data, error } = await supabaseClient
+                        .from('productos')
+                        .select('*')
+                        .order('id', { ascending: false });
+                    
+                    if (error) throw error;
+                    productos = data;
+                    log(`🔄 Productos obtenidos directamente de DB: ${productos.length}`);
+                } else {
+                    productos = await ProductosService.obtenerProductos();
+                    log(`📦 Productos obtenidos del servicio: ${productos.length}`);
+                }
+
+                const container = document.getElementById('productsList');
+                
+                if (productos.length === 0) {
+                    container.innerHTML = '<p>No hay productos en la base de datos</p>';
+                    updateStatus('listStatus', 'Sin productos', 'warning');
+                    return;
+                }
+
+                const productsHTML = productos.map(product => `
+                    <div class="product-card ${product.nombre.includes('Test Delete') ? 'test-product' : ''}">
+                        <button class="delete-btn" onclick="eliminarProducto(${product.id})" title="Eliminar">🗑️</button>
+                        <h4>${product.nombre}</h4>
+                        <p><strong>ID:</strong> ${product.id}</p>
+                        <p><strong>Marca:</strong> ${product.marca || 'N/A'}</p>
+                        <p><strong>Precio:</strong> $${product.precio}</p>
+                        <p><strong>Categoría:</strong> ${product.categoria}</p>
+                        <p><strong>Estado:</strong> ${product.estado || 'disponible'}</p>
+                        <p><strong>Activo:</strong> ${product.activo !== false ? 'Sí' : 'No'}</p>
+                        ${product.created_at ? `<p><strong>Creado:</strong> ${new Date(product.created_at).toLocaleString()}</p>` : ''}
+                    </div>
+                `).join('');
+
+                container.innerHTML = productsHTML;
+                updateStatus('listStatus', `${productos.length} productos`, 'success');
+                log(`✅ Lista actualizada con ${productos.length} productos`);
+
+            } catch (error) {
+                log(`❌ Error listando productos: ${error.message}`, 'error');
+                updateStatus('listStatus', 'Error al listar', 'error');
+            }
+        }
+
+        async function eliminarProducto(productId) {
+            if (!confirm(`¿Eliminar producto ID ${productId}?`)) return;
+            
+            try {
+                log(`🗑️ Eliminando producto ID: ${productId}`);
+                
+                const result = await ProductosService.deleteProduct(productId);
+                log(`✅ Resultado eliminación: ${JSON.stringify(result)}`);
+                
+                // Esperar un momento y verificar si realmente se eliminó
+                setTimeout(async () => {
+                    await verificarEliminacion(productId);
+                    await listarProductos(true);
+                }, 1000);
+                
+            } catch (error) {
+                log(`❌ Error eliminando producto: ${error.message}`, 'error');
+            }
+        }
+
+        async function eliminarDirecto() {
+            const productId = document.getElementById('deleteId').value;
+            if (!productId) {
+                alert('Por favor ingresa un ID de producto');
+                return;
+            }
+
+            try {
+                log(`🗑️ Eliminación DIRECTA del producto ID: ${productId}`);
+                updateStatus('deleteStatus', 'Eliminando...', 'warning');
+
+                // Primero verificar que existe
+                const { data: existingProduct, error: selectError } = await supabaseClient
+                    .from('productos')
+                    .select('*')
+                    .eq('id', productId)
+                    .single();
+
+                if (selectError) {
+                    log(`❌ Error buscando producto: ${selectError.message}`, 'error');
+                    updateStatus('deleteStatus', 'Producto no encontrado', 'error');
+                    return;
+                }
+
+                log(`📋 Producto encontrado: ${existingProduct.nombre}`);
+
+                // Intentar eliminación directa
+                const { data, error } = await supabaseClient
+                    .from('productos')
+                    .delete()
+                    .eq('id', productId)
+                    .select();
+
+                if (error) {
+                    log(`❌ Error en DELETE: ${error.message}`, 'error');
+                    log(`❌ Código de error: ${error.code}`);
+                    log(`❌ Detalles: ${JSON.stringify(error.details)}`);
+                    updateStatus('deleteStatus', `Error: ${error.message}`, 'error');
+                    return;
+                }
+
+                log(`✅ DELETE ejecutado. Datos retornados: ${JSON.stringify(data)}`);
+
+                // Verificar si realmente se eliminó
+                setTimeout(async () => {
+                    await verificarEliminacion(productId);
+                    await listarProductos(true);
+                    updateStatus('deleteStatus', 'Eliminación completada', 'success');
+                }, 1000);
+
+            } catch (error) {
+                log(`❌ Error en eliminación directa: ${error.message}`, 'error');
+                updateStatus('deleteStatus', 'Error eliminando', 'error');
+            }
+        }
+
+        async function eliminarConSQL() {
+            const productId = document.getElementById('deleteId').value;
+            if (!productId) {
+                alert('Por favor ingresa un ID de producto');
+                return;
+            }
+
+            try {
+                log(`🗑️ Eliminación con SQL RAW del producto ID: ${productId}`);
+                
+                // Usar RPC (función SQL) para eliminar
+                const { data, error } = await supabaseClient
+                    .rpc('delete_producto', { producto_id: productId });
+
+                if (error) {
+                    log(`❌ Error en RPC delete: ${error.message}`, 'error');
+                    
+                    // Si no existe la función RPC, intentar con SQL directo
+                    log('🔄 Intentando con SQL directo...');
+                    
+                    const { data: sqlData, error: sqlError } = await supabaseClient
+                        .from('productos')
+                        .delete()
+                        .eq('id', productId);
+
+                    if (sqlError) {
+                        log(`❌ Error en SQL directo: ${sqlError.message}`, 'error');
+                        return;
+                    }
+                    
+                    log(`✅ SQL directo ejecutado`);
+                } else {
+                    log(`✅ RPC delete ejecutado: ${JSON.stringify(data)}`);
+                }
+
+                // Verificar eliminación
+                setTimeout(async () => {
+                    await verificarEliminacion(productId);
+                    await listarProductos(true);
+                }, 1000);
+
+            } catch (error) {
+                log(`❌ Error en eliminación SQL: ${error.message}`, 'error');
+            }
+        }
+
+        async function verificarEliminacion(productId) {
+            try {
+                log(`🔍 Verificando si el producto ID ${productId} fue eliminado...`);
+                
+                const { data, error } = await supabaseClient
+                    .from('productos')
+                    .select('*')
+                    .eq('id', productId);
+
+                if (error) {
+                    log(`❌ Error verificando: ${error.message}`, 'error');
+                    return;
+                }
+
+                if (data && data.length === 0) {
+                    log(`✅ Confirmado: Producto ID ${productId} eliminado correctamente`, 'success');
+                } else {
+                    log(`❌ PROBLEMA: Producto ID ${productId} AÚN EXISTE en la base de datos`, 'error');
+                    log(`📋 Datos del producto: ${JSON.stringify(data[0])}`);
+                }
+
+            } catch (error) {
+                log(`❌ Error verificando eliminación: ${error.message}`, 'error');
+            }
+        }
+
+        async function verificarRLS() {
+            try {
+                log('🔍 Verificando políticas RLS...');
+                updateStatus('rlsStatus', 'Verificando...', 'warning');
+
+                // Intentar obtener información sobre RLS
+                const { data, error } = await supabaseClient
+                    .from('productos')
+                    .select('*')
+                    .limit(1);
+
+                if (error) {
+                    log(`❌ Error accediendo a productos: ${error.message}`, 'error');
+                    if (error.message.includes('RLS') || error.message.includes('policy')) {
+                        log('⚠️ Posible problema con Row Level Security (RLS)', 'warning');
+                        updateStatus('rlsStatus', 'Problema RLS detectado', 'error');
+                    }
+                    return;
+                }
+
+                log('✅ Acceso a tabla productos funcionando correctamente');
+                
+                // Intentar insertar y eliminar un registro de prueba para verificar permisos
+                try {
+                    const testRecord = {
+                        nombre: 'Test RLS Temp',
+                        marca: 'Test',
+                        precio: 1,
+                        categoria: 'test'
+                    };
+
+                    const { data: insertData, error: insertError } = await supabaseClient
+                        .from('productos')
+                        .insert([testRecord])
+                        .select();
+
+                    if (insertError) {
+                        log(`❌ Error INSERT (permisos): ${insertError.message}`, 'error');
+                        updateStatus('rlsStatus', 'Sin permisos INSERT', 'error');
+                        return;
+                    }
+
+                    const tempId = insertData[0].id;
+                    log(`✅ INSERT funcionando - Temp ID: ${tempId}`);
+
+                    // Intentar DELETE
+                    const { error: deleteError } = await supabaseClient
+                        .from('productos')
+                        .delete()
+                        .eq('id', tempId);
+
+                    if (deleteError) {
+                        log(`❌ Error DELETE (permisos): ${deleteError.message}`, 'error');
+                        updateStatus('rlsStatus', 'Sin permisos DELETE', 'error');
+                    } else {
+                        log(`✅ DELETE funcionando - Temp record eliminado`);
+                        updateStatus('rlsStatus', 'Permisos OK', 'success');
+                    }
+
+                } catch (testError) {
+                    log(`❌ Error en test de permisos: ${testError.message}`, 'error');
+                }
+
+            } catch (error) {
+                log(`❌ Error verificando RLS: ${error.message}`, 'error');
+                updateStatus('rlsStatus', 'Error verificando', 'error');
+            }
+        }
+
+        async function verificarPermisos() {
+            try {
+                log('🔍 Verificando permisos específicos...');
+                
+                // Obtener información del usuario actual
+                const { data: { user }, error: userError } = await supabaseClient.auth.getUser();
+                
+                if (userError) {
+                    log(`❌ Error obteniendo usuario: ${userError.message}`, 'error');
+                    log('⚠️ Posible problema: Usuario no autenticado', 'warning');
+                    return;
+                }
+
+                if (!user) {
+                    log('⚠️ No hay usuario autenticado - usando acceso anónimo', 'warning');
+                } else {
+                    log(`✅ Usuario autenticado: ${user.email || user.id}`);
+                }
+
+                // Verificar configuración de la tabla
+                log('🔍 Verificando configuración de tabla...');
+                
+                // Esto puede requerir permisos especiales
+                try {
+                    const { data, error } = await supabaseClient
+                        .from('productos')
+                        .select('count', { count: 'exact' });
+
+                    if (error) {
+                        log(`❌ Error contando registros: ${error.message}`, 'error');
+                    } else {
+                        log(`✅ Acceso a datos funcionando - Total registros: ${data.length > 0 ? data[0].count : 'desconocido'}`);
+                    }
+                } catch (countError) {
+                    log(`❌ Error en count: ${countError.message}`, 'error');
+                }
+
+            } catch (error) {
+                log(`❌ Error verificando permisos: ${error.message}`, 'error');
+            }
+        }
+
+        async function obtenerInfoTabla() {
+            try {
+                log('📊 Obteniendo información de la tabla...');
+                updateStatus('tableStatus', 'Obteniendo info...', 'warning');
+
+                // Información básica de la tabla
+                const { data, error } = await supabaseClient
+                    .from('productos')
+                    .select('*')
+                    .limit(1);
+
+                if (error) {
+                    log(`❌ Error accediendo a tabla: ${error.message}`, 'error');
+                    updateStatus('tableStatus', 'Error acceso tabla', 'error');
+                    return;
+                }
+
+                if (data && data.length > 0) {
+                    const sampleRecord = data[0];
+                    const columns = Object.keys(sampleRecord);
+                    
+                    log(`✅ Tabla 'productos' accesible`);
+                    log(`📋 Columnas detectadas: ${columns.join(', ')}`);
+                    log(`📋 Registro ejemplo: ${JSON.stringify(sampleRecord, null, 2)}`);
+                    
+                    updateStatus('tableStatus', `${columns.length} columnas detectadas`, 'success');
+                } else {
+                    log('⚠️ Tabla vacía o sin acceso a registros', 'warning');
+                    updateStatus('tableStatus', 'Tabla vacía', 'warning');
+                }
+
+            } catch (error) {
+                log(`❌ Error obteniendo info de tabla: ${error.message}`, 'error');
+                updateStatus('tableStatus', 'Error obteniendo info', 'error');
+            }
+        }
+
+        // Inicializar al cargar la página
+        document.addEventListener('DOMContentLoaded', () => {
+            log('🚀 Herramienta de diagnóstico iniciada');
+            log('📋 Usa los botones para probar diferentes aspectos de la eliminación');
+        });
+    </script>
+</body>
+</html>

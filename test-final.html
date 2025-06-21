@@ -1,0 +1,398 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Final Supabase</title>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <style>
+        body { 
+            font-family: Arial, sans-serif; 
+            max-width: 1000px; 
+            margin: 20px auto; 
+            padding: 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+        }
+        
+        .container {
+            background: white;
+            border-radius: 15px;
+            padding: 30px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+        }
+        
+        .test-box { 
+            background: #f8f9fa; 
+            padding: 20px; 
+            margin: 20px 0; 
+            border-radius: 10px;
+            border-left: 4px solid #3498db;
+        }
+        
+        .success { 
+            color: #27ae60; 
+            background: #d4edda;
+            border-left-color: #27ae60;
+        }
+        
+        .error { 
+            color: #e74c3c; 
+            background: #f8d7da;
+            border-left-color: #e74c3c;
+        }
+        
+        .loading { 
+            color: #f39c12; 
+            background: #fff3cd;
+            border-left-color: #f39c12;
+        }
+        
+        button { 
+            background: #3498db; 
+            color: white; 
+            border: none; 
+            padding: 12px 24px; 
+            border-radius: 8px; 
+            cursor: pointer;
+            margin: 8px 5px;
+            font-size: 14px;
+            transition: background 0.3s;
+        }
+        
+        button:hover { background: #2980b9; }
+        
+        .btn-success { background: #27ae60; }
+        .btn-success:hover { background: #219a52; }
+        
+        .btn-warning { background: #f39c12; }
+        .btn-warning:hover { background: #e67e22; }
+        
+        pre { 
+            background: #2c3e50; 
+            color: #ecf0f1;
+            padding: 15px; 
+            border-radius: 8px; 
+            overflow-x: auto;
+            font-size: 12px;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+        
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        
+        .header h1 {
+            color: #2c3e50;
+            margin-bottom: 10px;
+        }
+        
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+            margin-top: 20px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🚀 Test Final de Supabase</h1>
+            <p>Verificación completa de la configuración</p>
+        </div>
+
+        <div class="grid">
+            <!-- Test de Conexión -->
+            <div class="test-box loading" id="connection-box">
+                <h3>🔌 Conexión a Supabase</h3>
+                <div id="connection-result">Iniciando test...</div>
+                <button onclick="testConnection()">Probar Conexión</button>
+            </div>
+
+            <!-- Test de Productos -->
+            <div class="test-box loading" id="products-box">
+                <h3>📦 Productos en DB</h3>
+                <div id="products-result">Esperando...</div>
+                <button onclick="testProducts()">Cargar Productos</button>
+            </div>
+        </div>
+
+        <!-- Resultados -->
+        <div class="test-box">
+            <h3>📊 Resultados</h3>
+            <div id="results-container">
+                <p>Ejecuta los tests para ver los resultados...</p>
+            </div>
+            <pre id="data-display" style="display:none;"></pre>
+        </div>
+
+        <!-- Acciones -->
+        <div class="test-box">
+            <h3>🛠️ Acciones</h3>
+            <button onclick="insertTestProduct()" class="btn-success">➕ Insertar Producto</button>
+            <button onclick="runMigration()" class="btn-warning">🚚 Migrar Datos</button>
+            <button onclick="runAllTests()" class="btn-success">🔄 Test Completo</button>
+            
+            <br><br>
+            
+            <button onclick="window.open('https://xelobsbzytdxrrxgmlta.supabase.co/project/default/editor', '_blank')">
+                📝 Table Editor
+            </button>
+            <button onclick="window.open('https://xelobsbzytdxrrxgmlta.supabase.co/project/default/sql', '_blank')">
+                💾 SQL Editor
+            </button>
+            <button onclick="window.open('html/catalogo-supabase.html', '_blank')">
+                🛍️ Ver Catálogo
+            </button>
+        </div>
+    </div>
+
+    <!-- Cargar configuración corregida -->
+    <script src="js/supabase-config-fixed.js"></script>
+    
+    <script>
+        // Variables globales
+        let testResults = {
+            connection: false,
+            products: false,
+            insert: false
+        };
+
+        // Test de conexión
+        async function testConnection() {
+            const box = document.getElementById('connection-box');
+            const result = document.getElementById('connection-result');
+            
+            box.className = 'test-box loading';
+            result.textContent = 'Probando conexión...';
+
+            try {
+                // Verificar que Supabase esté disponible
+                if (!window.supabase) {
+                    throw new Error('Supabase JS no está cargado');
+                }
+
+                // Inicializar cliente
+                const client = window.supabase.createClient(
+                    'https://xelobsbzytdxrrxgmlta.supabase.co',
+                    'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhlbG9ic2J6eXRkeHJyeGdtbHRhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTAzODUzNTksImV4cCI6MjA2NTk2MTM1OX0.bJL5DsL4pxlQ_FV3jX0ieiW3bYLA-Zf3M2HlNmdMMy4'
+                );
+
+                // Test básico - verificar si la tabla existe
+                const { data, error } = await client
+                    .from('productos')
+                    .select('count')
+                    .limit(1);
+
+                if (error) {
+                    if (error.code === '42P01') {
+                        throw new Error('Tabla "productos" no existe. Ejecuta create-tables-simple.sql');
+                    }
+                    throw error;
+                }
+
+                box.className = 'test-box success';
+                result.textContent = '✅ Conexión exitosa a Supabase';
+                testResults.connection = true;
+                updateResults();
+
+            } catch (error) {
+                box.className = 'test-box error';
+                result.textContent = `❌ Error: ${error.message}`;
+                testResults.connection = false;
+                updateResults();
+                console.error('Error de conexión:', error);
+            }
+        }
+
+        // Test de productos
+        async function testProducts() {
+            const box = document.getElementById('products-box');
+            const result = document.getElementById('products-result');
+            const dataDisplay = document.getElementById('data-display');
+            
+            box.className = 'test-box loading';
+            result.textContent = 'Cargando productos...';
+
+            try {
+                const client = window.supabase.createClient(
+                    'https://xelobsbzytdxrrxgmlta.supabase.co',
+                    'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhlbG9ic2J6eXRkeHJyeGdtbHRhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTAzODUzNTksImV4cCI6MjA2NTk2MTM1OX0.bJL5DsL4pxlQ_FV3jX0ieiW3bYLA-Zf3M2HlNmdMMy4'
+                );
+
+                const { data: products, error } = await client
+                    .from('productos')
+                    .select('*')
+                    .limit(10);
+
+                if (error) throw error;
+
+                box.className = 'test-box success';
+                result.textContent = `✅ ${products.length} productos encontrados`;
+                testResults.products = true;
+                
+                // Mostrar datos
+                if (products.length > 0) {
+                    dataDisplay.textContent = JSON.stringify(products, null, 2);
+                    dataDisplay.style.display = 'block';
+                } else {
+                    dataDisplay.textContent = 'No hay productos. Ejecuta la migración o inserta datos manualmente.';
+                    dataDisplay.style.display = 'block';
+                }
+                
+                updateResults();
+
+            } catch (error) {
+                box.className = 'test-box error';
+                result.textContent = `❌ Error: ${error.message}`;
+                testResults.products = false;
+                updateResults();
+                console.error('Error cargando productos:', error);
+            }
+        }
+
+        // Insertar producto de prueba
+        async function insertTestProduct() {
+            try {
+                const client = window.supabase.createClient(
+                    'https://xelobsbzytdxrrxgmlta.supabase.co',
+                    'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhlbG9ic2J6eXRkeHJyeGdtbHRhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTAzODUzNTksImV4cCI6MjA2NTk2MTM1OX0.bJL5DsL4pxlQ_FV3jX0ieiW3bYLA-Zf3M2HlNmdMMy4'
+                );
+
+                const testProduct = {
+                    nombre: 'Test Fragrance ' + new Date().getTime(),
+                    marca: 'Test Brand',
+                    categoria: 'para-ellos',
+                    precio: 99.99,
+                    imagen: 'test.jpg',
+                    descripcion: 'Producto de prueba insertado desde el navegador'
+                };
+
+                const { data, error } = await client
+                    .from('productos')
+                    .insert([testProduct])
+                    .select()
+                    .single();
+
+                if (error) throw error;
+
+                alert('✅ Producto insertado: ' + data.nombre);
+                testResults.insert = true;
+                updateResults();
+                
+                // Recargar productos
+                await testProducts();
+
+            } catch (error) {
+                alert('❌ Error insertando producto: ' + error.message);
+                testResults.insert = false;
+                updateResults();
+                console.error('Error:', error);
+            }
+        }
+
+        // Migración básica
+        async function runMigration() {
+            try {
+                const client = window.supabase.createClient(
+                    'https://xelobsbzytdxrrxgmlta.supabase.co',
+                    'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhlbG9ic2J6eXRkeHJyeGdtbHRhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTAzODUzNTksImV4cCI6MjA2NTk2MTM1OX0.bJL5DsL4pxlQ_FV3jX0ieiW3bYLA-Zf3M2HlNmdMMy4'
+                );
+
+                // Productos de prueba basados en tus imágenes
+                const productos = [
+                    {
+                        nombre: '212 Men Carolina Herrera',
+                        marca: 'Carolina Herrera',
+                        categoria: 'para-ellos',
+                        precio: 89000,
+                        imagen: 'LOCIONES_PARA _ELLOS/212_CAROLINA_HERRERA.png',
+                        descripcion: 'Fragancia fresca y urbana para el hombre moderno'
+                    },
+                    {
+                        nombre: 'Versace Eros Blue',
+                        marca: 'Versace',
+                        categoria: 'para-ellos',
+                        precio: 120000,
+                        imagen: 'LOCIONES_PARA _ELLOS/VERSACE_EROS_BLUE.png',
+                        descripcion: 'Frescura mediterránea con notas aromáticas'
+                    },
+                    {
+                        nombre: 'One Million Paco Rabanne',
+                        marca: 'Paco Rabanne',
+                        categoria: 'para-ellos',
+                        precio: 110000,
+                        imagen: 'LOCIONES_PARA _ELLOS/ONE_MILLON_PACO_RABANE.png',
+                        descripcion: 'El aroma del éxito y la seducción'
+                    },
+                    {
+                        nombre: 'Montblanc Legend Night',
+                        marca: 'Montblanc',
+                        categoria: 'para-ellos',
+                        precio: 95000,
+                        imagen: 'LOCIONES_PARA _ELLOS/MONTBLACK_LEGEND_NIGH.png',
+                        descripcion: 'Elegancia nocturna y sofisticación'
+                    },
+                    {
+                        nombre: 'Givenchy Blue Label',
+                        marca: 'Givenchy',
+                        categoria: 'para-ellos',
+                        precio: 85000,
+                        imagen: 'LOCIONES_PARA _ELLOS/GIVENCHY_BLUE_LABEL.png',
+                        descripcion: 'Frescura azul con carácter masculino'
+                    }
+                ];
+
+                const { data, error } = await client
+                    .from('productos')
+                    .insert(productos)
+                    .select();
+
+                if (error) throw error;
+
+                alert(`✅ Migración exitosa: ${data.length} productos insertados`);
+                
+                // Recargar productos
+                await testProducts();
+
+            } catch (error) {
+                alert('❌ Error en migración: ' + error.message);
+                console.error('Error:', error);
+            }
+        }
+
+        // Ejecutar todos los tests
+        async function runAllTests() {
+            await testConnection();
+            await new Promise(resolve => setTimeout(resolve, 1000));
+            await testProducts();
+        }
+
+        // Actualizar resumen de resultados
+        function updateResults() {
+            const container = document.getElementById('results-container');
+            const total = Object.keys(testResults).length;
+            const passed = Object.values(testResults).filter(r => r === true).length;
+            
+            container.innerHTML = `
+                <h4>Estado General: ${passed}/${total} tests pasados</h4>
+                <ul>
+                    <li>🔌 Conexión: ${testResults.connection ? '✅' : '❌'}</li>
+                    <li>📦 Productos: ${testResults.products ? '✅' : '❌'}</li>
+                    <li>➕ Inserción: ${testResults.insert ? '✅' : '⏳'}</li>
+                </ul>
+                ${passed === total ? '<p style="color: #27ae60;"><strong>🎉 ¡Configuración completa!</strong></p>' : ''}
+            `;
+        }
+
+        // Test automático al cargar
+        window.addEventListener('load', () => {
+            updateResults();
+            testConnection();
+        });
+    </script>
+</body>
+</html>

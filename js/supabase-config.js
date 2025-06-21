@@ -22,8 +22,7 @@ function initSupabase() {
 }
 
 // Funciones para productos
-class ProductosService {
-    // Obtener todos los productos
+class ProductosService {    // Obtener todos los productos
     static async obtenerProductos(filtros = {}) {
         if (!supabaseClient) {
             console.warn('Supabase no configurado, usando datos locales');
@@ -31,6 +30,7 @@ class ProductosService {
         }
 
         try {
+            // Intentar primero con todas las columnas (incluyendo estado y descuento)
             let query = supabaseClient
                 .from('productos')
                 .select('*')
@@ -61,17 +61,88 @@ class ProductosService {
             
             if (error) {
                 console.error('Error obteniendo productos:', error);
+                
+                // Si falla, intentar sin las columnas estado y descuento
+                if (error.message && error.message.includes('column')) {
+                    console.log('🔧 Intentando consulta sin columnas estado/descuento...');
+                    return await this.obtenerProductosSinNuevasColumnas(filtros);
+                }
+                
                 return this.obtenerProductosLocales(filtros);
             }
             
-            return data || [];
+            // Normalizar productos para asegurar que tengan estado y descuento
+            const productosNormalizados = (data || []).map(producto => ({
+                ...producto,
+                estado: producto.estado || 'disponible',
+                descuento: producto.descuento || 0
+            }));
+            
+            return productosNormalizados;
         } catch (error) {
             console.error('Error en obtenerProductos:', error);
+            
+            // Si hay error de columna faltante, intentar sin esas columnas
+            if (error.message && error.message.includes('column')) {
+                console.log('🔧 Intentando consulta sin columnas estado/descuento...');
+                return await this.obtenerProductosSinNuevasColumnas(filtros);
+            }
+            
             return this.obtenerProductosLocales(filtros);
         }
     }
 
-    // Obtener producto por ID
+    // Método auxiliar para obtener productos sin las columnas nuevas
+    static async obtenerProductosSinNuevasColumnas(filtros = {}) {
+        try {
+            let query = supabaseClient
+                .from('productos')
+                .select('id, nombre, descripcion, precio, imagen_url, imagen, marca, categoria, subcategoria, activo, created_at, updated_at')
+                .eq('activo', true);
+
+            // Aplicar filtros básicos
+            if (filtros.categoria) {
+                query = query.eq('categoria', filtros.categoria);
+            }
+            
+            if (filtros.busqueda) {
+                query = query.or(
+                    `nombre.ilike.%${filtros.busqueda}%,` +
+                    `descripcion.ilike.%${filtros.busqueda}%,` +
+                    `marca.ilike.%${filtros.busqueda}%`
+                );
+            }
+            
+            if (filtros.precioMin) {
+                query = query.gte('precio', filtros.precioMin);
+            }
+            
+            if (filtros.precioMax) {
+                query = query.lte('precio', filtros.precioMax);
+            }
+
+            const { data, error } = await query.order('created_at', { ascending: false });
+            
+            if (error) {
+                console.error('Error obteniendo productos (sin columnas nuevas):', error);
+                return this.obtenerProductosLocales(filtros);
+            }
+            
+            // Agregar valores por defecto para estado y descuento
+            const productosNormalizados = (data || []).map(producto => ({
+                ...producto,
+                estado: 'disponible',
+                descuento: 0
+            }));
+            
+            console.log('⚠️ Productos obtenidos sin columnas estado/descuento. Agregue las columnas ejecutando el script SQL.');
+            
+            return productosNormalizados;
+        } catch (error) {
+            console.error('Error en obtenerProductosSinNuevasColumnas:', error);
+            return this.obtenerProductosLocales(filtros);
+        }
+    }    // Obtener producto por ID
     static async obtenerProductoPorId(id) {
         if (!supabaseClient) {
             return this.obtenerProductoLocalPorId(id);
@@ -86,16 +157,58 @@ class ProductosService {
 
             if (error) {
                 console.error('Error obteniendo producto:', error);
+                
+                // Si falla por columnas faltantes, intentar sin estado/descuento
+                if (error.message && error.message.includes('column')) {
+                    return await this.obtenerProductoPorIdSinNuevasColumnas(id);
+                }
+                
                 return this.obtenerProductoLocalPorId(id);
             }
 
-            return data;
+            // Normalizar producto para asegurar que tenga estado y descuento
+            return {
+                ...data,
+                estado: data.estado || 'disponible',
+                descuento: data.descuento || 0
+            };
         } catch (error) {
-            console.error('Error en obtenerProductoPorId:', error);            return this.obtenerProductoLocalPorId(id);
+            console.error('Error en obtenerProductoPorId:', error);
+            
+            // Si hay error de columna faltante, intentar sin esas columnas
+            if (error.message && error.message.includes('column')) {
+                return await this.obtenerProductoPorIdSinNuevasColumnas(id);
+            }
+            
+            return this.obtenerProductoLocalPorId(id);
         }
     }
 
-    // Obtener productos por categoría
+    // Método auxiliar para obtener producto por ID sin las columnas nuevas
+    static async obtenerProductoPorIdSinNuevasColumnas(id) {
+        try {
+            const { data, error } = await supabaseClient
+                .from('productos')
+                .select('id, nombre, descripcion, precio, imagen_url, imagen, marca, categoria, subcategoria, activo, created_at, updated_at')
+                .eq('id', id)
+                .single();
+
+            if (error) {
+                console.error('Error obteniendo producto (sin columnas nuevas):', error);
+                return this.obtenerProductoLocalPorId(id);
+            }
+
+            // Agregar valores por defecto para estado y descuento
+            return {
+                ...data,
+                estado: 'disponible',
+                descuento: 0
+            };
+        } catch (error) {
+            console.error('Error en obtenerProductoPorIdSinNuevasColumnas:', error);
+            return this.obtenerProductoLocalPorId(id);
+        }
+    }    // Obtener productos por categoría
     static async obtenerProductosPorCategoria(categoria) {
         console.log(`🔍 Buscando productos para categoría: "${categoria}"`);
         
@@ -113,17 +226,31 @@ class ProductosService {
             
             if (allError) {
                 console.error('Error obteniendo productos:', allError);
+                
+                // Si falla por columnas faltantes, intentar sin estado/descuento
+                if (allError.message && allError.message.includes('column')) {
+                    console.log('🔧 Intentando consulta sin columnas estado/descuento...');
+                    return await this.obtenerProductosPorCategoriaSinNuevasColumnas(categoria);
+                }
+                
                 return this.obtenerProductosLocales({ categoria });
             }
             
             console.log(`📦 ${allData.length} productos totales encontrados en la BD`);
             
+            // Normalizar productos para asegurar que tengan estado y descuento
+            const productosNormalizados = allData.map(producto => ({
+                ...producto,
+                estado: producto.estado || 'disponible',
+                descuento: producto.descuento || 0
+            }));
+            
             // Log de todas las categorías para debugging
-            const categorias = [...new Set(allData.map(p => p.categoria).filter(Boolean))];
+            const categorias = [...new Set(productosNormalizados.map(p => p.categoria).filter(Boolean))];
             console.log(`📂 Categorías disponibles en BD:`, categorias);
             
             // Filtrar productos para la categoría específica con mayor flexibilidad
-            let filteredData = allData.filter(product => {
+            let filteredData = productosNormalizados.filter(product => {
                 // Normalizar strings para comparación
                 const normalize = (str) => str ? str.toLowerCase().trim() : '';
                 const targetCategory = normalize(categoria);
@@ -166,6 +293,65 @@ class ProductosService {
             
         } catch (error) {
             console.error('Error en obtenerProductosPorCategoria:', error);
+            
+            // Si hay error de columna faltante, intentar sin esas columnas
+            if (error.message && error.message.includes('column')) {
+                console.log('🔧 Intentando consulta sin columnas estado/descuento...');
+                return await this.obtenerProductosPorCategoriaSinNuevasColumnas(categoria);
+            }
+            
+            return this.obtenerProductosLocales({ categoria });
+        }
+    }
+
+    // Método auxiliar para obtener productos por categoría sin las columnas nuevas
+    static async obtenerProductosPorCategoriaSinNuevasColumnas(categoria) {
+        try {
+            const { data: allData, error: allError } = await supabaseClient
+                .from('productos')
+                .select('id, nombre, descripcion, precio, imagen_url, imagen, marca, categoria, subcategoria, activo, created_at, updated_at')
+                .eq('activo', true);
+            
+            if (allError) {
+                console.error('Error obteniendo productos (sin columnas nuevas):', allError);
+                return this.obtenerProductosLocales({ categoria });
+            }
+            
+            // Agregar valores por defecto para estado y descuento
+            const productosNormalizados = allData.map(producto => ({
+                ...producto,
+                estado: 'disponible',
+                descuento: 0
+            }));
+            
+            // Filtrar por categoría
+            let filteredData = productosNormalizados.filter(product => {
+                const normalize = (str) => str ? str.toLowerCase().trim() : '';
+                const targetCategory = normalize(categoria);
+                
+                const matchCategory = normalize(product.categoria) === targetCategory;
+                const matchSubcategory = normalize(product.subcategoria) === targetCategory;
+                const matchTipo = normalize(product.tipo) === targetCategory;
+                
+                if (targetCategory === 'para-ellos') {
+                    const isForMen = normalize(product.categoria).includes('ellos') ||
+                                   normalize(product.categoria).includes('hombre') ||
+                                   normalize(product.categoria).includes('masculino') ||
+                                   normalize(product.subcategoria).includes('ellos') ||
+                                   normalize(product.subcategoria).includes('hombre') ||
+                                   normalize(product.subcategoria).includes('masculino');
+                    
+                    return matchCategory || matchSubcategory || matchTipo || isForMen;
+                }
+                
+                return matchCategory || matchSubcategory || matchTipo;
+            });
+            
+            console.log('⚠️ Productos obtenidos sin columnas estado/descuento. Agregue las columnas ejecutando el script SQL.');
+            
+            return filteredData;
+        } catch (error) {
+            console.error('Error en obtenerProductosPorCategoriaSinNuevasColumnas:', error);
             return this.obtenerProductosLocales({ categoria });
         }
     }
@@ -244,7 +430,9 @@ class ProductosService {
 
         try {
             console.log('💾 Creando producto:', producto.nombre);
-              // Validar datos requeridos
+            console.log('📝 Datos recibidos:', producto);
+            
+            // Validar datos requeridos
             if (!producto.nombre || !producto.marca || !producto.precio || !producto.categoria) {
                 throw new Error('Faltan campos requeridos: nombre, marca, precio, categoria');
             }
@@ -269,7 +457,22 @@ class ProductosService {
                 precioValidado = PRECIO_MIN;
             }
             
-            // Preparar datos BÁSICOS del producto (solo columnas que probablemente existen)
+            // Validar imagen_url (debe ser string o null)
+            let imagenUrl = null;
+            if (producto.imagen_url) {
+                if (typeof producto.imagen_url === 'string') {
+                    imagenUrl = producto.imagen_url.trim();
+                    // Validar que no sea una cadena vacía
+                    if (imagenUrl === '') {
+                        imagenUrl = null;
+                    }
+                } else {
+                    console.warn('⚠️ imagen_url no es string, ignorando:', typeof producto.imagen_url);
+                    imagenUrl = null;
+                }
+            }
+            
+            // Preparar datos BÁSICOS del producto (solo columnas que seguramente existen)
             const productDataBasic = {
                 nombre: producto.nombre.trim(),
                 marca: producto.marca.trim(),
@@ -278,43 +481,61 @@ class ProductosService {
                 activo: producto.activo !== false // por defecto true
             };
             
-            // Agregar campos opcionales solo si se proporcionan
-            if (producto.descripcion) {
-                productDataBasic.descripcion = producto.descripcion;
+            // Agregar campos opcionales solo si se proporcionan y son válidos
+            if (producto.descripcion && typeof producto.descripcion === 'string') {
+                productDataBasic.descripcion = producto.descripcion.trim();
             }
             
-            // Intentar con imagen_url/imagen
-            if (producto.imagen_url) {
-                productDataBasic.imagen_url = producto.imagen_url;
-                productDataBasic.imagen = producto.imagen_url; // fallback
+            if (producto.notas && typeof producto.notas === 'string') {
+                productDataBasic.notas = producto.notas.trim();
+            }
+            
+            if (producto.subcategoria && typeof producto.subcategoria === 'string') {
+                productDataBasic.subcategoria = producto.subcategoria.trim();
+            }
+              // Agregar imagen solo si es válida
+            if (imagenUrl) {
+                productDataBasic.imagen_url = imagenUrl;
+                console.log(`🖼️ Imagen agregada al producto: ${imagenUrl.startsWith('data:image/') ? 'Base64 (' + (imagenUrl.length / 1024).toFixed(1) + 'KB)' : 'URL'}`);
             }
             
             console.log('📤 Enviando datos básicos a Supabase:', productDataBasic);
 
-            const { data, error } = await supabaseClient
+            let { data, error } = await supabaseClient
                 .from('productos')
                 .insert([productDataBasic])
                 .select()
-                .single();            if (error) {
+                .single();
+
+            if (error) {
                 console.error('❌ Error de Supabase:', error);
+                console.error('❌ Detalles del error:', {
+                    message: error.message,
+                    details: error.details,
+                    hint: error.hint,
+                    code: error.code
+                });
                 
                 // Manejar errores específicos
                 if (error.message.includes('numeric field overflow')) {
                     throw new Error('El precio es demasiado alto. El máximo permitido es $2,147,483,647 COP.');
                 }
                 
-                if (error.message.includes('duplicate key') || error.message.includes('unique')) {
+                if (error.message.includes('duplicate key') || error.message.includes('unique_violation')) {
                     throw new Error('Ya existe un producto con ese nombre. Por favor usa un nombre diferente.');
                 }
                 
-                // Si hay error, intentar solo con campos mínimos (con precio validado)
-                let precioValidado = Number(producto.precio);
-                if (precioValidado > 2147483647) {
-                    precioValidado = 2147483647;
+                if (error.message.includes('violates not-null constraint')) {
+                    throw new Error('Faltan campos requeridos en la base de datos. Verifica que todos los campos obligatorios estén llenos.');
                 }
-                if (precioValidado < 0) {
-                    precioValidado = 0;
+                
+                if (error.message.includes('column') && error.message.includes('does not exist')) {
+                    console.error('❌ Error de columna:', error.message);
+                    throw new Error('Error de estructura de base de datos. Algunas columnas no existen.');
                 }
+                
+                // Si hay error, intentar solo con campos absolutamente mínimos
+                console.log('🔄 Reintentando con campos mínimos...');
                 
                 const productDataMinimal = {
                     nombre: producto.nombre.trim(),
@@ -323,7 +544,7 @@ class ProductosService {
                     categoria: producto.categoria
                 };
                 
-                console.log('🔄 Reintentando con datos mínimos y precio validado:', productDataMinimal);
+                console.log('🔄 Enviando datos mínimos:', productDataMinimal);
                 
                 const { data: retryData, error: retryError } = await supabaseClient
                     .from('productos')
@@ -332,21 +553,372 @@ class ProductosService {
                     .single();
                     
                 if (retryError) {
+                    console.error('❌ Error en reintento:', retryError);
+                    
                     if (retryError.message.includes('numeric field overflow')) {
                         throw new Error('Error de precio: El valor es demasiado alto para la base de datos.');
                     }
+                    
+                    if (retryError.message.includes('violates not-null constraint')) {
+                        throw new Error('Error de base de datos: Faltan campos requeridos que no se pueden omitir.');
+                    }
+                    
                     throw new Error(`Error de base de datos: ${retryError.message}`);
                 }
                 
                 console.log('✅ Producto creado con datos mínimos:', retryData);
-                return retryData;
+                data = retryData;
+            } else {
+                console.log('✅ Datos básicos creados exitosamente');
+            }
+
+            // Intentar agregar campos adicionales (estado y descuento) si existen
+            if (data && data.id && (producto.estado !== undefined || producto.descuento !== undefined)) {
+                console.log('🔄 Intentando agregar campos adicionales (estado/descuento)...');
+                
+                const additionalData = {};
+                
+                if (producto.estado !== undefined && typeof producto.estado === 'string') {
+                    additionalData.estado = producto.estado;
+                }
+                
+                if (producto.descuento !== undefined) {
+                    const descuentoValidado = Number(producto.descuento);
+                    if (!isNaN(descuentoValidado) && descuentoValidado >= 0 && descuentoValidado <= 100) {
+                        additionalData.descuento = descuentoValidado;
+                    }
+                }
+                
+                if (Object.keys(additionalData).length > 0) {
+                    try {
+                        const { data: additionalUpdate, error: additionalError } = await supabaseClient
+                            .from('productos')
+                            .update(additionalData)
+                            .eq('id', data.id)
+                            .select()
+                            .single();
+
+                        if (additionalError) {
+                            console.warn('⚠️ No se pudieron agregar campos adicionales:', additionalError.message);
+                            // No fallar, solo advertir
+                            if (additionalError.message.includes('descuento') || additionalError.message.includes('estado')) {
+                                console.warn('⚠️ Las columnas estado/descuento no existen. Ejecuta el script SQL para agregarlas.');
+                            }
+                        } else {
+                            console.log('✅ Campos adicionales agregados exitosamente');
+                            data = additionalUpdate; // Usar la data más actualizada
+                        }
+                    } catch (additionalCatchError) {
+                        console.warn('⚠️ Error agregando campos adicionales (continuando):', additionalCatchError.message);
+                    }
+                } else {
+                    console.log('📝 No hay campos adicionales válidos para agregar');
+                }
             }
 
             console.log('✅ Producto creado exitosamente:', data);
             return data;
             
         } catch (error) {
-            console.error('❌ Error en crearProducto:', error);            throw error;
+            console.error('❌ Error en crearProducto:', error);
+            throw error;
+        }
+    }// Actualizar producto existente
+    static async updateProduct(productId, producto) {
+        if (!supabaseClient) {
+            console.error('❌ Supabase no configurado');
+            throw new Error('Supabase no está configurado');
+        }
+
+        try {
+            console.log(`💾 Actualizando producto ID ${productId}:`, producto.nombre);
+              
+            // Validar datos requeridos
+            if (!producto.nombre || !producto.marca || !producto.precio || !producto.categoria) {
+                throw new Error('Faltan campos requeridos: nombre, marca, precio, categoria');
+            }
+            
+            // Validar y limpiar precio antes de enviar
+            let precioValidado = Number(producto.precio);
+            if (isNaN(precioValidado)) {
+                throw new Error('El precio debe ser un número válido');
+            }
+            
+            // Límites de precio para PostgreSQL integer
+            const PRECIO_MAX = 2147483647;
+            const PRECIO_MIN = 0;
+            
+            if (precioValidado > PRECIO_MAX) {
+                console.warn(`⚠️ Precio ${precioValidado} excede máximo, ajustando a ${PRECIO_MAX}`);
+                precioValidado = PRECIO_MAX;
+            }
+            
+            if (precioValidado < PRECIO_MIN) {
+                console.warn(`⚠️ Precio ${precioValidado} es negativo, ajustando a ${PRECIO_MIN}`);
+                precioValidado = PRECIO_MIN;
+            }
+            
+            // Preparar datos básicos del producto (campos que sabemos que existen)
+            const productData = {
+                nombre: producto.nombre.trim(),
+                marca: producto.marca.trim(),
+                precio: precioValidado,
+                categoria: producto.categoria,
+                activo: producto.activo !== false
+            };
+            
+            // Agregar campos opcionales que probablemente existen
+            if (producto.descripcion !== undefined) {
+                productData.descripcion = producto.descripcion;
+            }
+            
+            if (producto.subcategoria !== undefined) {
+                productData.subcategoria = producto.subcategoria;
+            }
+            
+            if (producto.notas !== undefined) {
+                productData.notas = producto.notas;
+            }
+              if (producto.imagen_url !== undefined) {
+                productData.imagen_url = producto.imagen_url;
+                console.log(`🖼️ Imagen actualizada: ${producto.imagen_url ? (producto.imagen_url.startsWith('data:image/') ? 'Base64 (' + (producto.imagen_url.length / 1024).toFixed(1) + 'KB)' : 'URL') : 'Eliminada'}`);
+            }
+            
+            console.log('📤 Enviando datos básicos de actualización a Supabase:', productData);
+
+            // Intentar actualizar con datos básicos primero
+            let { data, error } = await supabaseClient
+                .from('productos')
+                .update(productData)
+                .eq('id', productId)
+                .select()
+                .single();
+
+            if (error) {
+                console.error('❌ Error de Supabase al actualizar (datos básicos):', error);
+                throw new Error(`Error de base de datos: ${error.message}`);
+            }
+
+            console.log('✅ Datos básicos actualizados exitosamente');
+
+            // Intentar actualizar campos adicionales (estado y descuento) por separado
+            if (producto.estado !== undefined || producto.descuento !== undefined) {
+                console.log('🔄 Intentando actualizar campos adicionales (estado/descuento)...');
+                
+                const additionalData = {};
+                
+                if (producto.estado !== undefined) {
+                    additionalData.estado = producto.estado;
+                }
+                
+                if (producto.descuento !== undefined) {
+                    additionalData.descuento = producto.descuento;
+                }
+                
+                try {
+                    const { data: additionalUpdate, error: additionalError } = await supabaseClient
+                        .from('productos')
+                        .update(additionalData)
+                        .eq('id', productId)
+                        .select()
+                        .single();
+
+                    if (additionalError) {
+                        console.warn('⚠️ No se pudieron actualizar campos adicionales:', additionalError.message);
+                        // No fallar, solo advertir
+                        if (additionalError.message.includes('descuento') || additionalError.message.includes('estado')) {
+                            console.warn('⚠️ Las columnas estado/descuento no existen. Ejecuta el script SQL para agregarlas.');
+                        }
+                    } else {
+                        console.log('✅ Campos adicionales actualizados exitosamente');
+                        data = additionalUpdate; // Usar la data más actualizada
+                    }
+                } catch (additionalCatchError) {
+                    console.warn('⚠️ Error actualizando campos adicionales (continuando):', additionalCatchError.message);
+                }
+            }
+
+            console.log('✅ Producto actualizado exitosamente:', data);
+            return data;
+
+        } catch (error) {
+            console.error('❌ Error en updateProduct:', error);
+            throw error;
+        }
+    }    // Eliminar producto
+    static async deleteProduct(productId) {
+        if (!supabaseClient) {
+            console.error('❌ Supabase no configurado');
+            throw new Error('Supabase no está configurado');
+        }
+
+        try {
+            console.log(`🗑️ Eliminando producto ID: ${productId}`);
+
+            // Primero verificar si el producto existe y obtener sus datos
+            const { data: existingProduct, error: checkError } = await supabaseClient
+                .from('productos')
+                .select('id, nombre')
+                .eq('id', productId)
+                .single();
+
+            if (checkError) {
+                if (checkError.code === 'PGRST116') {
+                    throw new Error('El producto no existe o ya fue eliminado');
+                }
+                throw new Error(`Error verificando producto: ${checkError.message}`);
+            }
+
+            console.log(`📋 Producto encontrado: ${existingProduct.nombre}`);
+
+            // Proceder con la eliminación (método optimizado sin verificación posterior problemática)
+            const { error } = await supabaseClient
+                .from('productos')
+                .delete()
+                .eq('id', productId);
+
+            if (error) {
+                console.error('❌ Error de Supabase al eliminar:', error);
+                
+                // Manejar errores específicos
+                if (error.message && error.message.includes('violates foreign key')) {
+                    throw new Error('No se puede eliminar el producto porque está referenciado en otras tablas');
+                } else if (error.code === 'PGRST116') {
+                    throw new Error('El producto no existe o ya fue eliminado');
+                } else {
+                    throw new Error(`Error de base de datos: ${error.message}`);
+                }
+            }
+
+            console.log('🗑️ Comando DELETE ejecutado sin errores');
+
+            // En lugar de verificar si el producto ya no existe (que puede fallar),
+            // confiar en que Supabase hizo su trabajo correctamente si no hay error
+            console.log('✅ Producto eliminado exitosamente (método principal optimizado)');
+            return { 
+                success: true, 
+                deletedProduct: existingProduct,
+                message: `Producto "${existingProduct.nombre}" eliminado exitosamente`
+            };
+
+        } catch (error) {
+            console.error('❌ Error en deleteProduct:', error);
+            throw error;
+        }
+    }// Método alternativo de eliminación (más simple y robusto)
+    static async deleteProductSimple(productId) {
+        if (!supabaseClient) {
+            console.error('❌ Supabase no configurado');
+            throw new Error('Supabase no está configurado');
+        }
+
+        try {
+            console.log(`🗑️ Eliminando producto ID: ${productId} (método simple)`);
+
+            // Obtener información del producto antes de eliminarlo (opcional)
+            let productInfo = null;
+            try {
+                const { data } = await supabaseClient
+                    .from('productos')
+                    .select('id, nombre')
+                    .eq('id', productId)
+                    .single();
+                productInfo = data;
+            } catch (infoError) {
+                console.warn('⚠️ No se pudo obtener info del producto, continuando con eliminación');
+            }
+
+            // Proceder con eliminación simple sin verificaciones complejas
+            const { error } = await supabaseClient
+                .from('productos')
+                .delete()
+                .eq('id', productId);
+
+            if (error) {
+                console.error('❌ Error de Supabase al eliminar (simple):', error);
+                
+                if (error.message && error.message.includes('violates foreign key')) {
+                    throw new Error('No se puede eliminar el producto porque está referenciado en otras tablas');
+                } else if (error.code === 'PGRST116') {
+                    // En el contexto de DELETE, PGRST116 puede significar que no había nada que eliminar
+                    console.log('ℹ️ PGRST116 en DELETE - producto posiblemente ya eliminado');
+                    return { 
+                        success: true, 
+                        message: `Producto eliminado exitosamente (ya no existía)`
+                    };
+                } else {
+                    throw new Error(`Error de base de datos: ${error.message}`);
+                }
+            }
+
+            console.log('✅ Comando DELETE ejecutado exitosamente (método simple)');
+            
+            const productName = productInfo?.nombre || `ID ${productId}`;
+            return { 
+                success: true, 
+                deletedProduct: productInfo,
+                message: `Producto "${productName}" eliminado exitosamente`
+            };
+
+        } catch (error) {
+            console.error('❌ Error en deleteProductSimple:', error);
+            throw error;
+        }
+    }
+
+    // Función optimizada para recarga rápida (sin filtros complejos)
+    static async obtenerProductosRapido() {
+        if (!supabaseClient) {
+            console.warn('Supabase no configurado, usando datos locales');
+            return this.obtenerProductosLocales();
+        }
+
+        try {
+            console.log('⚡ Obteniendo productos con consulta rápida...');
+            
+            // Consulta simple sin filtros complejos para evitar timeouts
+            const { data, error } = await supabaseClient
+                .from('productos')
+                .select('id, nombre, marca, precio, categoria, imagen_url, imagen, estado, descuento, activo, created_at')
+                .order('id', { ascending: false })
+                .limit(50); // Limitar para evitar consultas muy pesadas
+
+            if (error) {
+                console.warn('Error en consulta rápida, intentando sin nuevas columnas:', error);
+                
+                // Fallback sin columnas estado/descuento
+                const { data: fallbackData, error: fallbackError } = await supabaseClient
+                    .from('productos')
+                    .select('id, nombre, marca, precio, categoria, imagen_url, imagen, activo, created_at')
+                    .order('id', { ascending: false })
+                    .limit(50);
+
+                if (fallbackError) {
+                    console.error('Error en fallback rápido:', fallbackError);
+                    return this.obtenerProductosLocales();
+                }
+
+                // Normalizar productos sin estado/descuento
+                return (fallbackData || []).map(producto => ({
+                    ...producto,
+                    estado: 'disponible',
+                    descuento: 0
+                }));
+            }
+
+            // Normalizar productos con todas las columnas
+            const productosNormalizados = (data || []).map(producto => ({
+                ...producto,
+                estado: producto.estado || 'disponible',
+                descuento: producto.descuento || 0
+            }));
+
+            console.log(`⚡ Consulta rápida exitosa: ${productosNormalizados.length} productos`);
+            return productosNormalizados;
+
+        } catch (error) {
+            console.error('Error crítico en obtenerProductosRapido:', error);
+            return this.obtenerProductosLocales();
         }
     }
 

@@ -15,20 +15,12 @@ class ParaEllosManager {
         };
         
         this.init();
-    }    async init() {
-        console.log('🚀 Inicializando ParaEllosManager...');
-        
+    }
+
+    async init() {
         // Verificar que Supabase esté disponible sin crear múltiples instancias
         if (typeof window.supabase === 'undefined' && typeof initSupabase === 'function') {
-            console.log('🔄 Inicializando Supabase...');
             initSupabase();
-        }
-        
-        // Verificar dependencias
-        const dependencies = this.checkDependencies();
-        if (Object.values(dependencies).some(dep => !dep)) {
-            console.error('❌ Algunas dependencias no están disponibles:', dependencies);
-            return;
         }
         
         await this.loadProducts();
@@ -36,52 +28,18 @@ class ParaEllosManager {
         this.renderProducts();
         this.setupFilters();
         this.setupPriceFilter();
-        
-        console.log('✅ ParaEllosManager inicializado completamente');
-    }    async loadProducts() {
+    }
+
+    async loadProducts() {
         try {
-            console.log('📦 Cargando productos para ellos...');
-            
-            // Verificar que ProductosService esté disponible
-            if (typeof ProductosService === 'undefined') {
-                console.error('❌ ProductosService no está disponible');
-                this.productos = [];
-                this.filteredProducts = [];
-                return;
-            }
-            
             // Cargar productos específicos para hombres
             this.productos = await ProductosService.obtenerProductosPorCategoria('para-ellos');
             this.filteredProducts = [...this.productos];
-            
-            console.log(`✅ ${this.productos.length} productos cargados para ellos:`, this.productos);
-            
-            if (this.productos.length === 0) {
-                console.warn('⚠️ No se encontraron productos para la categoría "para-ellos"');
-            }
-            
         } catch (error) {
-            console.error('❌ Error cargando productos:', error);
+            console.error('Error cargando productos:', error);
             this.productos = [];
             this.filteredProducts = [];
         }
-    }
-
-    checkDependencies() {
-        console.log('🔍 Verificando dependencias...');
-        
-        const dependencies = {
-            'Supabase JS': typeof window.supabase !== 'undefined',
-            'initSupabase': typeof initSupabase !== 'undefined',
-            'ProductosService': typeof ProductosService !== 'undefined',
-            'supabaseClient': typeof supabaseClient !== 'undefined'
-        };
-        
-        Object.entries(dependencies).forEach(([name, available]) => {
-            console.log(`${available ? '✅' : '❌'} ${name}: ${available ? 'Disponible' : 'NO DISPONIBLE'}`);
-        });
-        
-        return dependencies;
     }
 
     setupEventListeners() {
@@ -166,68 +124,53 @@ class ParaEllosManager {
         this.currentPage = 1;
         this.renderProducts();
         this.updateSearchResults();
-    }    renderProducts() {
-        console.log('🎨 Renderizando productos...');
-        
+    }
+
+    renderProducts() {
         const container = document.querySelector('.index-grid');
-        if (!container) {
-            console.error('❌ Contenedor .index-grid no encontrado');
-            return;
-        }
+        if (!container) return;
 
         const startIndex = (this.currentPage - 1) * this.productsPerPage;
         const endIndex = startIndex + this.productsPerPage;
         const currentProducts = this.filteredProducts.slice(startIndex, endIndex);
 
-        console.log(`📄 Página ${this.currentPage}: mostrando ${currentProducts.length} de ${this.filteredProducts.length} productos`);
-
         if (currentProducts.length === 0) {
             container.innerHTML = `
                 <div class="no-products">
                     <h3>No se encontraron productos</h3>
-                    <p>Total de productos disponibles: ${this.productos.length}</p>
-                    <p>Productos filtrados: ${this.filteredProducts.length}</p>
                     <p>Intenta ajustar los filtros de búsqueda</p>
                 </div>
             `;
             return;
-        }        const productsHTML = currentProducts.map(product => {
-            // Generar etiqueta de estado
-            const estado = product.estado || 'disponible';
-            const estadoBadge = this.getEstadoBadge(estado);
-            
-            // Calcular precios si hay descuento
-            const precioInfo = this.getPrecioInfo(product);
-              const imageSrc = this.getImagePath(product.imagen_url || product.imagen);
-            const productName = product.nombre || 'Producto sin nombre';
-            
-            return `
+        }
+
+        const productsHTML = currentProducts.map(product => `
             <div class="index-item" data-product-id="${product.id}">
                 <div class="item-image">
-                    <img src="${imageSrc}" 
-                         alt="${productName}"
-                         loading="lazy"
-                         onerror="window.paraEllosManager.handleImageError(this, '${productName}');">
-                    ${estadoBadge}
+                    <img src="${product.imagen_url || product.imagen || '../IMAGENES/placeholder.jpg'}" 
+                         alt="${product.nombre}" 
+                         loading="lazy">
                     <div class="item-overlay">
                         <button class="quick-view-btn" onclick="window.paraEllosManager.showQuickView(${product.id})">
                             Vista Rápida
                         </button>
                     </div>
                 </div>
-                <div class="item-content">
-                    <h3 class="item-title">${product.nombre || 'Sin nombre'}</h3>
-                    <p class="item-brand">${product.marca || 'Sin marca'}</p>
-                    <div class="item-price">${precioInfo}</div>
-                    <div class="item-category">${product.subcategoria || product.categoria || 'Sin categoría'}</div>
+                <div class="item-info">
+                    <h3 class="item-name">${product.nombre}</h3>
+                    <p class="item-brand">${product.marca || ''}</p>
+                    <p class="item-price">$${this.formatPrice(product.precio || 0)}</p>
+                    <div class="item-actions">
+                        <button class="add-to-cart-btn" onclick="window.paraEllosManager.addToCart(${product.id})">
+                            Agregar al Carrito
+                        </button>
+                    </div>
                 </div>
             </div>
-            `;
-        }).join('');
+        `).join('');
 
         container.innerHTML = productsHTML;
-        this.updatePagination();        
-        console.log(`✅ ${currentProducts.length} productos renderizados exitosamente`);
+        this.updatePagination();
     }
 
     formatPrice(price) {
@@ -242,16 +185,13 @@ class ParaEllosManager {
         if (!product) return;
 
         const modal = document.querySelector('.quick-view-modal');
-        const modalBody = modal.querySelector('.modal-body');        const imageSrc = this.getImagePath(product.imagen_url || product.imagen);
-        const productName = product.nombre || 'Producto sin nombre';
+        const modalBody = modal.querySelector('.modal-body');
 
         modalBody.innerHTML = `
             <div class="quick-view-content">
                 <div class="quick-view-image">
-                    <img src="${imageSrc}" 
-                         alt="${productName}"
-                         onerror="window.paraEllosManager.handleImageError(this, '${productName}');"
-                         loading="lazy">
+                    <img src="${product.imagen_url || product.imagen || '../IMAGENES/placeholder.jpg'}" 
+                         alt="${product.nombre}">
                 </div>
                 <div class="quick-view-info">
                     <h2>${product.nombre}</h2>
@@ -558,187 +498,21 @@ class ParaEllosManager {
             });
         });
     }
-
-    // Método para forzar recarga de productos (útil después de agregar nuevos productos)
-    async forceReloadProducts() {
-        console.log('🔄 Forzando recarga de productos...');
-        try {
-            this.productos = [];
-            this.filteredProducts = [];
-            
-            // Recargar productos
-            await this.loadProducts();
-            this.applyFilters();
-            this.renderProducts();
-            
-            console.log('✅ Productos recargados exitosamente');
-        } catch (error) {
-            console.error('❌ Error recargando productos:', error);
-        }
-    }
-
-    // Función auxiliar para generar etiqueta de estado
-    getEstadoBadge(estado) {
-        const estadoMap = {
-            'disponible': { text: 'Disponible', class: 'estado-disponible' },
-            'agotado': { text: 'Agotado', class: 'estado-agotado' },
-            'proximo': { text: 'Próximamente', class: 'estado-proximo' },
-            'oferta': { text: 'En Oferta', class: 'estado-oferta' }
-        };
-        
-        const estadoInfo = estadoMap[estado] || estadoMap['disponible'];
-        
-        return `<span class="estado-badge ${estadoInfo.class}">${estadoInfo.text}</span>`;
-    }
-    
-    // Función auxiliar para generar información de precio
-    getPrecioInfo(product) {
-        const precio = product.precio || 0;
-        const estado = product.estado || 'disponible';
-        const descuento = product.descuento || 0;
-        
-        if (estado === 'oferta' && descuento > 0) {
-            const precioConDescuento = precio - (precio * descuento / 100);
-            return `
-                <div class="precio-con-descuento">
-                    <span class="precio-original">$${this.formatPrice(precio)}</span>
-                    <span class="precio-oferta">$${this.formatPrice(precioConDescuento)}</span>
-                    <span class="descuento-badge">-${descuento}%</span>
-                </div>
-            `;
-        } else {
-            return `$${this.formatPrice(precio)}`;
-        }
-    }
-
-    // Función auxiliar para obtener la ruta correcta de imagen placeholder
-    getPlaceholderImagePath() {
-        // Detectar si estamos en la carpeta html/ o en la raíz
-        const currentPath = window.location.pathname;
-        const isInHtmlFolder = currentPath.includes('/html/') || currentPath.includes('\\html\\');
-        
-        if (isInHtmlFolder) {
-            return '../IMAGENES/placeholder-simple.svg';
-        } else {
-            return 'IMAGENES/placeholder-simple.svg';
-        }
-    }
-
-    // Función auxiliar para obtener la ruta correcta de cualquier imagen
-    getImagePath(imagePath) {
-        if (!imagePath) return this.getPlaceholderImagePath();
-        
-        // Si es una URL completa (http/https), usarla tal como está
-        if (imagePath.startsWith('http://') || imagePath.startsWith('https://')) {
-            return imagePath;
-        }
-        
-        // Si es una ruta relativa que empieza con ../, usarla tal como está
-        if (imagePath.startsWith('../')) {
-            return imagePath;
-        }
-        
-        // Si es una ruta absoluta desde la raíz, ajustarla según el contexto
-        const currentPath = window.location.pathname;
-        const isInHtmlFolder = currentPath.includes('/html/') || currentPath.includes('\\html\\');
-        
-        if (isInHtmlFolder && !imagePath.startsWith('../')) {
-            // Estamos en html/ y la imagen no tiene ../, agregar ../
-            return `../${imagePath}`;
-        }
-        
-        return imagePath;
-    }
-
-    // Función auxiliar para manejar errores de imagen de forma inteligente
-    handleImageError(imgElement, productName = '') {
-        // Evitar bucles infinitos de error
-        if (imgElement.hasAttribute('data-error-handled')) {
-            return;
-        }
-        
-        imgElement.setAttribute('data-error-handled', 'true');
-        
-        const placeholderSrc = this.getPlaceholderImagePath();
-        console.warn(`⚠️ Error cargando imagen${productName ? ` para ${productName}` : ''}, usando placeholder: ${placeholderSrc}`);
-        
-        // Agregar una pequeña pausa antes de cambiar la imagen para evitar flasheo
-        setTimeout(() => {
-            imgElement.src = placeholderSrc;
-            imgElement.alt = `Imagen no disponible${productName ? ` - ${productName}` : ''}`;
-        }, 50);
-    }
 }
 
 // Initialize when page loads
 document.addEventListener('DOMContentLoaded', function() {
-    console.log('🚀 DOM loaded, verificando dependencias...');
-    
     // Verificar que el contenedor exista antes de inicializar
     const checkContainer = () => {
         const container = document.querySelector('.index-grid');
         if (container) {
-            console.log('✅ Contenedor encontrado, inicializando ParaEllosManager...');
             setTimeout(() => {
                 window.paraEllosManager = new ParaEllosManager();
-                
-                // Agregar botón de recarga para debugging
-                addDebugControls();
             }, 200);
         } else {
-            console.log('⏳ Esperando contenedor .index-grid...');
             setTimeout(checkContainer, 100);
         }
     };
     
-    // Verificar dependencias antes de inicializar
-    const checkDependencies = () => {
-        const hasSupabase = typeof window.supabase !== 'undefined';
-        const hasConfig = typeof initSupabase === 'function';
-        const hasService = typeof ProductosService !== 'undefined';
-        
-        if (hasSupabase && hasConfig && hasService) {
-            console.log('✅ Todas las dependencias disponibles');
-            checkContainer();
-        } else {
-            console.log('⏳ Esperando dependencias...', {
-                supabase: hasSupabase,
-                config: hasConfig,
-                service: hasService
-            });
-            setTimeout(checkDependencies, 100);
-        }
-    };
-    
-    checkDependencies();
+    checkContainer();
 });
-
-// Función para agregar controles de debugging
-function addDebugControls() {
-    // Solo agregar en modo debug (si hay parámetro en URL)
-    const urlParams = new URLSearchParams(window.location.search);
-    if (urlParams.get('debug') === 'true') {
-        const debugDiv = document.createElement('div');
-        debugDiv.style.cssText = `
-            position: fixed;
-            top: 10px;
-            right: 10px;
-            background: rgba(0, 0, 0, 0.8);
-            color: white;
-            padding: 10px;
-            border-radius: 5px;
-            z-index: 10000;
-            font-family: monospace;
-            font-size: 12px;
-        `;
-        
-        debugDiv.innerHTML = `
-            <div>Debug Controls</div>
-            <button onclick="window.paraEllosManager.forceReloadProducts()" style="margin: 5px; padding: 5px;">🔄 Recargar</button>
-            <button onclick="console.log('Productos:', window.paraEllosManager.productos)" style="margin: 5px; padding: 5px;">📦 Log Productos</button>
-        `;
-        
-        document.body.appendChild(debugDiv);
-        console.log('🛠️ Controles de debug agregados. Accede con ?debug=true');
-    }
-}

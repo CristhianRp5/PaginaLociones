@@ -1,0 +1,399 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Final - Corrección de Imagen Local</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            background: #f5f5f5;
+        }
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .form-group {
+            margin: 15px 0;
+        }
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+        input, select, button {
+            width: 100%;
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            box-sizing: border-box;
+        }
+        button {
+            background: #28a745;
+            color: white;
+            cursor: pointer;
+            margin: 5px 0;
+        }
+        button:hover {
+            background: #218838;
+        }
+        .image-preview {
+            max-width: 200px;
+            max-height: 200px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            margin: 10px 0;
+        }
+        .log-output {
+            background: #000;
+            color: #0f0;
+            padding: 10px;
+            border-radius: 4px;
+            font-family: monospace;
+            white-space: pre-wrap;
+            max-height: 300px;
+            overflow-y: auto;
+            font-size: 11px;
+            margin: 10px 0;
+        }
+        .status {
+            padding: 10px;
+            border-radius: 4px;
+            margin: 10px 0;
+            font-weight: bold;
+        }
+        .status.success { background: #d4edda; color: #155724; }
+        .status.error { background: #f8d7da; color: #721c24; }
+        .status.warning { background: #fff3cd; color: #856404; }
+        .status.info { background: #d1ecf1; color: #0c5460; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🧪 Test Final - Imagen desde Archivo Local</h1>
+        <p>Esta página verifica que las correcciones aplicadas funcionen correctamente.</p>
+
+        <div id="status" class="status info">
+            Esperando selección de archivo...
+        </div>
+
+        <form id="testForm">
+            <div class="form-group">
+                <label for="nombre">Nombre del Producto:</label>
+                <input type="text" id="nombre" name="nombre" value="TEST Imagen Local Corregida" required>
+            </div>
+            
+            <div class="form-group">
+                <label for="marca">Marca:</label>
+                <input type="text" id="marca" name="marca" value="MARCA TEST" required>
+            </div>
+            
+            <div class="form-group">
+                <label for="precio">Precio:</label>
+                <input type="number" id="precio" name="precio" value="85000" required>
+            </div>
+            
+            <div class="form-group">
+                <label for="categoria">Categoría:</label>
+                <select id="categoria" name="categoria" required>
+                    <option value="para-ellos">Para Ellos</option>
+                    <option value="para-ellas">Para Ellas</option>
+                    <option value="unisex">Unisex</option>
+                </select>
+            </div>
+            
+            <div class="form-group">
+                <label for="imagen_file">🖼️ Selecciona una imagen desde tu PC:</label>
+                <input type="file" id="imagen_file" name="imagen_file" accept="image/*">
+            </div>
+            
+            <div id="imagePreview" style="display: none;">
+                <label>Vista Previa:</label>
+                <img id="previewImg" class="image-preview" alt="Preview">
+            </div>
+            
+            <button type="button" onclick="testCompleteFlow()">🚀 Probar Flujo Completo</button>
+            <button type="button" onclick="clearAll()">🔄 Limpiar Todo</button>
+        </form>
+
+        <div class="log-output" id="logOutput">
+Iniciando test de imagen local...\n
+        </div>
+    </div>
+
+    <!-- Scripts necesarios -->
+    <script src="js/supabase-config.js"></script>
+    
+    <script>
+        // Variables para simular AdminPanel
+        let imageData = null;
+        let imageType = 'url';
+        let testFile = null;
+        
+        function log(message, type = 'info') {
+            const logOutput = document.getElementById('logOutput');
+            const timestamp = new Date().toLocaleTimeString();
+            const colors = {
+                'info': '#00ffff',
+                'success': '#00ff00', 
+                'warning': '#ffff00',
+                'error': '#ff0000',
+                'debug': '#ff00ff'
+            };
+            
+            const coloredMessage = `[${timestamp}] ${message}\n`;
+            logOutput.innerHTML += `<span style="color: ${colors[type] || '#00ffff'}">${coloredMessage}</span>`;
+            logOutput.scrollTop = logOutput.scrollHeight;
+            console.log(`[TEST] ${message}`);
+        }
+        
+        function updateStatus(message, type = 'info') {
+            const statusDiv = document.getElementById('status');
+            statusDiv.className = `status ${type}`;
+            statusDiv.textContent = message;
+        }
+        
+        // Función para leer archivo como Data URL (igual que AdminPanel)
+        function readFileAsDataURL(file) {
+            return new Promise((resolve, reject) => {
+                if (!file) {
+                    reject(new Error('No se proporcionó archivo'));
+                    return;
+                }
+                
+                if (!file.type.startsWith('image/')) {
+                    reject(new Error('El archivo no es una imagen válida'));
+                    return;
+                }
+                
+                if (file.size > 5 * 1024 * 1024) {
+                    reject(new Error('El archivo es muy grande (máximo 5MB)'));
+                    return;
+                }
+                
+                const reader = new FileReader();
+                
+                reader.onload = (e) => {
+                    const result = e.target.result;
+                    if (result && result.startsWith('data:image/')) {
+                        resolve(result);
+                    } else {
+                        reject(new Error('Error procesando el archivo de imagen'));
+                    }
+                };
+                
+                reader.onerror = () => {
+                    reject(new Error('Error leyendo el archivo'));
+                };
+                
+                reader.readAsDataURL(file);
+            });
+        }
+        
+        // Simular previewImageFromFile del AdminPanel
+        function previewImageFromFile(input) {
+            const file = input.files[0];
+            const imagePreview = document.getElementById('imagePreview');
+            const previewImg = document.getElementById('previewImg');
+            
+            testFile = file;
+            log(`📁 Procesando archivo de imagen: ${file ? file.name : 'NULL'}`, file ? 'info' : 'error');
+            
+            if (!file) {
+                log('❌ No se seleccionó archivo', 'error');
+                imageData = null;
+                imageType = 'url';
+                updateStatus('Sin archivo seleccionado', 'error');
+                return;
+            }
+            
+            if (!file.type.startsWith('image/')) {
+                log(`❌ Tipo de archivo inválido: ${file.type}`, 'error');
+                updateStatus('Tipo de archivo inválido', 'error');
+                return;
+            }
+            
+            if (file.size > 5 * 1024 * 1024) {
+                log(`❌ Archivo muy grande: ${(file.size / 1024 / 1024).toFixed(2)}MB`, 'error');
+                updateStatus('Archivo muy grande (>5MB)', 'error');
+                return;
+            }
+            
+            log(`✅ Archivo válido: ${file.name} (${(file.size / 1024).toFixed(1)}KB)`, 'success');
+            updateStatus(`Procesando: ${file.name}...`, 'warning');
+            
+            // Mostrar loading
+            if (imagePreview && previewImg) {
+                imagePreview.style.display = 'block';
+                previewImg.src = '';
+                previewImg.alt = 'Cargando archivo...';
+                previewImg.style.opacity = '0.5';
+            }
+            
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                const result = e.target.result;
+                log(`✅ Archivo leído exitosamente`, 'success');
+                log(`📊 Tipo de datos: ${typeof result}`, 'debug');
+                log(`📊 Tamaño de datos: ${result ? result.length : 0} caracteres`, 'debug');
+                log(`📊 Inicio de datos: ${result ? result.substring(0, 50) : 'No datos'}...`, 'debug');
+                
+                if (previewImg) {
+                    previewImg.src = result;
+                    previewImg.alt = `Preview de ${file.name}`;
+                    previewImg.style.opacity = '1';
+                }
+                if (imagePreview) {
+                    imagePreview.style.display = 'block';
+                }
+                
+                // Guardar datos de imagen y establecer tipo (igual que AdminPanel)
+                imageData = result;
+                imageType = 'file';
+                
+                log(`📊 Variables globales actualizadas:`, 'success');
+                log(`   - imageData: ${imageData ? 'PRESENTE' : 'NULL'}`, 'debug');
+                log(`   - imageType: ${imageType}`, 'debug');
+                log(`   - Tamaño: ${(result.length / 1024).toFixed(1)}KB`, 'debug');
+                log(`   - Formato: ${result.startsWith('data:image/') ? 'Base64 válido' : 'Formato inválido'}`, 'debug');
+                
+                // Verificar que los datos se guardaron correctamente
+                if (imageData && imageType === 'file') {
+                    log(`✅ Imagen lista para enviar - Estado interno actualizado correctamente`, 'success');
+                    updateStatus(`Imagen cargada: ${file.name} (${(result.length / 1024).toFixed(1)}KB)`, 'success');
+                } else {
+                    log(`❌ Error guardando datos de imagen - Estado inconsistente`, 'error');
+                    updateStatus('Error en el estado interno de la imagen', 'error');
+                }
+            };
+            
+            reader.onerror = () => {
+                log(`❌ Error leyendo archivo: ${file.name}`, 'error');
+                updateStatus('Error leyendo archivo', 'error');
+                imageData = null;
+                imageType = 'url';
+            };
+            
+            reader.readAsDataURL(file);
+        }
+        
+        // Test del flujo completo
+        async function testCompleteFlow() {
+            log('=== INICIANDO TEST FLUJO COMPLETO ===', 'debug');
+            
+            try {
+                // Verificar estado inicial
+                log(`🔍 Estado inicial:`, 'info');
+                log(`   - imageData: ${imageData ? 'PRESENTE' : 'NULL'}`, 'debug');
+                log(`   - imageType: ${imageType}`, 'debug');
+                log(`   - testFile: ${testFile ? testFile.name : 'NULL'}`, 'debug');
+                
+                if (!imageData) {
+                    // Simular el procesamiento en tiempo real (como la corrección)
+                    const fileInput = document.getElementById('imagen_file');
+                    if (fileInput && fileInput.files && fileInput.files[0]) {
+                        log('🔄 No hay imageData, procesando archivo sincrónicamente...', 'warning');
+                        const file = fileInput.files[0];
+                        
+                        const fileData = await readFileAsDataURL(file);
+                        if (fileData) {
+                            imageData = fileData;
+                            imageType = 'file';
+                            log(`✅ Archivo procesado en tiempo real:`, 'success');
+                            log(`   - Tamaño: ${(fileData.length / 1024).toFixed(1)}KB`, 'debug');
+                            log(`   - Formato: ${fileData.startsWith('data:image/') ? 'Base64 válido' : 'Formato inválido'}`, 'debug');
+                        } else {
+                            throw new Error('No se pudo procesar el archivo');
+                        }
+                    } else {
+                        throw new Error('No se encontró archivo para procesar');
+                    }
+                }
+                
+                // Preparar datos del producto
+                const formData = new FormData(document.getElementById('testForm'));
+                const productData = {
+                    nombre: formData.get('nombre'),
+                    marca: formData.get('marca'),
+                    precio: parseInt(formData.get('precio')),
+                    categoria: formData.get('categoria'),
+                    imagen_url: imageData  // Asignar la imagen
+                };
+                
+                log('📦 Datos del producto preparados:', 'info');
+                log(`   - nombre: "${productData.nombre}"`, 'debug');
+                log(`   - marca: "${productData.marca}"`, 'debug');
+                log(`   - precio: ${productData.precio}`, 'debug');
+                log(`   - categoria: "${productData.categoria}"`, 'debug');
+                log(`   - imagen_url: ${productData.imagen_url ? 'PRESENTE (' + (productData.imagen_url.length / 1024).toFixed(1) + 'KB)' : 'AUSENTE'}`, productData.imagen_url ? 'success' : 'error');
+                
+                // Enviar a Supabase
+                log('🔄 Enviando a Supabase...', 'info');
+                updateStatus('Enviando producto a base de datos...', 'warning');
+                
+                if (typeof ProductosService === 'undefined') {
+                    throw new Error('ProductosService no está disponible');
+                }
+                
+                const result = await ProductosService.crearProducto(productData);
+                
+                log('✅ Producto creado exitosamente!', 'success');
+                log(`   - ID: ${result.id}`, 'success');
+                log(`   - Nombre: ${result.nombre}`, 'debug');
+                log(`   - Imagen guardada: ${result.imagen_url ? 'SÍ' : 'NO'}`, result.imagen_url ? 'success' : 'error');
+                
+                if (result.imagen_url) {
+                    log(`   - Tamaño imagen en BD: ${(result.imagen_url.length / 1024).toFixed(1)}KB`, 'debug');
+                    log(`   - Tipo imagen en BD: ${result.imagen_url.startsWith('data:image/') ? 'Base64' : 'URL/Ruta'}`, 'debug');
+                    
+                    // Verificar que la imagen es la misma
+                    if (result.imagen_url === productData.imagen_url) {
+                        log('   - ✅ La imagen se guardó exactamente como se envió', 'success');
+                        updateStatus(`¡ÉXITO! Producto ${result.id} creado con imagen correcta`, 'success');
+                    } else {
+                        log('   - ⚠️ La imagen en BD difiere de la enviada', 'warning');
+                        updateStatus(`Producto creado pero imagen modificada`, 'warning');
+                    }
+                } else {
+                    log('   - ❌ La imagen NO se guardó en la base de datos', 'error');
+                    updateStatus(`ERROR: Producto creado sin imagen`, 'error');
+                }
+                
+                log('=== TEST COMPLETADO ===', 'debug');
+                
+            } catch (error) {
+                log(`❌ ERROR en test: ${error.message}`, 'error');
+                updateStatus(`Error: ${error.message}`, 'error');
+                console.error('Error completo:', error);
+            }
+        }
+        
+        function clearAll() {
+            document.getElementById('testForm').reset();
+            document.getElementById('imagePreview').style.display = 'none';
+            imageData = null;
+            imageType = 'url';
+            testFile = null;
+            updateStatus('Todo limpiado', 'info');
+            log('🔄 Estado reseteado completamente', 'info');
+        }
+        
+        // Configurar event listener para el input de archivo
+        document.getElementById('imagen_file').addEventListener('change', function(e) {
+            log('📁 Event listener activado - archivo seleccionado', 'debug');
+            previewImageFromFile(e.target);
+        });
+        
+        // Inicialización
+        document.addEventListener('DOMContentLoaded', function() {
+            log('🚀 Test de imagen local iniciado', 'success');
+            updateStatus('Listo para probar - Selecciona una imagen', 'info');
+        });
+    </script>
+</body>
+</html>

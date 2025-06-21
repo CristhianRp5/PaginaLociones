@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test de Permisos</title>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <style>
+        body { 
+            font-family: Arial, sans-serif; 
+            max-width: 600px; 
+            margin: 50px auto; 
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        .card {
+            background: white;
+            padding: 25px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+        }
+        button {
+            background: #3498db;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 5px;
+            cursor: pointer;
+            margin: 10px 5px;
+        }
+        .result {
+            background: #f8f9fa;
+            border: 1px solid #dee2e6;
+            padding: 15px;
+            border-radius: 5px;
+            margin: 15px 0;
+            font-family: monospace;
+            white-space: pre-wrap;
+        }
+        .success { border-left: 4px solid #28a745; background: #d4edda; }
+        .error { border-left: 4px solid #dc3545; background: #f8d7da; }
+    </style>
+</head>
+<body>
+    <div class="card">
+        <h2>🔐 Test de Permisos Supabase</h2>
+        <p>Verifica si los permisos están configurados correctamente</p>
+        
+        <button onclick="testSelect()">📖 Test SELECT</button>
+        <button onclick="testInsert()">➕ Test INSERT</button>
+        <button onclick="testAll()">🔄 Test Completo</button>
+        
+        <div id="results" class="result">
+Haz clic en un botón para probar los permisos...
+        </div>
+    </div>
+
+    <script>
+        const supabase = window.supabase.createClient(
+            'https://xelobsbzytdxrrxgmlta.supabase.co',
+            'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhlbG9ic2J6eXRkeHJyeGdtbHRhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTAzODUzNTksImV4cCI6MjA2NTk2MTM1OX0.bJL5DsL4pxlQ_FV3jX0ieiW3bYLA-Zf3M2HlNmdMMy4'
+        );
+
+        const resultsEl = document.getElementById('results');
+
+        function log(message, isError = false) {
+            resultsEl.textContent += new Date().toLocaleTimeString() + ' - ' + message + '\n';
+            resultsEl.className = 'result ' + (isError ? 'error' : 'success');
+        }
+
+        async function testSelect() {
+            resultsEl.textContent = '';
+            log('🔍 Probando SELECT...');
+            
+            try {
+                const { data, error } = await supabase
+                    .from('productos')
+                    .select('*')
+                    .limit(5);
+
+                if (error) {
+                    log('❌ Error SELECT: ' + error.message, true);
+                    log('💡 Código: ' + error.code, true);
+                    
+                    if (error.code === 'PGRST301') {
+                        log('🔧 Solución: Configura políticas RLS públicas', true);
+                    }
+                } else {
+                    log('✅ SELECT funciona correctamente');
+                    log('📦 Productos encontrados: ' + data.length);
+                }
+            } catch (err) {
+                log('❌ Error: ' + err.message, true);
+            }
+        }
+
+        async function testInsert() {
+            log('\n🔍 Probando INSERT...');
+            
+            try {
+                const testProduct = {
+                    nombre: 'Test Permissions ' + Date.now(),
+                    marca: 'Test Brand',
+                    categoria: 'para-ellos',
+                    precio: 1000
+                };
+
+                const { data, error } = await supabase
+                    .from('productos')
+                    .insert([testProduct])
+                    .select()
+                    .single();
+
+                if (error) {
+                    log('❌ Error INSERT: ' + error.message, true);
+                    log('💡 Código: ' + error.code, true);
+                    
+                    if (error.code === 'PGRST301') {
+                        log('🔧 Solución: Agrega política para INSERT', true);
+                    }
+                } else {
+                    log('✅ INSERT funciona correctamente');
+                    log('🆕 Producto creado: ' + data.nombre);
+                }
+            } catch (err) {
+                log('❌ Error: ' + err.message, true);
+            }
+        }
+
+        async function testAll() {
+            resultsEl.textContent = '';
+            await testSelect();
+            await testInsert();
+            
+            log('\n📋 RESUMEN:');
+            log('Si ves errores 401/403, ejecuta el SQL de políticas');
+            log('Si ves ✅ en ambos, ¡ya puedes cargar productos!');
+        }
+    </script>
+</body>
+</html>

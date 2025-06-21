@@ -4,22 +4,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Panel de Administración - Aromes De Dieu</title>
-    
-    <!-- Fuentes -->
-    <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:            // Crear instancia del panel admin
-            if (typeof AdminPanel !== 'undefined') {
-                try {
-                    console.log('📋 Creando instancia del panel...');
-                    adminPanel = new AdminPanel();
-                    console.log('✅ Panel de administración listo');
-                } catch (error) {
-                    console.error('❌ Error creando panel:', error);
-                    alert('Error inicializando el panel: ' + error.message);
-                }
-            } else {
-                console.error('❌ AdminPanel no está disponible');
-                alert('Error: La clase AdminPanel no está disponible. Verifica que admin-panel-new.js se haya cargado correctamente.');
-            }300;0,400;0,600;1,300;1,400&family=Montserrat:wght@200;300;400;500;600&family=Italiana&display=swap" rel="stylesheet">
+      <!-- Fuentes -->
+    <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@300;400;600&family=Montserrat:wght@200;300;400;500;600&family=Italiana&display=swap" rel="stylesheet">
     
     <!-- Font Awesome -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
@@ -134,9 +120,11 @@
                         </button>
                         <button onclick="testImageUpload()" class="btn btn-secondary" style="margin: 5px;">
                             📷 Test Subida Imagen
-                        </button>
-                        <button onclick="testImageUpload()" class="btn btn-secondary" style="margin: 5px;">
+                        </button>                        <button onclick="testImageUpload()" class="btn btn-secondary" style="margin: 5px;">
                             🖼️ Test Subida Imagen
+                        </button>
+                        <button onclick="testOptimizedReload()" class="btn btn-secondary" style="margin: 5px;">
+                            ⚡ Test Recarga Rápida
                         </button>
                         <div id="debugOutput" style="margin-top: 10px; padding: 10px; background: #fff; border: 1px solid #ddd; border-radius: 3px; font-family: monospace; font-size: 12px; max-height: 200px; overflow-y: auto;"></div>
                     </div>
@@ -176,10 +164,9 @@
                             <input type="text" id="marca" name="marca" required>
                         </div>
                         
-                        <div class="form-group">                            <label for="precio">Precio (COP) *</label>
-                            <input type="number" id="precio" name="precio" required step="1000" min="0" max="2147483647" 
+                        <div class="form-group">                            <label for="precio">Precio (COP) *</label>                            <input type="number" id="precio" name="precio" required step="1000" min="0" max="2147483647" 
                                    placeholder="Ej: 50000" 
-                                   oninput="validatePrice(this)">
+                                   oninput="adminPanel.validatePrice(this)">
                         </div>
                         
                         <div class="form-group">
@@ -200,61 +187,67 @@
                                 <option value="arabic">Marcas Árabes</option>
                                 <option value="contemporary">Perfumería Contemporánea</option>
                                 <option value="vintage">Vintage</option>
-                            </select>
-                        </div>                        <div class="form-group">
-                            <label>Imagen del Producto</label>
-                            <div class="image-upload-container">
-                                <div class="upload-tabs">
-                                    <button type="button" class="tab-btn active" data-tab="url">URL</button>
-                                    <button type="button" class="tab-btn" data-tab="file">Seleccionar Archivo</button>
+                            </select>                        </div>
+                        
+                    </div>
+                    
+                    <!-- Sección de Imagen como apartado independiente -->
+                    <div class="image-upload-section">
+                        <h3 class="section-title">
+                            <i class="fas fa-image"></i>
+                            Imagen del Producto
+                        </h3>
+                        
+                        <div class="image-upload-container">
+                            <div class="upload-tabs">
+                                <button type="button" class="tab-btn active" data-tab="url">
+                                    <i class="fas fa-link"></i> URL
+                                </button>
+                                <button type="button" class="tab-btn" data-tab="file">
+                                    <i class="fas fa-upload"></i> Seleccionar Archivo
+                                </button>
+                            </div>
+                              <div class="tab-content active" id="url-tab">
+                                <div class="input-group">
+                                    <input type="url" id="imagen_url" name="imagen_url" placeholder="https://ejemplo.com/imagen.jpg" class="form-control">
+                                    <button type="button" class="btn btn-secondary" onclick="adminPanel.previewImageFromUrl()">
+                                        <i class="fas fa-eye"></i> Vista Previa
+                                    </button>
                                 </div>
-                                
-                                <div class="tab-content active" id="url-tab">
-                                    <div class="input-group">
-                                        <input type="url" id="imagen_url" name="imagen_url" placeholder="https://ejemplo.com/imagen.jpg" class="form-control">
-                                        <button type="button" class="btn btn-secondary" onclick="previewImageFromUrl()">
-                                            <i class="fas fa-eye"></i> Vista Previa
-                                        </button>
-                                    </div>
-                                    <div class="help-text">Pega la URL de una imagen en línea</div>
+                                <div class="help-text">Pega la URL de una imagen en línea</div>
+                            </div>
+                            
+                            <div class="tab-content" id="file-tab">
+                                <div class="file-upload-area" onclick="document.getElementById('imagen_file').click()">
+                                    <input type="file" id="imagen_file" accept="image/*" class="form-control file-input" onchange="adminPanel.previewImageFromFile(this)">
+                                    <label for="imagen_file" class="file-upload-label">
+                                        <i class="fas fa-cloud-upload-alt"></i>
+                                        <span>Haz clic para seleccionar una imagen</span>
+                                        <span class="file-types">JPG, PNG, WEBP (máx. 5MB)</span>
+                                    </label>
                                 </div>
-                                
-                                <div class="tab-content" id="file-tab">
-                                    <div class="file-upload-area">
-                                        <input type="file" id="imagen_file" accept="image/*" class="form-control file-input" onchange="previewImageFromFile(this)">
-                                        <label for="imagen_file" class="file-upload-label">
-                                            <i class="fas fa-cloud-upload-alt"></i>
-                                            <span>Haz clic para seleccionar una imagen</span>
-                                            <span class="file-types">JPG, PNG, WEBP (máx. 5MB)</span>
-                                        </label>
-                                    </div>
+                            </div>
+                            
+                            <div class="image-preview" id="imagePreview" style="display: none;">
+                                <div class="preview-header">
+                                    <span><i class="fas fa-eye"></i> Vista previa:</span>
+                                    <button type="button" class="btn btn-danger btn-sm" onclick="adminPanel.clearImagePreview()">
+                                        <i class="fas fa-times"></i> Limpiar
+                                    </button>
                                 </div>
-                                
-                                <div class="image-preview" id="imagePreview" style="display: none;">
-                                    <div class="preview-header">
-                                        <span>Vista previa:</span>
-                                        <button type="button" class="btn btn-danger btn-sm" onclick="clearImagePreview()">
-                                            <i class="fas fa-times"></i> Limpiar
-                                        </button>
-                                    </div>
-                                    <img id="previewImg" src="" alt="Vista previa" class="preview-image">
-                                </div>
+                                <img id="previewImg" src="" alt="Vista previa" class="preview-image">
                             </div>
                         </div>
                     </div>
                     
-                    <div class="form-group">
-                        <label for="descripcion">Descripción</label>
-                        <textarea id="descripcion" name="descripcion" rows="4" placeholder="Descripción detallada del producto..."></textarea>
-                    </div>
+                    <!-- Descripción y Notas -->
                     
                     <div class="form-group">
                         <label for="notas">Notas Olfativas</label>
                         <textarea id="notas" name="notas" rows="3" placeholder="Ej: Bergamota, Rosa, Sándalo (separadas por comas)"></textarea>
                     </div>
                       <div class="form-group">
-                        <label for="estado">Estado del Producto *</label>
-                        <select id="estado" name="estado" required onchange="handleEstadoChange()">
+                        <label for="estado">Estado del Producto *</label>                        <select id="estado" name="estado" required onchange="adminPanel.handleEstadoChange()">
                             <option value="disponible">Disponible</option>
                             <option value="agotado">Agotado</option>
                             <option value="proximo">Disponible Próximamente</option>
@@ -263,9 +256,8 @@
                     </div>
                     
                     <div class="form-group" id="descuentoGroup" style="display: none;">
-                        <label for="descuento">Descuento (%) *</label>
-                        <input type="number" id="descuento" name="descuento" min="1" max="99" step="1" 
-                               placeholder="Ej: 15" oninput="updatePrecioConDescuento()">
+                        <label for="descuento">Descuento (%) *</label>                        <input type="number" id="descuento" name="descuento" min="1" max="99" step="1" 
+                               placeholder="Ej: 15" oninput="adminPanel.updatePrecioConDescuento()">
                         <div class="help-text">Porcentaje de descuento sobre el precio original</div>
                         <div class="precio-info" id="precioInfo" style="display: none;">
                             <small>Precio original: <span id="precioOriginal">$0</span></small><br>
@@ -332,8 +324,9 @@
         <div class="loading-spinner">
             <i class="fas fa-spinner fa-spin"></i>
             <p>Cargando...</p>
-        </div>
-    </div>    <!-- Scripts en orden correcto -->
+        </div>    </div>
+    
+    <!-- Scripts en orden correcto -->
     <script src="../js/supabase-config.js"></script>
     <script src="../js/admin-panel-new.js"></script>
     
@@ -353,18 +346,19 @@
             console.log('initSupabase:', typeof initSupabase === 'function' ? '✅' : '❌');
             console.log('ProductosService:', typeof ProductosService !== 'undefined' ? '✅' : '❌');
             console.log('AdminPanel:', typeof AdminPanel !== 'undefined' ? '✅' : '❌');
-            
-            // Crear instancia del panel admin
+              // Crear instancia del panel admin
             if (typeof AdminPanel !== 'undefined') {
                 try {
-                    console.log('� Creando instancia del panel...');
+                    console.log('📋 Creando instancia del panel...');
                     adminPanel = new AdminPanel();
                     console.log('✅ Panel de administración listo');
                 } catch (error) {
                     console.error('❌ Error creando panel:', error);
+                    alert('Error inicializando el panel: ' + error.message);
                 }
             } else {
                 console.error('❌ AdminPanel no está disponible');
+                alert('Error: La clase AdminPanel no está disponible. Verifica que admin-panel-new.js se haya cargado correctamente.');
             }
         });
         
@@ -564,6 +558,88 @@
             } catch (error) {
                 if (output) output.textContent += `ERROR: ${error.message}\n`;
                 console.error('❌ Error en test de imagen:', error);
+            }
+        };
+        
+        window.testOptimizedReload = async function() {
+            const output = document.getElementById('debugOutput');
+            if (output) output.textContent = 'Probando recarga optimizada...\n';
+            
+            try {
+                const startTime = performance.now();
+                
+                if (adminPanel && typeof adminPanel.loadProductosRapido === 'function') {
+                    await adminPanel.loadProductosRapido();
+                    const endTime = performance.now();
+                    const duration = Math.round(endTime - startTime);
+                    
+                    if (output) output.textContent += `✅ Recarga rápida exitosa en ${duration}ms\n`;
+                    if (output) output.textContent += `📦 Productos cargados: ${adminPanel.productos.length}\n`;
+                    
+                    // Actualizar vista si estoy en productos
+                    if (adminPanel.currentSection === 'productos') {
+                        await adminPanel.loadProductsData();
+                        if (output) output.textContent += `🎨 Vista de productos actualizada\n`;
+                    }
+                    
+                } else {
+                    if (output) output.textContent += 'ERROR: loadProductosRapido no disponible.\n';
+                }
+                
+            } catch (error) {
+                if (output) output.textContent += `ERROR: ${error.message}\n`;
+                console.error('❌ Error en test de recarga rápida:', error);
+            }
+        };
+
+        // Funciones globales para eventos del formulario
+        window.handleEstadoChange = function() {
+            if (window.adminPanel) {
+                adminPanel.handleEstadoChange();
+            }
+        };
+        
+        window.updatePrecioConDescuento = function() {
+            if (window.adminPanel) {
+                adminPanel.updatePrecioConDescuento();
+            }
+        };
+        
+        window.previewImageFromUrl = function() {
+            if (window.adminPanel) {
+                adminPanel.previewImageFromUrl();
+            }
+        };
+        
+        window.previewImageFromFile = function(input) {
+            if (window.adminPanel) {
+                adminPanel.previewImageFromFile(input);
+            }
+        };
+          window.clearImagePreview = function() {
+            if (window.adminPanel) {
+                adminPanel.clearImagePreview(true); // Limpiar todo cuando el usuario hace click en limpiar
+            }
+        };
+        
+        // Función para cambiar tabs de imagen
+        window.switchImageTab = function(tabType) {
+            const tabs = document.querySelectorAll('.tab-btn');
+            const contents = document.querySelectorAll('.tab-content');
+            
+            // Actualizar tabs
+            tabs.forEach(tab => {
+                tab.classList.toggle('active', tab.dataset.tab === tabType);
+            });
+            
+            // Actualizar contenido
+            contents.forEach(content => {
+                content.classList.toggle('active', content.id === `${tabType}-tab`);
+            });
+            
+            // Actualizar tipo en adminPanel
+            if (window.adminPanel) {
+                adminPanel.imageType = tabType;
             }
         };
         
