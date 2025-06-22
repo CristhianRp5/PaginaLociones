@@ -1,0 +1,214 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Test DB Imagenes Supabase</title>
+    <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 2rem; }
+        pre { background: #f8f9fa; padding: 1rem; border-radius: 5px; }
+        .ok { color: green; }
+        .warn { color: orange; }
+        .err { color: red; }
+    </style>
+</head>
+<body>
+    <h1>Prueba de Base de Datos - Imágenes en Productos</h1>
+    <form id="form-producto" style="margin-bottom:2rem;">
+        <input type="hidden" id="editId">
+        <input type="text" id="nombre" placeholder="Nombre del producto" required>
+        <input type="file" id="imagenFile" accept="image/*">
+        <input type="url" id="imagenUrl" placeholder="o URL de imagen">
+        <button type="submit" id="submitBtn">Agregar producto</button>
+        <button type="button" id="cancelEdit" style="display:none;margin-left:8px;">Cancelar</button>
+        <div id="preview" style="margin-top:8px;"></div>
+    </form>
+    <button onclick="testDB()">Consultar Productos</button>
+    <div id="result" style="margin-top:2rem;"></div>
+    <script>
+    // Configura tus claves aquí
+    const supabaseUrl = 'https://xelobsbzytdxrrxgmlta.supabase.co';
+    const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhlbG9ic2J6eXRkeHJyeGdtbHRhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTAzODUzNTksImV4cCI6MjA2NTk2MTM1OX0.bJL5DsL4pxlQ_FV3jX0ieiW3bYLA-Zf3M2HlNmdMMy4'; // Clave pública real
+    const supabase = window.supabase.createClient(supabaseUrl, supabaseKey);
+
+    let editMode = false;
+    let currentEditId = null;
+
+    // Vista previa de imagen
+    const imagenFile = document.getElementById('imagenFile');
+    const imagenUrl = document.getElementById('imagenUrl');
+    const previewDiv = document.getElementById('preview');
+    const editIdInput = document.getElementById('editId');
+    const submitBtn = document.getElementById('submitBtn');
+    const cancelEditBtn = document.getElementById('cancelEdit');
+
+    imagenFile.addEventListener('change', function() {
+        if (this.files && this.files[0]) {
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                previewDiv.innerHTML = `<img src='${e.target.result}' style='max-width:120px;max-height:80px;'>`;
+            };
+            reader.readAsDataURL(this.files[0]);
+        } else {
+            previewDiv.innerHTML = '';
+        }
+    });
+    imagenUrl.addEventListener('input', function() {
+        if (this.value) {
+            previewDiv.innerHTML = `<img src='${this.value}' style='max-width:120px;max-height:80px;'>`;
+        } else {
+            previewDiv.innerHTML = '';
+        }
+    });
+
+    cancelEditBtn.onclick = function() {
+        resetForm();
+    };
+
+    function resetForm() {
+        editMode = false;
+        currentEditId = null;
+        editIdInput.value = '';
+        document.getElementById('form-producto').reset();
+        previewDiv.innerHTML = '';
+        submitBtn.textContent = 'Agregar producto';
+        cancelEditBtn.style.display = 'none';
+    }
+
+    document.getElementById('form-producto').onsubmit = async function(e) {
+        e.preventDefault();
+        const nombre = document.getElementById('nombre').value.trim();
+        let imagen = null, imagen_url = null;
+        if (imagenFile.files[0]) {
+            const reader = new FileReader();
+            reader.onload = async function(e) {
+                imagen = e.target.result;
+                if (editMode && currentEditId) {
+                    await actualizarProducto(currentEditId, nombre, imagen, null);
+                } else {
+                    await agregarProducto(nombre, imagen, null);
+                }
+            };
+            reader.readAsDataURL(imagenFile.files[0]);
+            return;
+        } else if (imagenUrl.value) {
+            imagen_url = imagenUrl.value;
+            if (editMode && currentEditId) {
+                await actualizarProducto(currentEditId, nombre, null, imagen_url);
+            } else {
+                await agregarProducto(nombre, null, imagen_url);
+            }
+        } else {
+            if (editMode && currentEditId) {
+                await actualizarProducto(currentEditId, nombre, null, null);
+            } else {
+                await agregarProducto(nombre, null, null);
+            }
+        }
+    };
+
+    async function agregarProducto(nombre, imagen, imagen_url) {
+        // Optimización: actualiza la UI antes de esperar la respuesta
+        let tempId = 'temp-' + Date.now();
+        addProductToUI({ id: tempId, nombre, imagen, imagen_url });
+        const { data, error } = await supabase.from('productos').insert([{ nombre, imagen, imagen_url }]).select().single();
+        if (error) {
+            alert('Error al agregar: ' + error.message);
+            removeProductFromUI(tempId);
+        } else {
+            replaceProductInUI(tempId, data);
+            resetForm();
+        }
+    }
+
+    async function actualizarProducto(id, nombre, imagen, imagen_url) {
+        // Optimización: actualiza la UI antes de esperar la respuesta
+        updateProductInUI(id, { id, nombre, imagen, imagen_url });
+        const { error } = await supabase.from('productos').update({ nombre, imagen, imagen_url }).eq('id', id);
+        if (error) {
+            alert('Error al actualizar: ' + error.message);
+            testDB(); // recarga si hay error
+        } else {
+            resetForm();
+        }
+    }
+
+    async function eliminarProducto(id) {
+        // Optimización: elimina de la UI antes de esperar la respuesta
+        removeProductFromUI(id);
+        const { error } = await supabase.from('productos').delete().eq('id', id);
+        if (error) {
+            alert('Error al eliminar: ' + error.message);
+            testDB(); // recarga si hay error
+        }
+    }
+
+    // --- UI helpers para máxima velocidad ---
+    function addProductToUI(product) {
+        const resultDiv = document.getElementById('result');
+        let html = resultDiv.innerHTML;
+        let prodHtml = renderProductHtml(product);
+        // Inserta al inicio
+        html = html.replace('<pre>', '<pre>' + prodHtml);
+        resultDiv.innerHTML = html;
+    }
+    function removeProductFromUI(id) {
+        const resultDiv = document.getElementById('result');
+        let html = resultDiv.innerHTML;
+        // Elimina el bloque del producto por ID
+        const regex = new RegExp(`ID: ?${id}[^-]+-----------------------------\\n`, 'g');
+        html = html.replace(regex, '');
+        resultDiv.innerHTML = html;
+    }
+    function replaceProductInUI(tempId, realProduct) {
+        removeProductFromUI(tempId);
+        addProductToUI(realProduct);
+    }
+    function updateProductInUI(id, product) {
+    }
+
+    async function testDB() {
+        const resultDiv = document.getElementById('result');
+        resultDiv.innerHTML = '<b>Consultando productos...</b>';
+        try {
+            // Consulta los últimos 5 productos
+            const { data, error } = await supabase
+                .from('productos')
+                .select('id, nombre, imagen, imagen_url')
+                .order('id', { ascending: false })
+                .limit(5);
+            if (error) throw error;
+
+            let html = '<h2>Últimos productos</h2><pre>';
+            data.forEach(p => {
+                html += `ID: ${p.id}\nNombre: ${p.nombre}\n`;
+                // Mostrar cuál campo tiene la imagen y un preview
+                if (p.imagen) {
+                    html += `<span class='ok'>imagen (base64): SÍ (${p.imagen.length} chars)</span>\n`;
+                    html += `<img src='${p.imagen}' alt='preview' style='max-width:120px;max-height:80px;display:block;margin-bottom:8px;'>\n`;
+                } else if (p.imagen_url) {
+                    html += `<span class='ok'>imagen_url (URL): SÍ (${p.imagen_url.length} chars)</span>\n`;
+                    html += `<img src='${p.imagen_url}' alt='preview' style='max-width:120px;max-height:80px;display:block;margin-bottom:8px;'>\n`;
+                } else {
+                    html += `<span class='warn'>Sin imagen</span>\n`;
+                }
+                html += `imagen_length: ${p.imagen ? p.imagen.length : 0}\n`;
+                html += `imagen_url_length: ${p.imagen_url ? p.imagen_url.length : 0}\n`;
+                html += `<button onclick='eliminarProducto(${p.id})'>Eliminar</button> `;
+                html += `<button onclick='editarProducto(${p.id})'>Editar</button>\n`;
+                html += '-----------------------------\n';
+            });
+            html += '</pre>';
+
+            // Consulta el tipo de columna
+            html += '<h2>Tipo de columna (requiere RLS OFF o función RPC)</h2>';
+            html += '<pre>Para ver el tipo de columna, ejecuta en SQL editor:\n\nSELECT column_name, data_type, character_maximum_length\nFROM information_schema.columns\nWHERE table_name = \'productos\'\n  AND (column_name = \'imagen\' OR column_name = \'imagen_url\');\n</pre>';
+
+            resultDiv.innerHTML = html;
+        } catch (err) {
+            resultDiv.innerHTML = '<span class="err">Error: ' + err.message + '</span>';
+        }
+    }
+    </script>
+</body>
+</html>

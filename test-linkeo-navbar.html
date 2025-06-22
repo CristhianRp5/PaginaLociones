@@ -1,0 +1,420 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🔗 Test Linkeo Navbar - Aromes De Dieu</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        
+        .header {
+            background: white;
+            border-radius: 15px;
+            padding: 30px;
+            margin-bottom: 30px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+            text-align: center;
+        }
+        
+        .header h1 {
+            color: #667eea;
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+        }
+        
+        .test-section {
+            background: white;
+            border-radius: 15px;
+            padding: 25px;
+            margin-bottom: 20px;
+            box-shadow: 0 5px 20px rgba(0,0,0,0.1);
+        }
+        
+        .test-item {
+            display: flex;
+            align-items: center;
+            padding: 15px;
+            margin: 10px 0;
+            border-radius: 8px;
+            transition: all 0.3s ease;
+        }
+        
+        .test-item.success {
+            background: #e6fffa;
+            border-left: 4px solid #38a169;
+        }
+        
+        .test-item.error {
+            background: #fed7d7;
+            border-left: 4px solid #e53e3e;
+        }
+        
+        .test-item.warning {
+            background: #fefcbf;
+            border-left: 4px solid #d69e2e;
+        }
+        
+        .test-item.info {
+            background: #e6f3ff;
+            border-left: 4px solid #3182ce;
+        }
+        
+        .status-icon {
+            font-size: 1.5rem;
+            margin-right: 15px;
+            min-width: 30px;
+        }
+        
+        .test-details {
+            flex: 1;
+        }
+        
+        .test-title {
+            font-weight: 600;
+            margin-bottom: 5px;
+        }
+        
+        .test-description {
+            font-size: 0.9rem;
+            color: #666;
+            margin-bottom: 5px;
+        }
+        
+        .test-url {
+            font-family: 'Courier New', monospace;
+            background: #f8f9fa;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 0.8rem;
+            color: #495057;
+        }
+        
+        .button-group {
+            display: flex;
+            gap: 15px;
+            margin: 20px 0;
+            flex-wrap: wrap;
+        }
+        
+        button {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border: none;
+            color: white;
+            padding: 12px 24px;
+            border-radius: 25px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+        }
+        
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(102, 126, 234, 0.6);
+        }
+        
+        .preview-frame {
+            width: 100%;
+            height: 500px;
+            border: 2px solid #e2e8f0;
+            border-radius: 10px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+        }
+        
+        .loading {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #667eea;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        .timestamp {
+            font-size: 0.8rem;
+            color: #718096;
+            margin-top: 5px;
+        }
+        
+        @media (max-width: 768px) {
+            .header h1 {
+                font-size: 2rem;
+            }
+            
+            .button-group {
+                flex-direction: column;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🔗 Test Linkeo Navbar</h1>
+            <p>Verificación completa del sistema de navegación</p>
+        </div>
+
+        <div class="test-section">
+            <h3>🎯 Controles de Verificación</h3>
+            <div class="button-group">
+                <button onclick="testNavbarLinking()">🔗 Test Linkeo Completo</button>
+                <button onclick="testNavbarFile()">📄 Test Archivo Navbar</button>
+                <button onclick="testJavaScriptIntegration()">⚡ Test Integración JS</button>
+                <button onclick="testRouteAdjustment()">🛣️ Test Ajuste de Rutas</button>
+                <button onclick="clearResults()">🧹 Limpiar</button>
+            </div>
+        </div>
+
+        <div class="test-section">
+            <h3>📊 Resultados de Verificación</h3>
+            <div id="test-results">
+                <div class="test-item info">
+                    <span class="status-icon">🔄</span>
+                    <div class="test-details">
+                        <div class="test-title">Esperando tests...</div>
+                        <div class="test-description">Presiona un botón para iniciar las verificaciones</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="test-section">
+            <h3>🖥️ Vista Previa de index.html</h3>
+            <iframe src="index.html" class="preview-frame" title="Vista previa del sitio"></iframe>
+        </div>
+
+        <div class="test-section">
+            <h3>📋 Información del Sistema</h3>
+            <div class="test-item info">
+                <span class="status-icon">ℹ️</span>
+                <div class="test-details">
+                    <div class="test-title">Configuración del Sistema</div>
+                    <div class="test-description">
+                        <strong>Fecha:</strong> <span id="current-date"></span><br>
+                        <strong>URL:</strong> <span id="current-url"></span><br>
+                        <strong>Navegador:</strong> <span id="browser-info"></span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Información del sistema
+        document.getElementById('current-date').textContent = new Date().toLocaleString('es-ES');
+        document.getElementById('current-url').textContent = window.location.href;
+        document.getElementById('browser-info').textContent = navigator.userAgent.split(' ').pop();
+
+        function addTestResult(title, status, description, url = '') {
+            const resultsDiv = document.getElementById('test-results');
+            
+            const icons = {
+                success: '✅',
+                error: '❌',
+                warning: '⚠️',
+                info: 'ℹ️',
+                loading: '<div class="loading"></div>'
+            };
+            
+            const testItem = document.createElement('div');
+            testItem.className = `test-item ${status}`;
+            testItem.innerHTML = `
+                <span class="status-icon">${icons[status] || icons.info}</span>
+                <div class="test-details">
+                    <div class="test-title">${title}</div>
+                    <div class="test-description">${description}</div>
+                    ${url ? `<div class="test-url">${url}</div>` : ''}
+                    <div class="timestamp">${new Date().toLocaleTimeString('es-ES')}</div>
+                </div>
+            `;
+            
+            resultsDiv.appendChild(testItem);
+            
+            // Scroll al último resultado
+            testItem.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        }
+
+        function clearResults() {
+            document.getElementById('test-results').innerHTML = `
+                <div class="test-item info">
+                    <span class="status-icon">✨</span>
+                    <div class="test-details">
+                        <div class="test-title">Resultados limpiados</div>
+                        <div class="test-description">Listo para nuevas verificaciones</div>
+                    </div>
+                </div>
+            `;
+        }
+
+        async function testNavbarFile() {
+            addTestResult('Verificando archivo navbar.html', 'loading', 'Comprobando existencia y contenido...');
+            
+            try {
+                const response = await fetch('html/navbar.html');
+                if (response.ok) {
+                    const content = await response.text();
+                    
+                    addTestResult('Archivo navbar.html', 'success', 'Archivo encontrado y accesible', 'html/navbar.html');
+                    
+                    // Verificar contenido específico
+                    if (content.includes('navbar-logo')) {
+                        addTestResult('Logo de navbar', 'success', 'Logo encontrado en el navbar');
+                    } else {
+                        addTestResult('Logo de navbar', 'warning', 'Logo no encontrado en el navbar');
+                    }
+                    
+                    if (content.includes('navbar-menu')) {
+                        addTestResult('Menú de navbar', 'success', 'Estructura de menú encontrada');
+                    } else {
+                        addTestResult('Menú de navbar', 'error', 'Estructura de menú no encontrada');
+                    }
+                    
+                    // Verificar enlaces específicos
+                    if (content.includes('href="index.html"')) {
+                        addTestResult('Enlaces a index.html', 'success', 'Enlaces a página principal encontrados');
+                    } else {
+                        addTestResult('Enlaces a index.html', 'warning', 'No se encontraron enlaces a index.html');
+                    }
+                    
+                } else {
+                    addTestResult('Archivo navbar.html', 'error', `Error HTTP ${response.status}`, 'html/navbar.html');
+                }
+            } catch (error) {
+                addTestResult('Archivo navbar.html', 'error', `Error: ${error.message}`, 'html/navbar.html');
+            }
+        }
+
+        async function testJavaScriptIntegration() {
+            addTestResult('Verificando integración JavaScript', 'loading', 'Comprobando scripts de navbar...');
+            
+            try {
+                // Test navbar.js
+                const navbarJsResponse = await fetch('js/navbar.js', { method: 'HEAD' });
+                if (navbarJsResponse.ok) {
+                    addTestResult('Script navbar.js', 'success', 'Archivo JavaScript de navbar encontrado', 'js/navbar.js');
+                } else {
+                    addTestResult('Script navbar.js', 'error', `Error ${navbarJsResponse.status}`, 'js/navbar.js');
+                }
+                
+                // Test app.js
+                const appJsResponse = await fetch('js/app.js', { method: 'HEAD' });
+                if (appJsResponse.ok) {
+                    addTestResult('Script app.js', 'success', 'Archivo JavaScript principal encontrado', 'js/app.js');
+                } else {
+                    addTestResult('Script app.js', 'error', `Error ${appJsResponse.status}`, 'js/app.js');
+                }
+                
+                // Verificar función initNavbar
+                if (typeof window.initNavbar === 'function' || typeof initNavbar === 'function') {
+                    addTestResult('Función initNavbar', 'success', 'Función de inicialización disponible');
+                } else {
+                    addTestResult('Función initNavbar', 'warning', 'Función no disponible globalmente (normal si está en módulo)');
+                }
+                
+            } catch (error) {
+                addTestResult('Integración JavaScript', 'error', `Error: ${error.message}`);
+            }
+        }
+
+        async function testRouteAdjustment() {
+            addTestResult('Verificando ajuste de rutas', 'loading', 'Simulando carga de navbar en index.html...');
+            
+            try {
+                // Simular carga de navbar
+                const response = await fetch('html/navbar.html');
+                if (response.ok) {
+                    const content = await response.text();
+                    
+                    // Crear un contenedor temporal para analizar rutas
+                    const tempDiv = document.createElement('div');
+                    tempDiv.innerHTML = content;
+                    
+                    const links = tempDiv.querySelectorAll('a[href]');
+                    let routeAdjustments = [];
+                    
+                    links.forEach(link => {
+                        const href = link.getAttribute('href');
+                        let expectedHref = href;
+                        
+                        // Simular lógica de ajuste de rutas
+                        if (!href.startsWith('http') && !href.startsWith('#') && href !== 'index.html') {
+                            if (!href.startsWith('html/')) {
+                                expectedHref = 'html/' + href;
+                            }
+                        }
+                        
+                        routeAdjustments.push({
+                            text: link.textContent.trim(),
+                            original: href,
+                            adjusted: expectedHref,
+                            needsAdjustment: href !== expectedHref
+                        });
+                    });
+                    
+                    addTestResult('Análisis de rutas', 'success', `${links.length} enlaces analizados`);
+                    
+                    const needsAdjustment = routeAdjustments.filter(r => r.needsAdjustment);
+                    if (needsAdjustment.length > 0) {
+                        needsAdjustment.forEach(route => {
+                            addTestResult(
+                                `Ruta: ${route.text}`, 
+                                'info', 
+                                `${route.original} → ${route.adjusted}`, 
+                                route.adjusted
+                            );
+                        });
+                    } else {
+                        addTestResult('Ajuste de rutas', 'success', 'Todas las rutas están correctamente configuradas');
+                    }
+                    
+                } else {
+                    addTestResult('Ajuste de rutas', 'error', 'No se pudo cargar navbar para análisis');
+                }
+                
+            } catch (error) {
+                addTestResult('Ajuste de rutas', 'error', `Error: ${error.message}`);
+            }
+        }
+
+        async function testNavbarLinking() {
+            addTestResult('Iniciando test completo de linkeo', 'info', 'Ejecutando todas las verificaciones...');
+            
+            clearResults();
+            
+            await testNavbarFile();
+            await new Promise(resolve => setTimeout(resolve, 500));
+            
+            await testJavaScriptIntegration();
+            await new Promise(resolve => setTimeout(resolve, 500));
+            
+            await testRouteAdjustment();
+            await new Promise(resolve => setTimeout(resolve, 500));
+            
+            // Test final de integración
+            addTestResult('Test de integración completo', 'success', 'Todas las verificaciones completadas. Revisa los resultados arriba.');
+        }
+    </script>
+</body>
+</html>

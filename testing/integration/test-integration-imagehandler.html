@@ -1,0 +1,443 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test - Integración ImageHandler</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        
+        .test-section {
+            background: white;
+            padding: 20px;
+            margin: 20px 0;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        
+        .test-section h2 {
+            color: #333;
+            border-bottom: 2px solid #4CAF50;
+            padding-bottom: 10px;
+        }
+        
+        .status {
+            padding: 10px;
+            border-radius: 4px;
+            margin: 10px 0;
+        }
+        
+        .status.success {
+            background-color: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        
+        .status.error {
+            background-color: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+        
+        .status.warning {
+            background-color: #fff3cd;
+            color: #856404;
+            border: 1px solid #ffeaa7;
+        }
+        
+        .admin-panel-test {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            margin: 20px 0;
+        }
+        
+        .image-preview {
+            border: 2px dashed #ddd;
+            padding: 20px;
+            text-align: center;
+            border-radius: 8px;
+            min-height: 200px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .image-preview img {
+            max-width: 100%;
+            max-height: 200px;
+            border-radius: 4px;
+        }
+        
+        .controls {
+            margin: 20px 0;
+        }
+        
+        .controls input, .controls button {
+            margin: 5px;
+            padding: 8px 12px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
+        
+        .controls button {
+            background: #4CAF50;
+            color: white;
+            cursor: pointer;
+        }
+        
+        .controls button:hover {
+            background: #45a049;
+        }
+        
+        .product-card {
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            padding: 15px;
+            margin: 10px;
+            background: white;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        
+        .product-image img {
+            width: 100%;
+            max-width: 200px;
+            height: 150px;
+            object-fit: cover;
+            border-radius: 4px;
+        }
+        
+        .logs {
+            background: #f8f9fa;
+            border: 1px solid #e9ecef;
+            border-radius: 4px;
+            padding: 15px;
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+    </style>
+</head>
+<body>
+    <h1>🧪 Test de Integración - ImageHandler</h1>
+    
+    <div class="test-section">
+        <h2>📋 Estado de Dependencias</h2>
+        <div id="dependencies-status"></div>
+    </div>
+    
+    <div class="test-section">
+        <h2>🖼️ Test de ImageHandler - Validaciones</h2>
+        <div class="controls">
+            <input type="file" id="test-file" accept="image/*">
+            <input type="url" id="test-url" placeholder="https://ejemplo.com/imagen.jpg">
+            <button onclick="testImageValidation()">Probar Validaciones</button>
+        </div>
+        <div id="validation-results"></div>
+    </div>
+    
+    <div class="test-section">
+        <h2>🎨 Test de Previsualizaciones</h2>
+        <div class="admin-panel-test">
+            <div>
+                <h3>Preview desde URL</h3>
+                <input type="url" id="preview-url" placeholder="URL de imagen">
+                <button onclick="testUrlPreview()">Previsualizar URL</button>
+                <div id="url-preview" class="image-preview">
+                    <p>Ingresa una URL para previsualizar</p>
+                </div>
+            </div>
+            <div>
+                <h3>Preview desde Archivo</h3>
+                <input type="file" id="preview-file" accept="image/*" onchange="testFilePreview(this)">
+                <div id="file-preview" class="image-preview">
+                    <p>Selecciona un archivo para previsualizar</p>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="test-section">
+        <h2>🛍️ Test de Productos - Simulación Tienda</h2>
+        <div class="controls">
+            <button onclick="testProductDisplay()">Simular Productos</button>
+            <button onclick="clearProducts()">Limpiar</button>
+        </div>
+        <div id="products-display"></div>
+    </div>
+    
+    <div class="test-section">
+        <h2>📊 Test de Procesamiento - Panel Admin</h2>
+        <div class="controls">
+            <input type="file" id="admin-file" accept="image/*">
+            <input type="url" id="admin-url" placeholder="URL de imagen">
+            <button onclick="testImageProcessing()">Procesar Imagen</button>
+        </div>
+        <div id="processing-results"></div>
+    </div>
+    
+    <div class="test-section">
+        <h2>📝 Logs de Prueba</h2>
+        <button onclick="clearLogs()">Limpiar Logs</button>
+        <div id="test-logs" class="logs"></div>
+    </div>
+
+    <!-- Scripts necesarios -->
+    <script src="js/utils/ImageHandler.js"></script>
+    
+    <script>
+        // Variables globales para testing
+        let imageHandler;
+        let testLogs = [];
+        
+        // Inicializar test
+        document.addEventListener('DOMContentLoaded', () => {
+            initializeTest();
+        });
+        
+        function initializeTest() {
+            log('🚀 Iniciando tests de integración ImageHandler...');
+            
+            checkDependencies();
+            
+            // Inicializar ImageHandler
+            try {
+                imageHandler = new ImageHandler();
+                log('✅ ImageHandler inicializado correctamente');
+            } catch (error) {
+                log('❌ Error inicializando ImageHandler: ' + error.message);
+            }
+        }
+        
+        function checkDependencies() {
+            const dependencies = {
+                'ImageHandler': typeof ImageHandler !== 'undefined'
+            };
+            
+            const statusContainer = document.getElementById('dependencies-status');
+            let html = '';
+            
+            for (const [name, available] of Object.entries(dependencies)) {
+                const statusClass = available ? 'success' : 'error';
+                const statusIcon = available ? '✅' : '❌';
+                html += `<div class="status ${statusClass}">${statusIcon} ${name}: ${available ? 'Disponible' : 'No disponible'}</div>`;
+            }
+            
+            statusContainer.innerHTML = html;
+        }
+        
+        function testImageValidation() {
+            const fileInput = document.getElementById('test-file');
+            const urlInput = document.getElementById('test-url');
+            const resultsContainer = document.getElementById('validation-results');
+            
+            let html = '<h4>Resultados de Validación:</h4>';
+            
+            // Test validación de archivo
+            if (fileInput.files.length > 0) {
+                const file = fileInput.files[0];
+                const fileValidation = imageHandler.validateImageFile(file);
+                
+                const statusClass = fileValidation.valid ? 'success' : 'error';
+                const statusIcon = fileValidation.valid ? '✅' : '❌';
+                
+                html += `<div class="status ${statusClass}">
+                    ${statusIcon} Archivo "${file.name}": ${fileValidation.valid ? 'Válido' : fileValidation.error}
+                </div>`;
+                
+                log(`Validación archivo: ${fileValidation.valid ? 'OK' : 'ERROR - ' + fileValidation.error}`);
+            }
+            
+            // Test validación de URL
+            if (urlInput.value.trim()) {
+                const urlValidation = imageHandler.validateImageUrl(urlInput.value);
+                
+                const statusClass = urlValidation.valid ? 'success' : 'error';
+                const statusIcon = urlValidation.valid ? '✅' : '❌';
+                
+                html += `<div class="status ${statusClass}">
+                    ${statusIcon} URL: ${urlValidation.valid ? 'Válida' : urlValidation.error}
+                </div>`;
+                
+                log(`Validación URL: ${urlValidation.valid ? 'OK' : 'ERROR - ' + urlValidation.error}`);
+            }
+            
+            if (fileInput.files.length === 0 && !urlInput.value.trim()) {
+                html += '<div class="status warning">⚠️ Selecciona un archivo o ingresa una URL para probar</div>';
+            }
+            
+            resultsContainer.innerHTML = html;
+        }
+        
+        function testUrlPreview() {
+            const urlInput = document.getElementById('preview-url');
+            const previewContainer = document.getElementById('url-preview');
+            
+            if (!urlInput.value.trim()) {
+                alert('Ingresa una URL para previsualizar');
+                return;
+            }
+            
+            log(`Probando preview de URL: ${urlInput.value}`);
+            
+            imageHandler.previewImageFromUrl(
+                urlInput.value,
+                previewContainer,
+                (img) => {
+                    log('✅ Preview URL exitoso');
+                },
+                (error) => {
+                    log('❌ Error en preview URL: ' + error);
+                }
+            );
+        }
+        
+        function testFilePreview(fileInput) {
+            const previewContainer = document.getElementById('file-preview');
+            
+            if (!fileInput.files.length) return;
+            
+            const file = fileInput.files[0];
+            log(`Probando preview de archivo: ${file.name}`);
+            
+            imageHandler.previewImageFromFile(
+                file,
+                previewContainer,
+                (img, base64) => {
+                    log('✅ Preview archivo exitoso');
+                },
+                (error) => {
+                    log('❌ Error en preview archivo: ' + error);
+                }
+            );
+        }
+        
+        function testProductDisplay() {
+            const container = document.getElementById('products-display');
+            
+            // Datos de prueba simulando productos
+            const testProducts = [
+                {
+                    id: 1,
+                    nombre: 'Perfume Test URL',
+                    marca: 'Test Brand',
+                    precio: 25.99,
+                    imagen_url: 'https://via.placeholder.com/200x200/4CAF50/white?text=URL+Test',
+                    estado: 'disponible'
+                },
+                {
+                    id: 2,
+                    nombre: 'Perfume Test Local',
+                    marca: 'Test Brand',
+                    precio: 35.50,
+                    imagen_url: 'PARA_ELLOS.png',
+                    estado: 'oferta',
+                    descuento: 20
+                },
+                {
+                    id: 3,
+                    nombre: 'Perfume Sin Imagen',
+                    marca: 'Test Brand',
+                    precio: 45.00,
+                    imagen_url: null,
+                    estado: 'agotado'
+                }
+            ];
+            
+            log('Simulando display de productos con diferentes tipos de imagen');
+            
+            const html = testProducts.map(product => {
+                const imageSrc = imageHandler.getImagePath(product.imagen_url);
+                const placeholderSrc = imageHandler.getPlaceholder();
+                
+                return `
+                    <div class="product-card">
+                        <div class="product-image">
+                            <img src="${imageSrc}" 
+                                 alt="${product.nombre}"
+                                 onerror="this.src='${placeholderSrc}'; console.log('Fallback aplicado para: ${product.nombre}')">
+                        </div>
+                        <h3>${product.nombre}</h3>
+                        <p>Marca: ${product.marca}</p>
+                        <p>Precio: $${product.precio}</p>
+                        <p>Estado: ${product.estado}</p>
+                        <p><small>Imagen: ${product.imagen_url || 'Sin imagen'}</small></p>
+                    </div>
+                `;
+            }).join('');
+            
+            container.innerHTML = html;
+            log('✅ Productos simulados mostrados');
+        }
+        
+        function clearProducts() {
+            document.getElementById('products-display').innerHTML = '';
+            log('🧹 Productos limpiados');
+        }
+        
+        async function testImageProcessing() {
+            const fileInput = document.getElementById('admin-file');
+            const urlInput = document.getElementById('admin-url');
+            const resultsContainer = document.getElementById('processing-results');
+            
+            try {
+                log('Probando procesamiento de imagen (simulando admin panel)');
+                
+                const result = await imageHandler.processProductImage(fileInput, urlInput);
+                
+                let html = `
+                    <div class="status success">
+                        ✅ Procesamiento exitoso
+                        <br><strong>Imagen:</strong> ${result.imagen ? 'Procesada' : 'No procesada'}
+                        <br><strong>URL:</strong> ${result.imagen_url ? 'Generada' : 'No generada'}
+                    </div>
+                `;
+                
+                if (result.imagen) {
+                    html += `
+                        <div class="image-preview">
+                            <img src="${result.imagen}" alt="Imagen procesada">
+                        </div>
+                    `;
+                }
+                
+                resultsContainer.innerHTML = html;
+                log('✅ Procesamiento de imagen exitoso');
+                
+            } catch (error) {
+                const html = `
+                    <div class="status error">
+                        ❌ Error en procesamiento: ${error.message}
+                    </div>
+                `;
+                resultsContainer.innerHTML = html;
+                log('❌ Error en procesamiento: ' + error.message);
+            }
+        }
+        
+        function log(message) {
+            const timestamp = new Date().toLocaleTimeString();
+            testLogs.push(`[${timestamp}] ${message}`);
+            updateLogs();
+        }
+        
+        function updateLogs() {
+            const logsContainer = document.getElementById('test-logs');
+            logsContainer.innerHTML = testLogs.join('<br>');
+            logsContainer.scrollTop = logsContainer.scrollHeight;
+        }
+        
+        function clearLogs() {
+            testLogs = [];
+            updateLogs();
+        }
+    </script>
+</body>
+</html>

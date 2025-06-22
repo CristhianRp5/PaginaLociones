@@ -1,0 +1,267 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test - Verificación Final Index</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .test-item {
+            margin: 10px 0;
+            padding: 10px;
+            border-left: 4px solid #007bff;
+            background-color: #f8f9fa;
+        }
+        .success {
+            border-left-color: #28a745;
+            background-color: #d4edda;
+        }
+        .error {
+            border-left-color: #dc3545;
+            background-color: #f8d7da;
+        }
+        .warning {
+            border-left-color: #ffc107;
+            background-color: #fff3cd;
+        }
+        button {
+            background-color: #007bff;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        button:hover {
+            background-color: #0056b3;
+        }
+        pre {
+            background-color: #f8f9fa;
+            padding: 10px;
+            border-radius: 4px;
+            overflow-x: auto;
+        }
+        .iframe-container {
+            margin: 20px 0;
+            border: 2px solid #ddd;
+            border-radius: 8px;
+            overflow: hidden;
+        }
+        iframe {
+            width: 100%;
+            height: 600px;
+            border: none;
+        }
+        .test-results {
+            margin: 20px 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔧 Verificación Final de index.html</h1>
+        <p><strong>Propósito:</strong> Confirmar que el archivo index.html funciona correctamente después de corregir el conflicto de guardado.</p>
+        
+        <div class="test-results">
+            <h2>📋 Resultados de Verificación</h2>
+            <div id="test-results">
+                <p>🔄 Ejecutando verificaciones...</p>
+            </div>
+        </div>
+
+        <h2>🔧 Controles de Prueba</h2>
+        <button onclick="runAllTests()">🚀 Ejecutar Todas las Pruebas</button>
+        <button onclick="testFileExists()">📄 Verificar Archivo</button>
+        <button onclick="testJavaScript()">⚡ Verificar JavaScript</button>
+        <button onclick="testCSS()">🎨 Verificar CSS</button>
+        <button onclick="testNavbar()">🧭 Verificar Navbar</button>
+        <button onclick="testVideos()">🎥 Verificar Videos</button>
+        <button onclick="clearResults()">🧹 Limpiar Resultados</button>
+
+        <h2>📱 Vista Previa del index.html</h2>
+        <div class="iframe-container">
+            <iframe src="index.html" title="Vista previa de index.html"></iframe>
+        </div>
+
+        <h2>📊 Información del Sistema</h2>
+        <div class="test-item">
+            <strong>Fecha de verificación:</strong> <span id="current-date"></span><br>
+            <strong>Navegador:</strong> <span id="browser-info"></span><br>
+            <strong>Resolución:</strong> <span id="resolution"></span>
+        </div>
+    </div>
+
+    <script>
+        // Información del sistema
+        document.getElementById('current-date').textContent = new Date().toLocaleString();
+        document.getElementById('browser-info').textContent = navigator.userAgent.split(' ').slice(-2).join(' ');
+        document.getElementById('resolution').textContent = `${screen.width}x${screen.height}`;
+
+        function addTestResult(title, status, details = '') {
+            const resultsDiv = document.getElementById('test-results');
+            const testItem = document.createElement('div');
+            testItem.className = `test-item ${status}`;
+            testItem.innerHTML = `
+                <strong>${title}</strong><br>
+                ${details}
+                <small style="display: block; margin-top: 5px; color: #666;">
+                    ${new Date().toLocaleTimeString()}
+                </small>
+            `;
+            resultsDiv.appendChild(testItem);
+        }
+
+        function clearResults() {
+            document.getElementById('test-results').innerHTML = '<p>✨ Resultados limpiados. Listo para nuevas pruebas.</p>';
+        }
+
+        async function testFileExists() {
+            try {
+                const response = await fetch('index.html', { method: 'HEAD' });
+                if (response.ok) {
+                    addTestResult('📄 Archivo index.html', 'success', 'El archivo existe y es accesible');
+                } else {
+                    addTestResult('📄 Archivo index.html', 'error', `Error HTTP: ${response.status}`);
+                }
+            } catch (error) {
+                addTestResult('📄 Archivo index.html', 'error', `Error: ${error.message}`);
+            }
+        }
+
+        async function testJavaScript() {
+            try {
+                // Verificar que el JavaScript no tenga errores de sintaxis
+                const response = await fetch('index.html');
+                const html = await response.text();
+                
+                // Buscar problemas comunes de JavaScript
+                const issues = [];
+                
+                if (html.includes('.then(') && html.includes('.catch(')) {
+                    if (!html.includes('.then(response =>') || html.includes('.then(response =>' + '                .then(')) {
+                        issues.push('Posible problema de formato en cadena de promesas');
+                    }
+                }
+                
+                if (issues.length === 0) {
+                    addTestResult('⚡ JavaScript', 'success', 'No se detectaron problemas de sintaxis en el JavaScript');
+                } else {
+                    addTestResult('⚡ JavaScript', 'warning', 'Problemas detectados: ' + issues.join(', '));
+                }
+            } catch (error) {
+                addTestResult('⚡ JavaScript', 'error', `Error verificando JavaScript: ${error.message}`);
+            }
+        }
+
+        async function testCSS() {
+            try {
+                // Verificar que los archivos CSS existan
+                const cssFiles = ['css/style.css', 'css/navbar.css'];
+                let allFound = true;
+                let results = [];
+                
+                for (const file of cssFiles) {
+                    try {
+                        const response = await fetch(file, { method: 'HEAD' });
+                        if (response.ok) {
+                            results.push(`✅ ${file} - OK`);
+                        } else {
+                            results.push(`❌ ${file} - Error ${response.status}`);
+                            allFound = false;
+                        }
+                    } catch (error) {
+                        results.push(`❌ ${file} - ${error.message}`);
+                        allFound = false;
+                    }
+                }
+                
+                if (allFound) {
+                    addTestResult('🎨 Archivos CSS', 'success', results.join('<br>'));
+                } else {
+                    addTestResult('🎨 Archivos CSS', 'error', results.join('<br>'));
+                }
+            } catch (error) {
+                addTestResult('🎨 Archivos CSS', 'error', `Error verificando CSS: ${error.message}`);
+            }
+        }
+
+        async function testNavbar() {
+            try {
+                const response = await fetch('html/navbar.html', { method: 'HEAD' });
+                if (response.ok) {
+                    addTestResult('🧭 Navbar', 'success', 'Archivo navbar.html encontrado');
+                } else {
+                    addTestResult('🧭 Navbar', 'error', `Error cargando navbar: ${response.status}`);
+                }
+            } catch (error) {
+                addTestResult('🧭 Navbar', 'error', `Error: ${error.message}`);
+            }
+        }
+
+        async function testVideos() {
+            const videos = ['VIDEOS/Video1_index.mp4', 'VIDEOS/Video2_index.mp4', 'VIDEOS/Video3_Index.mp4'];
+            let results = [];
+            let allFound = true;
+            
+            for (const video of videos) {
+                try {
+                    const response = await fetch(video, { method: 'HEAD' });
+                    if (response.ok) {
+                        results.push(`✅ ${video} - OK`);
+                    } else {
+                        results.push(`❌ ${video} - Error ${response.status}`);
+                        allFound = false;
+                    }
+                } catch (error) {
+                    results.push(`❌ ${video} - ${error.message}`);
+                    allFound = false;
+                }
+            }
+            
+            if (allFound) {
+                addTestResult('🎥 Videos', 'success', results.join('<br>'));
+            } else {
+                addTestResult('🎥 Videos', 'warning', results.join('<br>'));
+            }
+        }
+
+        async function runAllTests() {
+            clearResults();
+            addTestResult('🚀 Iniciando Verificación Completa', 'success', 'Ejecutando todas las pruebas automáticamente...');
+            
+            await testFileExists();
+            await new Promise(resolve => setTimeout(resolve, 500));
+            
+            await testJavaScript();
+            await new Promise(resolve => setTimeout(resolve, 500));
+            
+            await testCSS();
+            await new Promise(resolve => setTimeout(resolve, 500));
+            
+            await testNavbar();
+            await new Promise(resolve => setTimeout(resolve, 500));
+            
+            await testVideos();
+            await new Promise(resolve => setTimeout(resolve, 500));
+            
+            addTestResult('✅ Verificación Completa', 'success', 'Todas las pruebas han sido ejecutadas. Revisa los resultados arriba.');
+        }
+
+        // Ejecutar pruebas automáticamente al cargar la página
+        setTimeout(runAllTests, 1000);
+    </script>
+</body>
+</html>

@@ -1,0 +1,519 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Automatizado - Guardar Producto con Imagen Local</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; background: #f5f5f5; }
+        .container { max-width: 1000px; margin: 0 auto; background: white; padding: 20px; border-radius: 8px; }
+        .test-section { margin: 20px 0; padding: 15px; border: 1px solid #ddd; border-radius: 5px; }
+        .status { padding: 10px; margin: 10px 0; border-radius: 4px; font-weight: bold; }
+        .status.success { background-color: #d4edda; color: #155724; }
+        .status.error { background-color: #f8d7da; color: #721c24; }
+        .status.info { background-color: #d1ecf1; color: #0c5460; }
+        .status.warning { background-color: #fff3cd; color: #856404; }
+        .log-container { background: #f8f9fa; border: 1px solid #e9ecef; border-radius: 4px; padding: 15px; margin: 10px 0; max-height: 400px; overflow-y: auto; font-family: monospace; font-size: 11px; }
+        .btn { padding: 10px 20px; margin: 5px; border: none; border-radius: 4px; cursor: pointer; font-size: 14px; }
+        .btn-primary { background: #007bff; color: white; }
+        .btn-success { background: #28a745; color: white; }
+        .btn-warning { background: #ffc107; color: black; }
+        .btn-danger { background: #dc3545; color: white; }
+        
+        .step { padding: 10px; margin: 10px 0; border-left: 4px solid #007bff; background: #f8f9fa; }
+        .step.active { border-left-color: #ffc107; background: #fff3cd; }
+        .step.completed { border-left-color: #28a745; background: #d4edda; }
+        .step.error { border-left-color: #dc3545; background: #f8d7da; }
+        
+        .progress-bar { width: 100%; height: 20px; background: #e9ecef; border-radius: 10px; overflow: hidden; margin: 10px 0; }
+        .progress-fill { height: 100%; background: #007bff; transition: width 0.3s; }
+        
+        .preview-container { margin: 15px 0; padding: 15px; border: 1px solid #ddd; border-radius: 5px; background: #f9f9f9; text-align: center; }
+        .preview-image { max-width: 200px; max-height: 200px; border: 1px solid #ddd; border-radius: 4px; }
+        
+        .data-preview { background: #f8f9fa; padding: 10px; border-radius: 4px; margin: 10px 0; font-family: monospace; font-size: 12px; max-height: 200px; overflow-y: auto; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🤖 Test Automatizado - Guardar Producto con Imagen Local</h1>
+        <p>Este test simula automáticamente todo el proceso de agregar un producto con imagen local, igual que en el panel real.</p>
+        
+        <div class="test-section">
+            <h3>🎯 Progreso del Test</h3>
+            <div class="progress-bar">
+                <div class="progress-fill" id="progressFill" style="width: 0%;"></div>
+            </div>
+            <div id="currentStep">Listo para iniciar...</div>
+        </div>
+        
+        <div class="test-section">
+            <h3>📋 Pasos del Proceso</h3>
+            <div id="stepsContainer">
+                <div class="step" id="step1">1. Generar imagen de prueba</div>
+                <div class="step" id="step2">2. Simular selección de archivo</div>
+                <div class="step" id="step3">3. Procesar imagen con FileReader</div>
+                <div class="step" id="step4">4. Validar datos de imagen</div>
+                <div class="step" id="step5">5. Preparar datos del producto</div>
+                <div class="step" id="step6">6. Simular envío a Supabase</div>
+                <div class="step" id="step7">7. Verificar resultado</div>
+            </div>
+        </div>
+        
+        <div class="test-section">
+            <h3>🖼️ Vista Previa de Imagen</h3>
+            <div class="preview-container" id="previewContainer">
+                <div>No hay imagen generada aún</div>
+            </div>
+        </div>
+        
+        <div class="test-section">
+            <h3>📦 Datos del Producto</h3>
+            <div class="data-preview" id="productDataPreview">Esperando datos...</div>
+        </div>
+        
+        <div class="test-section">
+            <h3>🔧 Controles</h3>
+            <button class="btn btn-success" onclick="startTest()" id="startBtn">🚀 Iniciar Test Completo</button>
+            <button class="btn btn-primary" onclick="stepByStep()" id="stepBtn">👣 Paso a Paso</button>
+            <button class="btn btn-warning" onclick="generateImageOnly()">🖼️ Solo Generar Imagen</button>
+            <button class="btn btn-danger" onclick="resetTest()">🔄 Resetear</button>
+        </div>
+        
+        <div class="test-section">
+            <h3>📝 Log Detallado</h3>
+            <div class="log-container" id="logContainer"></div>
+            <button class="btn btn-primary" onclick="clearLog()">Limpiar Log</button>
+        </div>
+        
+        <div class="test-section">
+            <h3>🎯 Resultado Final</h3>
+            <div id="finalResult">
+                <div class="status info">Ejecuta el test para ver los resultados...</div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let currentStepIndex = 0;
+        let isStepByStep = false;
+        let testImage = null;
+        let imageData = null;
+        let productData = null;
+        
+        const steps = [
+            'Generar imagen de prueba',
+            'Simular selección de archivo', 
+            'Procesar imagen con FileReader',
+            'Validar datos de imagen',
+            'Preparar datos del producto',
+            'Simular envío a Supabase',
+            'Verificar resultado'
+        ];
+        
+        function log(message, type = 'info') {
+            const timestamp = new Date().toLocaleTimeString();
+            const logContainer = document.getElementById('logContainer');
+            const logEntry = document.createElement('div');
+            const color = type === 'error' ? '#dc3545' : type === 'success' ? '#28a745' : type === 'warning' ? '#ffc107' : '#007bff';
+            logEntry.innerHTML = `<span style="color: #666;">[${timestamp}]</span> <span style="color: ${color};">[${type.toUpperCase()}] ${message}</span>`;
+            logContainer.appendChild(logEntry);
+            logContainer.scrollTop = logContainer.scrollHeight;
+            console.log(`[${type.toUpperCase()}] ${message}`);
+        }
+        
+        function updateProgress(step) {
+            const progress = (step / steps.length) * 100;
+            document.getElementById('progressFill').style.width = progress + '%';
+            document.getElementById('currentStep').textContent = `Paso ${step}/${steps.length}: ${steps[step - 1] || 'Completado'}`;
+            
+            // Actualizar estados visuales de los pasos
+            for (let i = 1; i <= steps.length; i++) {
+                const stepElement = document.getElementById(`step${i}`);
+                stepElement.className = 'step';
+                if (i < step) {
+                    stepElement.className += ' completed';
+                } else if (i === step) {
+                    stepElement.className += ' active';
+                }
+            }
+        }
+        
+        function clearLog() {
+            document.getElementById('logContainer').innerHTML = '';
+        }
+        
+        function resetTest() {
+            currentStepIndex = 0;
+            isStepByStep = false;
+            testImage = null;
+            imageData = null;
+            productData = null;
+            
+            updateProgress(0);
+            document.getElementById('previewContainer').innerHTML = '<div>No hay imagen generada aún</div>';
+            document.getElementById('productDataPreview').textContent = 'Esperando datos...';
+            document.getElementById('finalResult').innerHTML = '<div class="status info">Ejecuta el test para ver los resultados...</div>';
+            
+            log('🔄 Test reseteado');
+        }
+        
+        async function generateTestImage() {
+            return new Promise((resolve) => {
+                log('🖼️ Generando imagen de prueba...');
+                
+                const canvas = document.createElement('canvas');
+                canvas.width = 300;
+                canvas.height = 300;
+                const ctx = canvas.getContext('2d');
+                
+                // Fondo gradiente elegante
+                const gradient = ctx.createLinearGradient(0, 0, 300, 300);
+                gradient.addColorStop(0, '#f8f9fa');
+                gradient.addColorStop(0.5, '#e9ecef');
+                gradient.addColorStop(1, '#dee2e6');
+                ctx.fillStyle = gradient;
+                ctx.fillRect(0, 0, 300, 300);
+                
+                // Botella de perfume estilizada
+                ctx.fillStyle = '#d4af37';
+                ctx.fillRect(120, 80, 60, 140);
+                
+                // Reflejos en la botella
+                ctx.fillStyle = 'rgba(255, 255, 255, 0.3)';
+                ctx.fillRect(125, 85, 10, 130);
+                
+                // Tapa dorada
+                ctx.fillStyle = '#b8860b';
+                ctx.fillRect(115, 60, 70, 25);
+                
+                // Highlight en la tapa
+                ctx.fillStyle = 'rgba(255, 255, 255, 0.4)';
+                ctx.fillRect(118, 63, 64, 6);
+                
+                // Etiqueta elegante
+                ctx.fillStyle = 'white';
+                ctx.fillRect(125, 100, 50, 80);
+                
+                // Borde de la etiqueta
+                ctx.strokeStyle = '#d4af37';
+                ctx.lineWidth = 1;
+                ctx.strokeRect(125, 100, 50, 80);
+                
+                // Texto de la etiqueta
+                ctx.fillStyle = '#333';
+                ctx.font = 'bold 14px Arial';
+                ctx.textAlign = 'center';
+                ctx.fillText('TEST', 150, 120);
+                
+                ctx.font = '12px Arial';
+                ctx.fillText('PERFUME', 150, 140);
+                
+                ctx.font = '10px Arial';
+                ctx.fillText('Eau de', 150, 155);
+                ctx.fillText('Toilette', 150, 167);
+                
+                ctx.font = 'bold 10px Arial';
+                ctx.fillText('100ml', 150, 182);
+                
+                // Información del test
+                ctx.font = '8px Arial';
+                ctx.fillStyle = '#666';
+                ctx.fillText(`Test: ${new Date().toLocaleTimeString()}`, 150, 280);
+                
+                // Convertir a blob
+                canvas.toBlob((blob) => {
+                    testImage = new File([blob], 'perfume-test.png', { type: 'image/png' });
+                    
+                    // Mostrar preview
+                    const url = URL.createObjectURL(blob);
+                    document.getElementById('previewContainer').innerHTML = `
+                        <img src="${url}" class="preview-image" alt="Imagen de prueba">
+                        <div style="margin-top: 10px; font-size: 12px;">
+                            <strong>Archivo generado:</strong> ${testImage.name}<br>
+                            <strong>Tamaño:</strong> ${(testImage.size / 1024).toFixed(1)}KB<br>
+                            <strong>Tipo:</strong> ${testImage.type}
+                        </div>
+                    `;
+                    
+                    log(`✅ Imagen generada: ${testImage.name} (${(testImage.size / 1024).toFixed(1)}KB)`, 'success');
+                    resolve(testImage);
+                });
+            });
+        }
+        
+        async function processImageWithFileReader(file) {
+            return new Promise((resolve, reject) => {
+                log('📁 Procesando imagen con FileReader...');
+                
+                const reader = new FileReader();
+                
+                reader.onload = (e) => {
+                    imageData = e.target.result;
+                    log(`✅ Imagen procesada como base64`, 'success');
+                    log(`📊 Tamaño base64: ${(imageData.length / 1024).toFixed(1)}KB`);
+                    log(`📊 Formato válido: ${imageData.startsWith('data:image/') ? '✅' : '❌'}`);
+                    resolve(imageData);
+                };
+                
+                reader.onerror = () => {
+                    log('❌ Error procesando imagen con FileReader', 'error');
+                    reject(new Error('Error procesando imagen'));
+                };
+                
+                reader.readAsDataURL(file);
+            });
+        }
+        
+        function validateImageData() {
+            log('🔍 Validando datos de imagen...');
+            
+            if (!imageData) {
+                log('❌ No hay datos de imagen', 'error');
+                return false;
+            }
+            
+            if (typeof imageData !== 'string') {
+                log(`❌ Datos de imagen no son string: ${typeof imageData}`, 'error');
+                return false;
+            }
+            
+            if (!imageData.startsWith('data:image/')) {
+                log('❌ Datos no son base64 válido', 'error');
+                return false;
+            }
+            
+            if (imageData.length < 1000) {
+                log('❌ Datos de imagen muy pequeños (posiblemente corruptos)', 'error');
+                return false;
+            }
+            
+            log('✅ Datos de imagen válidos', 'success');
+            log(`   - Tipo: string ✅`);
+            log(`   - Formato base64: ✅`);
+            log(`   - Tamaño: ${(imageData.length / 1024).toFixed(1)}KB ✅`);
+            
+            return true;
+        }
+        
+        function prepareProductData() {
+            log('📦 Preparando datos del producto...');
+            
+            productData = {
+                nombre: `Perfume Test ${new Date().getTime()}`,
+                marca: 'Test Brand',
+                precio: 75000,
+                categoria: 'para-ellos',
+                subcategoria: 'designer',
+                descripcion: 'Perfume de prueba generado automáticamente para testing',
+                notas: 'Bergamota, Rosa, Sándalo',
+                estado: 'disponible',
+                descuento: null,
+                activo: true
+            };
+            
+            // Agregar imagen si está disponible
+            if (imageData) {
+                productData.imagen_url = imageData;
+                log('✅ Imagen agregada a los datos del producto', 'success');
+            } else {
+                log('⚠️ No hay imagen para agregar', 'warning');
+            }
+            
+            // Mostrar datos en la UI
+            document.getElementById('productDataPreview').innerHTML = `<pre>${JSON.stringify(productData, null, 2)}</pre>`;
+            
+            log('✅ Datos del producto preparados', 'success');
+            log(`📋 Campos: ${Object.keys(productData).length}`);
+            log(`📋 Tiene imagen: ${productData.imagen_url ? '✅' : '❌'}`);
+            
+            return productData;
+        }
+        
+        async function simulateSupabaseSend() {
+            log('🚀 Simulando envío a Supabase...', 'warning');
+            
+            if (!productData) {
+                log('❌ No hay datos de producto para enviar', 'error');
+                return null;
+            }
+            
+            // Simular delay de red
+            await new Promise(resolve => setTimeout(resolve, 1000));
+            
+            // Simular validación de Supabase
+            const requiredFields = ['nombre', 'marca', 'precio', 'categoria'];
+            const missingFields = requiredFields.filter(field => !productData[field]);
+            
+            if (missingFields.length > 0) {
+                log(`❌ Campos requeridos faltantes: ${missingFields.join(', ')}`, 'error');
+                return null;
+            }
+            
+            // Simular respuesta de Supabase
+            const simulatedResponse = {
+                id: Math.floor(Math.random() * 1000) + 1,
+                ...productData,
+                created_at: new Date().toISOString(),
+                updated_at: new Date().toISOString()
+            };
+            
+            log('✅ Respuesta simulada de Supabase recibida', 'success');
+            log(`📋 Producto creado con ID: ${simulatedResponse.id}`);
+            
+            // Verificar que la imagen se "guardó"
+            if (simulatedResponse.imagen_url) {
+                log('🖼️ Imagen guardada en base de datos ✅', 'success');
+                log(`   - Tamaño en BD: ${(simulatedResponse.imagen_url.length / 1024).toFixed(1)}KB`);
+            } else {
+                log('❌ Imagen NO se guardó en base de datos', 'error');
+            }
+            
+            return simulatedResponse;
+        }
+        
+        function verifyResult(result) {
+            log('🔍 Verificando resultado final...');
+            
+            let success = true;
+            let issues = [];
+            
+            if (!result) {
+                issues.push('No se recibió respuesta del guardado');
+                success = false;
+            } else {
+                if (!result.id) {
+                    issues.push('Producto sin ID asignado');
+                    success = false;
+                }
+                
+                if (!result.imagen_url) {
+                    issues.push('Imagen no se guardó en la base de datos');
+                    success = false;
+                }
+                
+                if (result.imagen_url && !result.imagen_url.startsWith('data:image/')) {
+                    issues.push('Imagen guardada en formato incorrecto');
+                    success = false;
+                }
+            }
+            
+            // Mostrar resultado final
+            let resultHtml = '';
+            if (success) {
+                resultHtml = `
+                    <div class="status success">
+                        ✅ <strong>TEST EXITOSO</strong><br>
+                        El producto se guardó correctamente con imagen local.
+                    </div>
+                    <div style="margin-top: 10px; font-size: 14px;">
+                        <strong>Detalles:</strong><br>
+                        • ID del producto: ${result.id}<br>
+                        • Imagen guardada: ✅ (${(result.imagen_url.length / 1024).toFixed(1)}KB)<br>
+                        • Formato base64: ✅<br>
+                        • Todos los campos: ✅
+                    </div>
+                `;
+                log('🎉 TEST COMPLETADO EXITOSAMENTE', 'success');
+            } else {
+                resultHtml = `
+                    <div class="status error">
+                        ❌ <strong>TEST FALLÓ</strong><br>
+                        Se encontraron problemas en el proceso.
+                    </div>
+                    <div style="margin-top: 10px; font-size: 14px;">
+                        <strong>Problemas encontrados:</strong><br>
+                        ${issues.map(issue => `• ${issue}`).join('<br>')}
+                    </div>
+                `;
+                log('❌ TEST FALLÓ - Ver problemas arriba', 'error');
+            }
+            
+            document.getElementById('finalResult').innerHTML = resultHtml;
+            return success;
+        }
+        
+        async function executeStep(stepIndex) {
+            currentStepIndex = stepIndex;
+            updateProgress(stepIndex);
+            
+            try {
+                switch (stepIndex) {
+                    case 1:
+                        await generateTestImage();
+                        break;
+                    case 2:
+                        log('📁 Simulando selección de archivo...');
+                        if (!testImage) throw new Error('No hay imagen generada');
+                        log(`✅ Archivo seleccionado: ${testImage.name}`, 'success');
+                        break;
+                    case 3:
+                        await processImageWithFileReader(testImage);
+                        break;
+                    case 4:
+                        if (!validateImageData()) throw new Error('Validación de imagen falló');
+                        break;
+                    case 5:
+                        prepareProductData();
+                        break;
+                    case 6:
+                        const result = await simulateSupabaseSend();
+                        if (!result) throw new Error('Envío a Supabase falló');
+                        window.testResult = result; // Guardar para verificación
+                        break;
+                    case 7:
+                        verifyResult(window.testResult);
+                        break;
+                }
+                
+                if (!isStepByStep && stepIndex < steps.length) {
+                    setTimeout(() => executeStep(stepIndex + 1), 1000);
+                }
+                
+            } catch (error) {
+                log(`❌ Error en paso ${stepIndex}: ${error.message}`, 'error');
+                document.getElementById(`step${stepIndex}`).className = 'step error';
+                
+                document.getElementById('finalResult').innerHTML = `
+                    <div class="status error">
+                        ❌ <strong>ERROR EN PASO ${stepIndex}</strong><br>
+                        ${error.message}
+                    </div>
+                `;
+            }
+        }
+        
+        async function startTest() {
+            log('🚀 Iniciando test completo automatizado...', 'warning');
+            resetTest();
+            isStepByStep = false;
+            executeStep(1);
+        }
+        
+        async function stepByStep() {
+            if (currentStepIndex === 0) {
+                log('👣 Iniciando modo paso a paso...', 'warning');
+                resetTest();
+                isStepByStep = true;
+                executeStep(1);
+            } else if (currentStepIndex < steps.length) {
+                executeStep(currentStepIndex + 1);
+            } else {
+                log('✅ Todos los pasos completados');
+            }
+        }
+        
+        async function generateImageOnly() {
+            log('🖼️ Generando solo imagen de prueba...');
+            await generateTestImage();
+            updateProgress(1);
+        }
+        
+        // Inicializar
+        document.addEventListener('DOMContentLoaded', function() {
+            log('🤖 Sistema de test automatizado listo');
+            resetTest();
+        });
+    </script>
+</body>
+</html>

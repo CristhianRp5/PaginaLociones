@@ -1,0 +1,501 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test - Flujo Completo Carga Imagen Local</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .test-section {
+            margin: 20px 0;
+            padding: 15px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+        }
+        .test-section h3 {
+            margin-top: 0;
+            color: #333;
+        }
+        .status {
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 4px;
+            font-weight: bold;
+        }
+        .status.success { background-color: #d4edda; color: #155724; }
+        .status.error { background-color: #f8d7da; color: #721c24; }
+        .status.info { background-color: #d1ecf1; color: #0c5460; }
+        .status.warning { background-color: #fff3cd; color: #856404; }
+        
+        .log-container {
+            background: #f8f9fa;
+            border: 1px solid #e9ecef;
+            border-radius: 4px;
+            padding: 15px;
+            margin: 10px 0;
+            max-height: 300px;
+            overflow-y: auto;
+            font-family: monospace;
+            font-size: 12px;
+        }
+        
+        .file-upload-test {
+            border: 2px dashed #ccc;
+            padding: 20px;
+            text-align: center;
+            margin: 10px 0;
+            border-radius: 8px;
+            background: #fafafa;
+        }
+        
+        .file-upload-test:hover {
+            border-color: #007bff;
+            background: #f0f8ff;
+        }
+        
+        .file-upload-test.dragover {
+            border-color: #007bff;
+            background: #e7f3ff;
+        }
+        
+        .file-upload-test.file-selected {
+            border-color: #28a745;
+            background: #f0fff0;
+        }
+        
+        .btn {
+            padding: 8px 16px;
+            margin: 5px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+        }
+        
+        .btn-primary { background: #007bff; color: white; }
+        .btn-success { background: #28a745; color: white; }
+        .btn-danger { background: #dc3545; color: white; }
+        .btn-warning { background: #ffc107; color: black; }
+        
+        .btn:hover {
+            opacity: 0.8;
+        }
+        
+        .preview-container {
+            margin: 15px 0;
+            padding: 15px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            background: #f9f9f9;
+        }
+        
+        .preview-image {
+            max-width: 200px;
+            max-height: 200px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
+        
+        .test-results {
+            margin-top: 20px;
+            padding: 15px;
+            background: #f0f0f0;
+            border-radius: 5px;
+        }
+        
+        .counter {
+            display: inline-block;
+            padding: 5px 10px;
+            margin: 5px;
+            background: #e9ecef;
+            border-radius: 3px;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🧪 Test - Flujo Completo Carga Imagen Local</h1>
+        <p>Este test verifica que el proceso de carga de imágenes locales funcione correctamente sin duplicaciones.</p>
+        
+        <div class="test-section">
+            <h3>🎯 Objetivos del Test</h3>
+            <ul>
+                <li>✅ Verificar que el selector de archivos no se abra múltiples veces</li>
+                <li>✅ Confirmar que la imagen se carga y previsualiza correctamente</li>
+                <li>✅ Validar que los datos se guardan en formato base64</li>
+                <li>✅ Comprobar que no hay eventos duplicados</li>
+                <li>✅ Verificar el comportamiento de drag & drop</li>
+            </ul>
+        </div>
+        
+        <div class="test-section">
+            <h3>📊 Contadores de Eventos</h3>
+            <div id="counters">
+                <span class="counter">Input Change: <span id="inputChangeCount">0</span></span>
+                <span class="counter">Area Click: <span id="areaClickCount">0</span></span>
+                <span class="counter">File Selected: <span id="fileSelectedCount">0</span></span>
+                <span class="counter">Preview Called: <span id="previewCalledCount">0</span></span>
+            </div>
+        </div>
+        
+        <div class="test-section">
+            <h3>📁 Área de Carga de Archivos</h3>
+            <div class="file-upload-test" id="fileUploadArea">
+                <input type="file" id="imagen_file" accept="image/*" style="display: none;">
+                <div class="upload-content">
+                    <i>📁</i>
+                    <div id="uploadText">Haz clic para seleccionar una imagen</div>
+                    <div style="font-size: 12px; color: #666; margin-top: 5px;">
+                        O arrastra y suelta una imagen aquí
+                    </div>
+                </div>
+            </div>
+            
+            <div class="preview-container" id="previewContainer" style="display: none;">
+                <h4>🖼️ Vista Previa</h4>
+                <img id="previewImg" class="preview-image" src="" alt="Vista previa">
+                <div id="imageInfo" style="margin-top: 10px; font-size: 12px; color: #666;"></div>
+            </div>
+        </div>
+        
+        <div class="test-section">
+            <h3>🔧 Controles de Test</h3>
+            <button class="btn btn-primary" onclick="testFileSelection()">🖱️ Test Selección Manual</button>
+            <button class="btn btn-success" onclick="simulateFileUpload()">🎭 Simular Carga</button>
+            <button class="btn btn-warning" onclick="resetTest()">🔄 Reset Test</button>
+            <button class="btn btn-danger" onclick="clearAll()">🧹 Limpiar Todo</button>
+        </div>
+        
+        <div class="test-section">
+            <h3>📝 Log de Eventos</h3>
+            <div class="log-container" id="logContainer"></div>
+            <button class="btn btn-primary" onclick="clearLog()">Limpiar Log</button>
+        </div>
+        
+        <div class="test-results" id="testResults">
+            <h3>🏆 Resultados del Test</h3>
+            <div id="resultsContent">
+                <div class="status info">Esperando interacción del usuario...</div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Contadores globales
+        let counters = {
+            inputChange: 0,
+            areaClick: 0,
+            fileSelected: 0,
+            previewCalled: 0
+        };
+        
+        // Variables de estado
+        let imageData = null;
+        let currentFile = null;
+        let eventsConfigured = false;
+        
+        // Función de logging
+        function log(message, type = 'info') {
+            const timestamp = new Date().toLocaleTimeString();
+            const logContainer = document.getElementById('logContainer');
+            const logEntry = document.createElement('div');
+            logEntry.innerHTML = `<span style="color: #666;">[${timestamp}]</span> <span style="color: ${getLogColor(type)};">${message}</span>`;
+            logContainer.appendChild(logEntry);
+            logContainer.scrollTop = logContainer.scrollHeight;
+            
+            console.log(`[${type.toUpperCase()}] ${message}`);
+        }
+        
+        function getLogColor(type) {
+            switch(type) {
+                case 'error': return '#dc3545';
+                case 'success': return '#28a745';
+                case 'warning': return '#ffc107';
+                default: return '#007bff';
+            }
+        }
+        
+        // Actualizar contadores
+        function updateCounter(type) {
+            counters[type]++;
+            document.getElementById(`${type}Count`).textContent = counters[type];
+            log(`📊 Contador ${type}: ${counters[type]}`);
+        }
+        
+        // Configurar eventos (solo una vez)
+        function setupEvents() {
+            if (eventsConfigured) {
+                log('⚠️ Eventos ya configurados, evitando duplicación', 'warning');
+                return;
+            }
+            
+            log('🔧 Configurando eventos...');
+            
+            const fileInput = document.getElementById('imagen_file');
+            const fileUploadArea = document.getElementById('fileUploadArea');
+            
+            // Evento de cambio del input de archivo
+            fileInput.addEventListener('change', function(e) {
+                updateCounter('inputChange');
+                log('📁 Evento change del input de archivo disparado');
+                handleFileSelection(e.target);
+            });
+            
+            // Evento de click en el área de carga
+            fileUploadArea.addEventListener('click', function(e) {
+                updateCounter('areaClick');
+                log('🖱️ Click en área de carga');
+                
+                // Solo abrir selector si no hay drag activo
+                if (!fileUploadArea.classList.contains('dragover')) {
+                    log('📂 Abriendo selector de archivos...');
+                    fileInput.click();
+                } else {
+                    log('📂 Selector bloqueado - drag activo');
+                }
+            });
+            
+            // Configurar drag & drop
+            ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+                fileUploadArea.addEventListener(eventName, function(e) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                });
+            });
+            
+            ['dragenter', 'dragover'].forEach(eventName => {
+                fileUploadArea.addEventListener(eventName, function() {
+                    fileUploadArea.classList.add('dragover');
+                    log('📂 Drag over - activando visual');
+                });
+            });
+            
+            ['dragleave', 'drop'].forEach(eventName => {
+                fileUploadArea.addEventListener(eventName, function() {
+                    fileUploadArea.classList.remove('dragover');
+                    log('📂 Drag leave/drop - desactivando visual');
+                });
+            });
+            
+            fileUploadArea.addEventListener('drop', function(e) {
+                const files = e.dataTransfer.files;
+                log(`📂 Archivos arrastrados: ${files.length}`);
+                
+                if (files.length > 0) {
+                    // Simular selección de archivo
+                    const dataTransfer = new DataTransfer();
+                    dataTransfer.items.add(files[0]);
+                    fileInput.files = dataTransfer.files;
+                    
+                    handleFileSelection(fileInput);
+                }
+            });
+            
+            eventsConfigured = true;
+            log('✅ Eventos configurados correctamente');
+        }
+        
+        // Manejar selección de archivo
+        function handleFileSelection(input) {
+            updateCounter('fileSelected');
+            
+            const file = input.files[0];
+            const uploadText = document.getElementById('uploadText');
+            const fileUploadArea = document.getElementById('fileUploadArea');
+            
+            if (!file) {
+                log('❌ No se seleccionó archivo');
+                clearPreview();
+                return;
+            }
+            
+            log(`📁 Archivo seleccionado: ${file.name} (${(file.size / 1024).toFixed(1)}KB)`);
+            
+            // Validar tipo de archivo
+            if (!file.type.startsWith('image/')) {
+                log(`❌ Tipo de archivo inválido: ${file.type}`, 'error');
+                showResult('Tipo de archivo inválido. Selecciona una imagen.', 'error');
+                input.value = '';
+                return;
+            }
+            
+            // Validar tamaño
+            if (file.size > 5 * 1024 * 1024) {
+                log(`❌ Archivo muy grande: ${(file.size / 1024 / 1024).toFixed(2)}MB`, 'error');
+                showResult('Archivo muy grande. Máximo 5MB.', 'error');
+                input.value = '';
+                return;
+            }
+            
+            // Actualizar visual
+            fileUploadArea.classList.add('file-selected');
+            uploadText.textContent = `Archivo seleccionado: ${file.name}`;
+            
+            // Procesar archivo
+            previewImage(file);
+        }
+        
+        // Previsualizar imagen
+        function previewImage(file) {
+            updateCounter('previewCalled');
+            log('🖼️ Iniciando preview de imagen...');
+            
+            const reader = new FileReader();
+            
+            reader.onload = function(e) {
+                const result = e.target.result;
+                
+                log(`✅ Archivo leído exitosamente`);
+                log(`📊 Tipo de datos: ${typeof result}`);
+                log(`📊 Tamaño: ${(result.length / 1024).toFixed(1)}KB`);
+                log(`📊 Formato: ${result.startsWith('data:image/') ? 'Base64 válido' : 'Formato inválido'}`);
+                
+                // Guardar datos
+                imageData = result;
+                currentFile = file;
+                
+                // Mostrar preview
+                showPreview(result, file);
+                
+                // Actualizar resultados
+                showResult('✅ Imagen cargada y procesada correctamente', 'success');
+                
+                log('🎉 Preview completado exitosamente', 'success');
+            };
+            
+            reader.onerror = function() {
+                log('❌ Error leyendo archivo', 'error');
+                showResult('❌ Error leyendo el archivo', 'error');
+            };
+            
+            reader.readAsDataURL(file);
+        }
+        
+        // Mostrar preview
+        function showPreview(imageDataUrl, file) {
+            const previewContainer = document.getElementById('previewContainer');
+            const previewImg = document.getElementById('previewImg');
+            const imageInfo = document.getElementById('imageInfo');
+            
+            previewImg.src = imageDataUrl;
+            imageInfo.innerHTML = `
+                <strong>Archivo:</strong> ${file.name}<br>
+                <strong>Tipo:</strong> ${file.type}<br>
+                <strong>Tamaño:</strong> ${(file.size / 1024).toFixed(1)}KB<br>
+                <strong>Datos Base64:</strong> ${(imageDataUrl.length / 1024).toFixed(1)}KB
+            `;
+            
+            previewContainer.style.display = 'block';
+        }
+        
+        // Limpiar preview
+        function clearPreview() {
+            const previewContainer = document.getElementById('previewContainer');
+            const previewImg = document.getElementById('previewImg');
+            const uploadText = document.getElementById('uploadText');
+            const fileUploadArea = document.getElementById('fileUploadArea');
+            
+            previewContainer.style.display = 'none';
+            previewImg.src = '';
+            uploadText.textContent = 'Haz clic para seleccionar una imagen';
+            fileUploadArea.classList.remove('file-selected');
+            
+            imageData = null;
+            currentFile = null;
+            
+            log('🧹 Preview limpiado');
+        }
+        
+        // Mostrar resultado
+        function showResult(message, type) {
+            const resultsContent = document.getElementById('resultsContent');
+            resultsContent.innerHTML = `<div class="status ${type}">${message}</div>`;
+        }
+        
+        // Funciones de test
+        function testFileSelection() {
+            log('🧪 Iniciando test de selección manual...', 'info');
+            const fileInput = document.getElementById('imagen_file');
+            fileInput.click();
+        }
+        
+        function simulateFileUpload() {
+            log('🎭 Simulando carga de archivo...', 'info');
+            
+            // Crear un Blob simulado
+            const canvas = document.createElement('canvas');
+            canvas.width = 100;
+            canvas.height = 100;
+            const ctx = canvas.getContext('2d');
+            
+            // Dibujar algo simple
+            ctx.fillStyle = '#007bff';
+            ctx.fillRect(0, 0, 100, 100);
+            ctx.fillStyle = 'white';
+            ctx.font = '16px Arial';
+            ctx.fillText('TEST', 30, 55);
+            
+            canvas.toBlob(function(blob) {
+                const file = new File([blob], 'test-image.png', { type: 'image/png' });
+                
+                // Simular selección
+                const fileInput = document.getElementById('imagen_file');
+                const dataTransfer = new DataTransfer();
+                dataTransfer.items.add(file);
+                fileInput.files = dataTransfer.files;
+                
+                handleFileSelection(fileInput);
+            });
+        }
+        
+        function resetTest() {
+            log('🔄 Reseteando test...', 'warning');
+            
+            // Resetear contadores
+            Object.keys(counters).forEach(key => {
+                counters[key] = 0;
+                document.getElementById(`${key}Count`).textContent = '0';
+            });
+            
+            // Limpiar archivo
+            document.getElementById('imagen_file').value = '';
+            
+            // Limpiar preview
+            clearPreview();
+            
+            showResult('Test reseteado', 'info');
+            log('✅ Test reseteado correctamente');
+        }
+        
+        function clearAll() {
+            resetTest();
+            clearLog();
+            log('🧹 Todo limpiado', 'info');
+        }
+        
+        function clearLog() {
+            document.getElementById('logContainer').innerHTML = '';
+        }
+        
+        // Inicializar al cargar la página
+        document.addEventListener('DOMContentLoaded', function() {
+            log('🚀 Iniciando test de carga de imágenes...');
+            setupEvents();
+            showResult('Sistema listo. Selecciona una imagen para probar.', 'info');
+        });
+    </script>
+</body>
+</html>
