@@ -1,0 +1,221 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Validación de Precios</title>
+    <style>
+        body { font-family: Arial, sans-serif; padding: 20px; line-height: 1.6; }
+        .test-box { margin: 15px 0; padding: 15px; border: 1px solid #ddd; border-radius: 8px; }
+        .success { background-color: #d4edda; color: #155724; border-color: #c3e6cb; }
+        .error { background-color: #f8d7da; color: #721c24; border-color: #f5c6cb; }
+        .warning { background-color: #fff3cd; color: #856404; border-color: #ffeaa7; }
+        button { padding: 10px 15px; margin: 5px; cursor: pointer; border: none; border-radius: 4px; background: #007bff; color: white; }
+        input { padding: 8px; margin: 5px; border: 1px solid #ddd; border-radius: 4px; width: 200px; }
+        .log { background: #f8f9fa; padding: 10px; border-radius: 4px; font-family: monospace; font-size: 12px; height: 300px; overflow-y: auto; border: 1px solid #ddd; }
+    </style>
+</head>
+<body>
+    <h1>🧮 Test Validación de Precios</h1>
+    
+    <div class="test-box">
+        <h3>Test Manual</h3>
+        <label>Precio a probar:</label>
+        <input type="number" id="priceInput" placeholder="Ej: 100000000000000" value="100000000000000">
+        <button onclick="testPrice()">Probar Precio</button>
+        <button onclick="testProduct()">Crear Producto con Este Precio</button>
+    </div>
+    
+    <div class="test-box">
+        <h3>Tests Automáticos</h3>
+        <button onclick="testPriceValidations()">🧪 Test Validaciones</button>
+        <button onclick="testProductCreation()">📦 Test Creación Productos</button>
+        <button onclick="runAllPriceTests()">🚀 Ejecutar Todos</button>
+    </div>
+    
+    <div id="results" class="test-box">
+        <h4>Resultados:</h4>
+        <div id="status">Esperando tests...</div>
+    </div>
+    
+    <div class="test-box">
+        <h4>Log:</h4>
+        <div id="log" class="log"></div>
+    </div>
+
+    <!-- Scripts -->
+    <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+    <script src="../js/supabase-config.js"></script>
+
+    <script>
+        let logContent = '';
+        
+        function log(message) {
+            const timestamp = new Date().toLocaleTimeString();
+            logContent += `[${timestamp}] ${message}\n`;
+            document.getElementById('log').textContent = logContent;
+            console.log(message);
+        }
+        
+        function updateStatus(message, type = 'info') {
+            const statusDiv = document.getElementById('status');
+            statusDiv.className = type;
+            statusDiv.innerHTML = message;
+            log(message);
+        }
+        
+        function testPrice() {
+            const input = document.getElementById('priceInput');
+            const value = parseInt(input.value);
+            
+            log(`🧮 Probando precio: ${value}`);
+            
+            const PRECIO_MAX = 2147483647;
+            
+            if (value > PRECIO_MAX) {
+                log(`⚠️ Precio ${value} excede máximo ${PRECIO_MAX}`);
+                updateStatus(`⚠️ Precio demasiado alto. Máximo: ${PRECIO_MAX.toLocaleString()}`, 'warning');
+            } else if (value < 0) {
+                log(`⚠️ Precio ${value} es negativo`);
+                updateStatus('⚠️ Precio negativo no permitido', 'warning');
+            } else {
+                log(`✅ Precio ${value} es válido`);
+                updateStatus(`✅ Precio válido: ${value.toLocaleString()}`, 'success');
+            }
+        }
+        
+        async function testProduct() {
+            const input = document.getElementById('priceInput');
+            const precio = parseInt(input.value);
+            
+            log(`📦 Probando crear producto con precio: ${precio}`);
+            
+            try {
+                if (typeof ProductosService === 'undefined') {
+                    throw new Error('ProductosService no disponible');
+                }
+                
+                const testProduct = {
+                    nombre: `Test Precio ${new Date().getTime()}`,
+                    marca: 'Test Brand',
+                    precio: precio,
+                    categoria: 'para-ellos'
+                };
+                
+                log('🔄 Enviando producto...');
+                const result = await ProductosService.crearProducto(testProduct);
+                
+                log(`✅ Producto creado: ID ${result.id}, Precio: ${result.precio}`);
+                updateStatus(`✅ Producto creado exitosamente con precio: ${result.precio.toLocaleString()}`, 'success');
+                
+            } catch (error) {
+                log(`❌ Error: ${error.message}`);
+                updateStatus(`❌ Error: ${error.message}`, 'error');
+            }
+        }
+        
+        async function testPriceValidations() {
+            log('🧪 Test: Validaciones de Precio');
+            
+            const testCases = [
+                { value: 50000, expected: 'valid', description: 'Precio normal' },
+                { value: 2147483647, expected: 'valid', description: 'Precio máximo' },
+                { value: 2147483648, expected: 'invalid', description: 'Precio excesivo' },
+                { value: 100000000000000, expected: 'invalid', description: 'Precio muy alto' },
+                { value: -1000, expected: 'invalid', description: 'Precio negativo' },
+                { value: 0, expected: 'valid', description: 'Precio cero' }
+            ];
+            
+            let passed = 0;
+            
+            for (const testCase of testCases) {
+                try {
+                    log(`🔬 Test: ${testCase.description} (${testCase.value})`);
+                    
+                    const testProduct = {
+                        nombre: `Test ${testCase.description}`,
+                        marca: 'Test',
+                        precio: testCase.value,
+                        categoria: 'para-ellos'
+                    };
+                    
+                    const result = await ProductosService.crearProducto(testProduct);
+                    
+                    if (testCase.expected === 'valid') {
+                        log(`  ✅ Pasó: Precio aceptado como ${result.precio}`);
+                        passed++;
+                    } else {
+                        log(`  ⚠️ Inesperado: Debería haber fallado pero se creó con precio ${result.precio}`);
+                    }
+                    
+                } catch (error) {
+                    if (testCase.expected === 'invalid') {
+                        log(`  ✅ Pasó: Error esperado - ${error.message}`);
+                        passed++;
+                    } else {
+                        log(`  ❌ Falló: Error inesperado - ${error.message}`);
+                    }
+                }
+                
+                await new Promise(resolve => setTimeout(resolve, 200));
+            }
+            
+            updateStatus(`Validaciones completadas: ${passed}/${testCases.length} pasaron`, passed === testCases.length ? 'success' : 'warning');
+        }
+        
+        async function testProductCreation() {
+            log('📦 Test: Creación de Productos');
+            
+            const products = [
+                { nombre: 'Producto Barato', precio: 10000 },
+                { nombre: 'Producto Caro', precio: 500000 },
+                { nombre: 'Producto Límite', precio: 2147483647 }
+            ];
+            
+            let created = 0;
+            
+            for (const product of products) {
+                try {
+                    log(`📦 Creando: ${product.nombre} - $${product.precio.toLocaleString()}`);
+                    
+                    const productData = {
+                        ...product,
+                        marca: 'Test Brand',
+                        categoria: 'para-ellos'
+                    };
+                    
+                    const result = await ProductosService.crearProducto(productData);
+                    log(`  ✅ Creado: ID ${result.id}`);
+                    created++;
+                    
+                } catch (error) {
+                    log(`  ❌ Error: ${error.message}`);
+                }
+                
+                await new Promise(resolve => setTimeout(resolve, 300));
+            }
+            
+            updateStatus(`Productos creados: ${created}/${products.length}`, created === products.length ? 'success' : 'warning');
+        }
+        
+        async function runAllPriceTests() {
+            log('🚀 Ejecutando todos los tests de precio...');
+            updateStatus('🚀 Ejecutando tests...', 'info');
+            
+            await testPriceValidations();
+            await new Promise(resolve => setTimeout(resolve, 1000));
+            
+            await testProductCreation();
+            
+            log('✅ Todos los tests completados');
+            updateStatus('✅ Tests completados', 'success');
+        }
+        
+        // Auto-inicializar
+        setTimeout(() => {
+            log('🚀 Página cargada, listo para tests...');
+            updateStatus('Listo para ejecutar tests de precio', 'info');
+        }, 1000);
+    </script>
+</body>
+</html>

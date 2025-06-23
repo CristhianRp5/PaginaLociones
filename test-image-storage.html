@@ -1,0 +1,249 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Storage de Imágenes - Supabase</title>
+    <style>
+        body { font-family: Arial, sans-serif; padding: 20px; line-height: 1.6; }
+        .test-box { margin: 15px 0; padding: 15px; border: 1px solid #ddd; border-radius: 8px; }
+        .success { background-color: #d4edda; color: #155724; border-color: #c3e6cb; }
+        .error { background-color: #f8d7da; color: #721c24; border-color: #f5c6cb; }
+        .warning { background-color: #fff3cd; color: #856404; border-color: #ffeaa7; }
+        button { padding: 10px 15px; margin: 5px; cursor: pointer; border: none; border-radius: 4px; background: #007bff; color: white; }
+        button:hover { background: #0056b3; }
+        .log { background: #f8f9fa; padding: 10px; border-radius: 4px; font-family: monospace; font-size: 12px; height: 200px; overflow-y: auto; border: 1px solid #ddd; }
+        input[type="file"] { margin: 10px 0; padding: 8px; border: 1px solid #ddd; border-radius: 4px; }
+        .preview { margin: 10px 0; max-width: 200px; border: 1px solid #ddd; border-radius: 4px; }
+    </style>
+</head>
+<body>
+    <h1>🖼️ Test Storage de Imágenes - Supabase</h1>
+    
+    <div class="test-box">
+        <h3>Tests Automáticos</h3>
+        <button onclick="testStorageConnection()">1. Test Conexión Storage</button>
+        <button onclick="testBucketExists()">2. Test Bucket 'imagenes'</button>
+        <button onclick="testUploadSampleImage()">3. Test Subir Imagen Muestra</button>
+        <button onclick="runAllStorageTests()">🚀 Ejecutar Todos</button>
+    </div>
+    
+    <div class="test-box">
+        <h3>Test Manual con Archivo</h3>
+        <input type="file" id="fileInput" accept="image/*" onchange="previewFile()">
+        <div id="preview"></div>
+        <button onclick="testUploadSelectedFile()">📤 Subir Archivo Seleccionado</button>
+    </div>
+    
+    <div id="results" class="test-box">
+        <h4>Resultados:</h4>
+        <div id="status">Esperando tests...</div>
+    </div>
+    
+    <div class="test-box">
+        <h4>Log Detallado:</h4>
+        <div id="log" class="log"></div>
+    </div>
+
+    <!-- Scripts -->
+    <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+    <script src="../js/supabase-config.js"></script>
+
+    <script>
+        let logContent = '';
+        let uploadedUrls = []; // Para limpiar después
+        
+        function log(message) {
+            const timestamp = new Date().toLocaleTimeString();
+            logContent += `[${timestamp}] ${message}\n`;
+            document.getElementById('log').textContent = logContent;
+            console.log(message);
+        }
+        
+        function updateStatus(message, type = 'info') {
+            const statusDiv = document.getElementById('status');
+            statusDiv.className = type;
+            statusDiv.innerHTML = message;
+            log(message);
+        }
+        
+        async function testStorageConnection() {
+            log('🔍 Test 1: Conexión Storage');
+            
+            try {
+                if (!supabaseClient) {
+                    throw new Error('Cliente Supabase no disponible');
+                }
+                
+                // Test básico de storage
+                const { data, error } = await supabaseClient.storage.listBuckets();
+                
+                if (error) {
+                    throw new Error(`Error accediendo storage: ${error.message}`);
+                }
+                
+                log(`✅ Storage accesible, ${data.length} buckets encontrados`);
+                data.forEach(bucket => log(`  - ${bucket.name} (público: ${bucket.public})`));
+                
+                updateStatus('✅ Conexión Storage OK', 'success');
+                
+            } catch (error) {
+                log(`❌ Error: ${error.message}`);
+                updateStatus(`❌ Error en conexión storage: ${error.message}`, 'error');
+            }
+        }
+        
+        async function testBucketExists() {
+            log('🔍 Test 2: Bucket imagenes');
+            
+            try {
+                if (!supabaseClient) {
+                    throw new Error('Cliente Supabase no disponible');
+                }
+                
+                const { data, error } = await supabaseClient.storage.getBucket('imagenes');
+                
+                if (error) {
+                    if (error.message.includes('not found') || error.message.includes('does not exist')) {
+                        log('⚠️ Bucket "imagenes" no existe');
+                        log('💡 Ejecuta el script setup-storage-simple.sql en Supabase');
+                        updateStatus('⚠️ Bucket "imagenes" no existe. Ejecuta setup-storage-simple.sql', 'warning');
+                        return;
+                    } else {
+                        throw new Error(`Error verificando bucket: ${error.message}`);
+                    }
+                }
+                
+                log(`✅ Bucket "imagenes" existe - Público: ${data.public}`);
+                updateStatus('✅ Bucket "imagenes" OK', 'success');
+                
+            } catch (error) {
+                log(`❌ Error: ${error.message}`);
+                updateStatus(`❌ Error verificando bucket: ${error.message}`, 'error');
+            }
+        }
+        
+        async function testUploadSampleImage() {
+            log('🔍 Test 3: Subir Imagen Muestra');
+            
+            try {
+                if (typeof ImageStorageService === 'undefined') {
+                    throw new Error('ImageStorageService no disponible');
+                }
+                
+                // Crear imagen de muestra (1x1 pixel rojo PNG)
+                const canvas = document.createElement('canvas');
+                canvas.width = 1;
+                canvas.height = 1;
+                const ctx = canvas.getContext('2d');
+                ctx.fillStyle = '#ff0000';
+                ctx.fillRect(0, 0, 1, 1);
+                
+                // Convertir a blob
+                const blob = await new Promise(resolve => canvas.toBlob(resolve, 'image/png'));
+                const file = new File([blob], 'test-sample.png', { type: 'image/png' });
+                
+                log(`📤 Subiendo imagen muestra (${file.size} bytes)...`);
+                
+                const imageUrl = await ImageStorageService.uploadImage(file, 'test-sample');
+                uploadedUrls.push(imageUrl);
+                
+                log(`✅ Imagen subida: ${imageUrl}`);
+                updateStatus(`✅ Subida exitosa: ${imageUrl}`, 'success');
+                
+            } catch (error) {
+                log(`❌ Error: ${error.message}`);
+                updateStatus(`❌ Error subiendo imagen: ${error.message}`, 'error');
+            }
+        }
+        
+        function previewFile() {
+            const fileInput = document.getElementById('fileInput');
+            const preview = document.getElementById('preview');
+            const file = fileInput.files[0];
+            
+            if (file) {
+                log(`📁 Archivo seleccionado: ${file.name} (${file.size} bytes)`);
+                
+                if (file.type.startsWith('image/')) {
+                    const reader = new FileReader();
+                    reader.onload = (e) => {
+                        preview.innerHTML = `<img src="${e.target.result}" class="preview" alt="Preview">`;
+                    };
+                    reader.readAsDataURL(file);
+                } else {
+                    preview.innerHTML = '<p>No es una imagen válida</p>';
+                }
+            }
+        }
+        
+        async function testUploadSelectedFile() {
+            log('🔍 Test: Subir Archivo Seleccionado');
+            
+            try {
+                const fileInput = document.getElementById('fileInput');
+                const file = fileInput.files[0];
+                
+                if (!file) {
+                    throw new Error('No hay archivo seleccionado');
+                }
+                
+                if (typeof ImageStorageService === 'undefined') {
+                    throw new Error('ImageStorageService no disponible');
+                }
+                
+                log(`📤 Subiendo ${file.name}...`);
+                
+                const imageUrl = await ImageStorageService.uploadImage(file, 'test-manual');
+                uploadedUrls.push(imageUrl);
+                
+                log(`✅ Archivo subido: ${imageUrl}`);
+                updateStatus(`✅ Archivo subido exitosamente: ${imageUrl}`, 'success');
+                
+                // Mostrar imagen subida
+                const preview = document.getElementById('preview');
+                preview.innerHTML += `<div style="margin-top: 10px;"><strong>Imagen subida:</strong><br><img src="${imageUrl}" class="preview" alt="Uploaded"></div>`;
+                
+            } catch (error) {
+                log(`❌ Error: ${error.message}`);
+                updateStatus(`❌ Error subiendo archivo: ${error.message}`, 'error');
+            }
+        }
+        
+        async function runAllStorageTests() {
+            log('🚀 Ejecutando todos los tests de storage...');
+            updateStatus('🚀 Ejecutando tests...', 'info');
+            
+            await testStorageConnection();
+            await new Promise(resolve => setTimeout(resolve, 500));
+            
+            await testBucketExists();
+            await new Promise(resolve => setTimeout(resolve, 500));
+            
+            await testUploadSampleImage();
+            
+            log('✅ Todos los tests de storage completados');
+            updateStatus('✅ Tests completados', 'success');
+        }
+        
+        // Limpiar imágenes de prueba al cerrar
+        window.addEventListener('beforeunload', async () => {
+            if (uploadedUrls.length > 0 && typeof ImageStorageService !== 'undefined') {
+                for (const url of uploadedUrls) {
+                    try {
+                        await ImageStorageService.deleteImage(url);
+                    } catch (e) {
+                        console.warn('No se pudo eliminar:', url);
+                    }
+                }
+            }
+        });
+        
+        // Auto-inicializar
+        setTimeout(() => {
+            log('🚀 Inicializando tests de storage...');
+            testStorageConnection();
+        }, 1000);
+    </script>
+</body>
+</html>

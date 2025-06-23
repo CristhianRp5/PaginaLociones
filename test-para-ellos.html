@@ -1,0 +1,297 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Para Ellos - Debug</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .debug-section {
+            background: white;
+            padding: 20px;
+            margin: 20px 0;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .log-output {
+            background: #000;
+            color: #00ff00;
+            padding: 15px;
+            border-radius: 4px;
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+            max-height: 300px;
+            overflow-y: auto;
+            white-space: pre-wrap;
+        }
+        .product-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+            gap: 20px;
+            margin-top: 20px;
+        }
+        .product-card {
+            background: white;
+            border-radius: 8px;
+            padding: 15px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+        .product-image {
+            width: 100%;
+            height: 150px;
+            object-fit: cover;
+            border-radius: 4px;
+            background: #f0f0f0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #666;
+        }
+        .btn {
+            background: #007bff;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        .btn:hover {
+            background: #0056b3;
+        }
+        .status {
+            padding: 10px;
+            border-radius: 4px;
+            margin: 10px 0;
+        }
+        .status.success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        .status.error {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+        .status.warning {
+            background: #fff3cd;
+            color: #856404;
+            border: 1px solid #ffeaa7;
+        }
+    </style>
+</head>
+<body>
+    <h1>🧪 Test: Para Ellos - Carga de Productos</h1>
+    
+    <div class="debug-section">
+        <h2>Estado de dependencias</h2>
+        <div id="dependencies-status"></div>
+        <button class="btn" onclick="checkDependencies()">🔍 Verificar Dependencias</button>
+    </div>
+
+    <div class="debug-section">
+        <h2>Test de carga de productos</h2>
+        <div id="products-status"></div>
+        <button class="btn" onclick="testProductLoad()">📦 Cargar Productos</button>
+        <button class="btn" onclick="testSupabaseConnection()">🔗 Test Supabase</button>
+    </div>
+
+    <div class="debug-section">
+        <h2>Productos cargados</h2>
+        <div id="products-count">Productos: 0</div>
+        <div id="products-container" class="product-grid"></div>
+    </div>
+
+    <div class="debug-section">
+        <h2>Log de debugging</h2>
+        <button class="btn" onclick="clearLog()">🗑️ Limpiar Log</button>
+        <div id="log-output" class="log-output">Esperando logs...\n</div>
+    </div>
+
+    <!-- Scripts necesarios -->
+    <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+    <script src="js/supabase-config.js"></script>
+
+    <script>
+        // Variables globales para testing
+        let testProducts = [];
+        
+        // Función para capturar logs en la interfaz
+        const originalLog = console.log;
+        const originalError = console.error;
+        const originalWarn = console.warn;
+        
+        function addToLog(message, type = 'log') {
+            const logOutput = document.getElementById('log-output');
+            const timestamp = new Date().toLocaleTimeString();
+            const prefix = type === 'error' ? '❌' : type === 'warn' ? '⚠️' : '📝';
+            logOutput.textContent += `[${timestamp}] ${prefix} ${message}\n`;
+            logOutput.scrollTop = logOutput.scrollHeight;
+        }
+        
+        console.log = function(...args) {
+            addToLog(args.join(' '), 'log');
+            originalLog.apply(console, args);
+        };
+        
+        console.error = function(...args) {
+            addToLog(args.join(' '), 'error');
+            originalError.apply(console, args);
+        };
+        
+        console.warn = function(...args) {
+            addToLog(args.join(' '), 'warn');
+            originalWarn.apply(console, args);
+        };
+
+        function clearLog() {
+            document.getElementById('log-output').textContent = 'Log limpiado...\n';
+        }
+
+        function updateStatus(elementId, message, type = 'info') {
+            const element = document.getElementById(elementId);
+            element.innerHTML = `<div class="status ${type}">${message}</div>`;
+        }
+
+        function checkDependencies() {
+            console.log('🔍 Verificando dependencias...');
+            
+            const dependencies = {
+                'Supabase JS': typeof window.supabase !== 'undefined',
+                'initSupabase': typeof initSupabase !== 'undefined',
+                'ProductosService': typeof ProductosService !== 'undefined',
+                'supabaseClient': typeof supabaseClient !== 'undefined'
+            };
+            
+            let html = '<table style="width:100%; border-collapse: collapse;">';
+            html += '<tr><th style="border:1px solid #ddd; padding:8px;">Dependencia</th><th style="border:1px solid #ddd; padding:8px;">Estado</th></tr>';
+            
+            Object.entries(dependencies).forEach(([name, available]) => {
+                const status = available ? '✅ Disponible' : '❌ NO DISPONIBLE';
+                const color = available ? '#d4edda' : '#f8d7da';
+                html += `<tr><td style="border:1px solid #ddd; padding:8px;">${name}</td><td style="border:1px solid #ddd; padding:8px; background-color:${color};">${status}</td></tr>`;
+                console.log(`${available ? '✅' : '❌'} ${name}: ${available ? 'Disponible' : 'NO DISPONIBLE'}`);
+            });
+            
+            html += '</table>';
+            document.getElementById('dependencies-status').innerHTML = html;
+            
+            // Inicializar Supabase si no está inicializado
+            if (!supabaseClient && typeof initSupabase === 'function') {
+                console.log('🔄 Inicializando Supabase...');
+                initSupabase();
+            }
+        }
+
+        async function testSupabaseConnection() {
+            console.log('🔗 Probando conexión a Supabase...');
+            
+            try {
+                if (!supabaseClient) {
+                    console.log('⚠️ Cliente de Supabase no disponible, inicializando...');
+                    if (typeof initSupabase === 'function') {
+                        initSupabase();
+                    }
+                }
+                
+                if (supabaseClient) {
+                    console.log('📊 Consultando tabla productos...');
+                    const { data, error, count } = await supabaseClient
+                        .from('productos')
+                        .select('*', { count: 'exact' })
+                        .limit(5);
+                    
+                    if (error) {
+                        console.error('❌ Error en la consulta:', error);
+                        updateStatus('products-status', `Error: ${error.message}`, 'error');
+                    } else {
+                        console.log(`✅ Conexión exitosa. Total de productos: ${count}`);
+                        console.log('📦 Muestra de productos:', data);
+                        updateStatus('products-status', `Conexión exitosa. ${count} productos encontrados.`, 'success');
+                    }
+                } else {
+                    console.error('❌ No se pudo inicializar el cliente de Supabase');
+                    updateStatus('products-status', 'Error: No se pudo conectar a Supabase', 'error');
+                }
+            } catch (error) {
+                console.error('❌ Error inesperado:', error);
+                updateStatus('products-status', `Error inesperado: ${error.message}`, 'error');
+            }
+        }
+
+        async function testProductLoad() {
+            console.log('📦 Probando carga de productos para ellos...');
+            
+            try {
+                if (typeof ProductosService === 'undefined') {
+                    console.error('❌ ProductosService no está disponible');
+                    updateStatus('products-status', 'Error: ProductosService no disponible', 'error');
+                    return;
+                }
+                
+                // Cargar productos específicos para hombres
+                console.log('🔍 Buscando productos con categoría "para-ellos"...');
+                testProducts = await ProductosService.obtenerProductosPorCategoria('para-ellos');
+                
+                console.log(`✅ ${testProducts.length} productos cargados:`, testProducts);
+                
+                if (testProducts.length === 0) {
+                    console.warn('⚠️ No se encontraron productos para la categoría "para-ellos"');
+                    updateStatus('products-status', 'No se encontraron productos para "para-ellos"', 'warning');
+                } else {
+                    updateStatus('products-status', `${testProducts.length} productos cargados exitosamente`, 'success');
+                }
+                
+                renderProducts();
+                
+            } catch (error) {
+                console.error('❌ Error cargando productos:', error);
+                updateStatus('products-status', `Error: ${error.message}`, 'error');
+                testProducts = [];
+            }
+        }
+
+        function renderProducts() {
+            const container = document.getElementById('products-container');
+            const countElement = document.getElementById('products-count');
+            
+            countElement.textContent = `Productos: ${testProducts.length}`;
+            
+            if (testProducts.length === 0) {
+                container.innerHTML = '<p style="color: #666; text-align: center; grid-column: 1/-1;">No hay productos para mostrar</p>';
+                return;
+            }
+            
+            container.innerHTML = testProducts.map(product => `
+                <div class="product-card">
+                    <div class="product-image">
+                        ${product.imagen_url ? 
+                            `<img src="${product.imagen_url}" alt="${product.nombre}" style="width:100%; height:100%; object-fit:cover; border-radius:4px;" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+                            <div style="display:none; width:100%; height:100%; background:#f0f0f0; align-items:center; justify-content:center; color:#666;">Sin imagen</div>` 
+                            : 'Sin imagen'
+                        }
+                    </div>
+                    <h4 style="margin:10px 0 5px 0; font-size:14px;">${product.nombre || 'Sin nombre'}</h4>
+                    <p style="margin:0; color:#666; font-size:12px;">Marca: ${product.marca || 'Sin marca'}</p>
+                    <p style="margin:5px 0 0 0; color:#666; font-size:12px;">Categoría: ${product.categoria || 'Sin categoría'}</p>
+                    <p style="margin:5px 0 0 0; color:#666; font-size:12px;">Precio: $${product.precio || 'N/A'}</p>
+                </div>
+            `).join('');
+        }
+
+        // Inicialización automática
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log('🚀 Iniciando test de Para Ellos...');
+            
+            setTimeout(() => {
+                checkDependencies();
+            }, 100);
+        });
+    </script>
+</body>
+</html>

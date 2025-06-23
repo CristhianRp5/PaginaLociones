@@ -161,10 +161,16 @@
                             <label for="marca">Marca *</label>
                             <input type="text" id="marca" name="marca" required>
                         </div>
-                        
-                        <div class="form-group">                            <label for="precio">Precio (COP) *</label>                            <input type="number" id="precio" name="precio" required step="1000" min="0" max="2147483647" 
+                          <div class="form-group">                            <label for="precio">Precio (COP) *</label>                            <input type="number" id="precio" name="precio" required step="1000" min="0" max="2147483647" 
                                    placeholder="Ej: 50000" 
                                    oninput="adminPanel.validatePrice(this)">
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="ml">Tamaño (ML) *</label>
+                            <input type="number" id="ml" name="ml" required min="1" max="1000" 
+                                   placeholder="Ej: 100" value="100">
+                            <div class="help-text">Tamaño del producto en mililitros</div>
                         </div>
                         
                         <div class="form-group">
@@ -234,8 +240,11 @@
                             </div>
                         </div>
                     </div>
-                    
-                    <!-- Descripción y Notas -->
+                      <!-- Descripción y Notas -->
+                    <div class="form-group">
+                        <label for="descripcion">Descripción del Producto</label>
+                        <textarea id="descripcion" name="descripcion" rows="3" placeholder="Descripción detallada del producto que aparecerá en las tarjetas"></textarea>
+                    </div>
                     
                     <div class="form-group">
                         <label for="notas">Notas Olfativas</label>
@@ -258,6 +267,12 @@
                             <small>Precio original: <span id="precioOriginal">$0</span></small><br>
                             <small>Precio con descuento: <span id="precioConDescuento">$0</span></small>
                         </div>
+                    </div>
+                      <div class="form-group">
+                        <label>
+                            <input type="checkbox" id="luxury" name="luxury">
+                            Producto de lujo (mostrará la etiqueta LUXURY)
+                        </label>
                     </div>
                     
                     <div class="form-group">

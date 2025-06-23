@@ -800,21 +800,21 @@ class AdminPanel {    constructor() {
             const precioNum = parseInt(precio);
             if (isNaN(precioNum) || precioNum < 0) {
                 throw new Error('El precio debe ser un número válido mayor o igual a 0');
-            }
-            
-            // Recopilar datos del formulario
+            }            // Recopilar datos del formulario
             const productData = {
                 nombre: nombre.trim(),
                 marca: marca.trim(),
                 precio: precioNum,
+                ml: parseInt(formData.get('ml')) || 100,
                 categoria: categoria,
                 subcategoria: formData.get('subcategoria') || null,
                 descripcion: formData.get('descripcion') || '',
                 notas: formData.get('notas') || '',
                 estado: formData.get('estado') || 'disponible',
                 descuento: parseInt(formData.get('descuento')) || null,
+                luxury: formData.get('luxury') === 'on',
                 activo: formData.get('activo') === 'on'
-            };            // Manejar imagen con la nueva lógica simple
+            };// Manejar imagen con la nueva lógica simple
             console.log('🖼️ Procesando imagen con lógica simple...');
             
             const fileInput = document.getElementById('imagen_file');
@@ -942,10 +942,16 @@ class AdminPanel {    constructor() {
                 if (this.currentSection === 'productos') {
                     await this.loadProductsData();
                 }
-                
-                // Verificar imagen SIN recargar productos otra vez
+                  // Verificar imagen SIN recargar productos otra vez
                 if (productData.imagen && result.id) {
                     console.log('🔍 Ejecutando verificación de imagen guardada...');
+                    console.log('📊 Datos enviados para verificación:', {
+                        productId: result.id,
+                        imagenEnviada: !!productData.imagen,
+                        imagenSize: productData.imagen ? productData.imagen.length : 0,
+                        imagenType: productData.imagen ? (productData.imagen.startsWith('data:') ? 'base64' : 'url') : 'none'
+                    });
+                    
                     setTimeout(async () => {
                         const verification = await this.verifyImageSaved(result.id, productData.imagen.length);
                         
@@ -956,6 +962,8 @@ class AdminPanel {    constructor() {
                             this.showAlert(`Advertencia: ${verification.reason}`, 'warning');
                         }
                     }, 1000);
+                } else {
+                    console.log('ℹ️ No se envió imagen o no se obtuvo ID del producto para verificar');
                 }
                 
                 const action = isEditMode ? 'actualizado' : 'guardado';
@@ -1213,19 +1221,27 @@ class AdminPanel {    constructor() {
                     element.value = value || defaultValue;
                 }
             }
-        };
-
-        // Poblar campos básicos
+        };        // Poblar campos básicos
         safeSetValue('nombre', product.nombre);
         safeSetValue('marca', product.marca);
         safeSetValue('precio', product.precio);
+        safeSetValue('ml', product.ml || 100);
         safeSetValue('categoria', product.categoria);
         safeSetValue('subcategoria', product.subcategoria);
         safeSetValue('descripcion', product.descripcion);
-        safeSetValue('notas', product.notas);
-        safeSetValue('estado', product.estado, 'disponible');
+        safeSetValue('notas', product.notas);safeSetValue('estado', product.estado, 'disponible');
         safeSetValue('descuento', product.descuento);
-        safeSetValue('activo', product.activo);        // Manejar imagen - poblar el campo URL y mostrar preview si existe
+        
+        // Manejar checkboxes (luxury y activo)
+        const luxuryCheckbox = document.getElementById('luxury');
+        if (luxuryCheckbox) {
+            luxuryCheckbox.checked = product.luxury === true;
+        }
+        
+        const activoCheckbox = document.getElementById('activo');
+        if (activoCheckbox) {
+            activoCheckbox.checked = product.activo !== false;
+        }// Manejar imagen - poblar el campo URL y mostrar preview si existe
         if (product.imagen_url || product.imagen) {
             const imageUrl = product.imagen_url || product.imagen;
             safeSetValue('imagen_url', imageUrl);

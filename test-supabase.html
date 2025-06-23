@@ -1,0 +1,416 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Conexión Supabase - Perfumería</title>
+    
+    <!-- Supabase -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        
+        .test-container {
+            background: white;
+            border-radius: 20px;
+            padding: 40px;
+            max-width: 800px;
+            margin: 0 auto;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+        }
+        
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        
+        .header h1 {
+            color: #2c3e50;
+            margin-bottom: 10px;
+        }
+        
+        .test-section {
+            margin-bottom: 30px;
+            padding: 20px;
+            border: 1px solid #e0e0e0;
+            border-radius: 10px;
+        }
+        
+        .test-section h3 {
+            color: #34495e;
+            margin-bottom: 15px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .status {
+            padding: 10px 15px;
+            border-radius: 8px;
+            margin: 10px 0;
+            font-weight: 500;
+        }
+        
+        .status.loading {
+            background: #fff3cd;
+            color: #856404;
+            border: 1px solid #ffeaa7;
+        }
+        
+        .status.success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        
+        .status.error {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+        
+        .btn {
+            background: #3498db;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 16px;
+            margin: 10px 5px;
+            transition: background 0.3s;
+        }
+        
+        .btn:hover {
+            background: #2980b9;
+        }
+        
+        .btn.success {
+            background: #27ae60;
+        }
+        
+        .btn.success:hover {
+            background: #219a52;
+        }
+        
+        .results {
+            background: #f8f9fa;
+            border: 1px solid #e9ecef;
+            border-radius: 8px;
+            padding: 15px;
+            margin: 15px 0;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+        
+        .results pre {
+            white-space: pre-wrap;
+            word-wrap: break-word;
+        }
+        
+        .icon {
+            width: 20px;
+            height: 20px;
+        }
+        
+        .actions {
+            text-align: center;
+            margin-top: 30px;
+        }
+    </style>
+</head>
+<body>
+    <div class="test-container">
+        <div class="header">
+            <h1>🧪 Test de Conexión Supabase</h1>
+            <p>Verificación de la configuración y conectividad</p>
+        </div>
+
+        <!-- Test 1: Conexión -->
+        <div class="test-section">
+            <h3>
+                <span>🔌</span>
+                Test 1: Conexión a Supabase
+            </h3>
+            <div id="connection-status" class="status loading">
+                Verificando conexión...
+            </div>
+            <button class="btn" onclick="testConnection()">Probar Conexión</button>
+        </div>
+
+        <!-- Test 2: Tablas -->
+        <div class="test-section">
+            <h3>
+                <span>🗃️</span>
+                Test 2: Verificar Tablas
+            </h3>
+            <div id="tables-status" class="status loading">
+                Verificando estructura de base de datos...
+            </div>
+            <button class="btn" onclick="testTables()">Verificar Tablas</button>
+            <div id="tables-results" class="results" style="display: none;"></div>
+        </div>
+
+        <!-- Test 3: Datos -->
+        <div class="test-section">
+            <h3>
+                <span>📦</span>
+                Test 3: Verificar Productos
+            </h3>
+            <div id="products-status" class="status loading">
+                Verificando productos en la base de datos...
+            </div>
+            <button class="btn" onclick="testProducts()">Verificar Productos</button>
+            <div id="products-results" class="results" style="display: none;"></div>
+        </div>
+
+        <!-- Test 4: Migración -->
+        <div class="test-section">
+            <h3>
+                <span>🚀</span>
+                Test 4: Migración de Datos
+            </h3>
+            <div id="migration-status" class="status loading">
+                Listo para migrar datos locales...
+            </div>
+            <button class="btn" onclick="testMigration()">Ejecutar Migración</button>
+            <div id="migration-results" class="results" style="display: none;"></div>
+        </div>
+
+        <div class="actions">
+            <button class="btn success" onclick="runAllTests()">🔄 Ejecutar Todos los Tests</button>
+            <button class="btn" onclick="window.open('supabase-setup.html', '_blank')">⚙️ Ir a Configuración</button>
+            <button class="btn" onclick="window.open('https://supabase.com/dashboard/project/xelobsbzytdxrrxgmlta', '_blank')">🎛️ Panel de Supabase</button>
+        </div>
+    </div>
+
+    <script src="js/supabase-config.js"></script>
+    <script>
+        // Inicializar
+        let supabase;
+        
+        async function initializeSupabase() {
+            try {
+                supabase = window.supabase.createClient(
+                    'https://xelobsbzytdxrrxgmlta.supabase.co',
+                    'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhlbG9ic2J6eXRkeHJyeGdtbHRhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTAzODUzNTksImV4cCI6MjA2NTk2MTM1OX0.bJL5DsL4pxlQ_FV3jX0ieiW3bYLA-Zf3M2HlNmdMMy4'
+                );
+                return true;
+            } catch (error) {
+                console.error('Error inicializando Supabase:', error);
+                return false;
+            }
+        }
+
+        // Test 1: Conexión
+        async function testConnection() {
+            const statusElement = document.getElementById('connection-status');
+            statusElement.className = 'status loading';
+            statusElement.textContent = 'Probando conexión...';
+
+            try {
+                const initialized = await initializeSupabase();
+                if (!initialized) {
+                    throw new Error('No se pudo inicializar Supabase');
+                }
+
+                // Probar una consulta simple
+                const { data, error } = await supabase
+                    .from('productos')
+                    .select('count')
+                    .limit(1);
+
+                if (error && error.code !== 'PGRST116') { // PGRST116 es "tabla no encontrada"
+                    throw error;
+                }
+
+                statusElement.className = 'status success';
+                statusElement.textContent = '✅ Conexión exitosa a Supabase';
+            } catch (error) {
+                statusElement.className = 'status error';
+                statusElement.textContent = `❌ Error de conexión: ${error.message}`;
+                console.error('Error de conexión:', error);
+            }
+        }
+
+        // Test 2: Tablas
+        async function testTables() {
+            const statusElement = document.getElementById('tables-status');
+            const resultsElement = document.getElementById('tables-results');
+            
+            statusElement.className = 'status loading';
+            statusElement.textContent = 'Verificando tablas...';
+
+            try {
+                if (!supabase) {
+                    await initializeSupabase();
+                }
+
+                const requiredTables = ['productos', 'categorias', 'marcas'];
+                const tableResults = [];
+
+                for (const table of requiredTables) {
+                    try {
+                        const { data, error } = await supabase
+                            .from(table)
+                            .select('*')
+                            .limit(1);
+
+                        if (error) {
+                            tableResults.push(`❌ ${table}: ${error.message}`);
+                        } else {
+                            tableResults.push(`✅ ${table}: OK`);
+                        }
+                    } catch (err) {
+                        tableResults.push(`❌ ${table}: ${err.message}`);
+                    }
+                }
+
+                resultsElement.innerHTML = `<pre>${tableResults.join('\n')}</pre>`;
+                resultsElement.style.display = 'block';
+
+                const allOk = tableResults.every(result => result.includes('✅'));
+                statusElement.className = allOk ? 'status success' : 'status error';
+                statusElement.textContent = allOk ? 
+                    '✅ Todas las tablas están disponibles' : 
+                    '⚠️ Algunas tablas necesitan ser creadas';
+
+            } catch (error) {
+                statusElement.className = 'status error';
+                statusElement.textContent = `❌ Error verificando tablas: ${error.message}`;
+            }
+        }
+
+        // Test 3: Productos
+        async function testProducts() {
+            const statusElement = document.getElementById('products-status');
+            const resultsElement = document.getElementById('products-results');
+            
+            statusElement.className = 'status loading';
+            statusElement.textContent = 'Consultando productos...';
+
+            try {
+                if (!supabase) {
+                    await initializeSupabase();
+                }
+
+                const { data: products, error } = await supabase
+                    .from('productos')
+                    .select('*')
+                    .limit(5);
+
+                if (error) {
+                    throw error;
+                }
+
+                statusElement.className = 'status success';
+                statusElement.textContent = `✅ ${products.length} productos encontrados`;
+
+                if (products.length > 0) {
+                    const productList = products.map(p => 
+                        `• ${p.nombre} - ${p.marca || 'Sin marca'} - ${p.categoria || 'Sin categoría'}`
+                    ).join('\n');
+                    
+                    resultsElement.innerHTML = `<pre>Productos encontrados:\n${productList}</pre>`;
+                } else {
+                    resultsElement.innerHTML = '<pre>No hay productos en la base de datos. Ejecuta la migración.</pre>';
+                }
+                
+                resultsElement.style.display = 'block';
+
+            } catch (error) {
+                statusElement.className = 'status error';
+                statusElement.textContent = `❌ Error consultando productos: ${error.message}`;
+                
+                resultsElement.innerHTML = `<pre>Error: ${error.message}\n\nEsto puede significar que:\n1. Las tablas no existen (ejecuta setup-database.sql)\n2. Los datos no han sido migrados</pre>`;
+                resultsElement.style.display = 'block';
+            }
+        }
+
+        // Test 4: Migración
+        async function testMigration() {
+            const statusElement = document.getElementById('migration-status');
+            const resultsElement = document.getElementById('migration-results');
+            
+            statusElement.className = 'status loading';
+            statusElement.textContent = 'Ejecutando migración...';
+
+            try {
+                if (!supabase) {
+                    await initializeSupabase();
+                }
+
+                // Cargar el script de migración
+                const response = await fetch('js/migration.js');
+                const migrationScript = await response.text();
+                
+                // Ejecutar la migración (esto requiere que migration.js exporte las funciones)
+                statusElement.textContent = 'Migración iniciada. Revisa la consola para más detalles.';
+                
+                // Simular migración básica
+                const testProduct = {
+                    nombre: 'Test Product',
+                    marca: 'Test Brand',
+                    categoria: 'test',
+                    precio: 29.99,
+                    imagen: 'test.jpg',
+                    descripcion: 'Producto de prueba'
+                };
+
+                const { data, error } = await supabase
+                    .from('productos')
+                    .insert([testProduct])
+                    .select();
+
+                if (error) {
+                    throw error;
+                }
+
+                statusElement.className = 'status success';
+                statusElement.textContent = '✅ Migración de prueba exitosa';
+                
+                resultsElement.innerHTML = '<pre>Producto de prueba insertado correctamente.\nPara migración completa, ejecuta el script de migración completo.</pre>';
+                resultsElement.style.display = 'block';
+
+            } catch (error) {
+                statusElement.className = 'status error';
+                statusElement.textContent = `❌ Error en migración: ${error.message}`;
+                
+                resultsElement.innerHTML = `<pre>Error: ${error.message}\n\nAcciones recomendadas:\n1. Ejecuta setup-database.sql en Supabase\n2. Verifica permisos de la tabla\n3. Ejecuta la migración completa</pre>`;
+                resultsElement.style.display = 'block';
+            }
+        }
+
+        // Ejecutar todos los tests
+        async function runAllTests() {
+            await testConnection();
+            await new Promise(resolve => setTimeout(resolve, 1000));
+            
+            await testTables();
+            await new Promise(resolve => setTimeout(resolve, 1000));
+            
+            await testProducts();
+            await new Promise(resolve => setTimeout(resolve, 1000));
+            
+            // No ejecutamos automáticamente la migración para evitar duplicados
+            document.getElementById('migration-status').className = 'status loading';
+            document.getElementById('migration-status').textContent = 'Listo para ejecutar migración manual';
+        }
+
+        // Ejecutar test de conexión al cargar
+        window.addEventListener('load', testConnection);
+    </script>
+</body>
+</html>
