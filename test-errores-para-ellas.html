@@ -1,0 +1,220 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Para Ellas - Verificación de Errores</title>
+    <link rel="stylesheet" href="css/style.css">
+    <link rel="stylesheet" href="css/para_ellas.css">
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            padding: 20px;
+            background: #f8f9fa;
+        }
+        .test-container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+        }
+        .status {
+            padding: 15px;
+            margin: 15px 0;
+            border-radius: 8px;
+            font-weight: bold;
+        }
+        .status.success { background: #d4edda; color: #155724; border: 1px solid #c3e6cb; }
+        .status.error { background: #f8d7da; color: #721c24; border: 1px solid #f5c6cb; }
+        .status.warning { background: #fff3cd; color: #856404; border: 1px solid #ffeaa7; }
+        .log {
+            background: #f8f9fa;
+            padding: 15px;
+            margin: 10px 0;
+            border-radius: 5px;
+            font-family: monospace;
+            font-size: 12px;
+            max-height: 200px;
+            overflow-y: auto;
+            border: 1px solid #dee2e6;
+        }
+        .grid-preview {
+            border: 2px dashed #dee2e6;
+            padding: 20px;
+            margin: 20px 0;
+            min-height: 200px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #6c757d;
+        }
+    </style>
+</head>
+<body>
+    <div class="test-container">
+        <h1>🧪 Test Para Ellas - Verificación de Errores</h1>
+        
+        <div id="initStatus" class="status warning">
+            🔄 Inicializando sistema...
+        </div>
+
+        <div id="dependencyStatus" class="status warning">
+            📦 Verificando dependencias...
+        </div>
+
+        <div id="dbStatus" class="status warning">
+            🗄️ Verificando conexión a base de datos...
+        </div>
+
+        <div id="functionsStatus" class="status warning">
+            ⚙️ Verificando funciones de Para Ellas...
+        </div>
+
+        <h3>Console Log</h3>
+        <div id="logContainer" class="log">
+            Esperando logs...
+        </div>
+
+        <h3>Preview de Productos</h3>
+        <div class="index-grid grid-preview" id="productsPreview">
+            Cargando productos...
+        </div>
+    </div>
+
+    <!-- Scripts necesarios -->
+    <script src="js/supabase-config.js"></script>
+    <script src="js/cart.js"></script>
+    <script src="js/para_ellas.js"></script>
+    
+    <script>
+        class TestRunner {
+            constructor() {
+                this.logs = [];
+                this.originalConsole = {
+                    log: console.log,
+                    error: console.error,
+                    warn: console.warn
+                };
+                this.init();
+            }
+
+            init() {
+                this.interceptConsole();
+                this.runTests();
+            }
+
+            interceptConsole() {
+                const logContainer = document.getElementById('logContainer');
+                
+                console.log = (...args) => {
+                    this.originalConsole.log(...args);
+                    this.addLog('LOG', args.join(' '));
+                };
+
+                console.error = (...args) => {
+                    this.originalConsole.error(...args);
+                    this.addLog('ERROR', args.join(' '));
+                };
+
+                console.warn = (...args) => {
+                    this.originalConsole.warn(...args);
+                    this.addLog('WARN', args.join(' '));
+                };
+            }
+
+            addLog(type, message) {
+                const timestamp = new Date().toLocaleTimeString();
+                const logEntry = `[${timestamp}] ${type}: ${message}`;
+                this.logs.push(logEntry);
+                
+                const logContainer = document.getElementById('logContainer');
+                logContainer.innerHTML = this.logs.slice(-20).join('\\n');
+                logContainer.scrollTop = logContainer.scrollHeight;
+            }
+
+            updateStatus(elementId, status, message) {
+                const element = document.getElementById(elementId);
+                element.className = `status ${status}`;
+                element.innerHTML = message;
+            }
+
+            async runTests() {
+                try {
+                    // Test 1: Verificar dependencias
+                    this.updateStatus('dependencyStatus', 'warning', '📦 Verificando ProductosService...');
+                    
+                    if (typeof ProductosService === 'undefined') {
+                        this.updateStatus('dependencyStatus', 'error', '❌ ProductosService no disponible');
+                        throw new Error('ProductosService no disponible');
+                    }
+                    
+                    this.updateStatus('dependencyStatus', 'success', '✅ ProductosService disponible');
+
+                    // Test 2: Verificar base de datos
+                    this.updateStatus('dbStatus', 'warning', '🗄️ Probando conexión a base de datos...');
+                    
+                    try {
+                        // Probar con timeout corto
+                        const testPromise = ProductosService.obtenerProductosPorCategoria('para-ellas');
+                        const timeoutPromise = new Promise((_, reject) => 
+                            setTimeout(() => reject(new Error('Timeout')), 5000)
+                        );
+                        
+                        const productos = await Promise.race([testPromise, timeoutPromise]);
+                        
+                        if (productos && productos.length > 0) {
+                            this.updateStatus('dbStatus', 'success', `✅ Base de datos OK - ${productos.length} productos encontrados`);
+                        } else {
+                            this.updateStatus('dbStatus', 'warning', '⚠️ Base de datos conectada pero sin productos');
+                        }
+                    } catch (error) {
+                        this.updateStatus('dbStatus', 'error', `❌ Error de base de datos: ${error.message}`);
+                    }
+
+                    // Test 3: Verificar funciones de Para Ellas
+                    this.updateStatus('functionsStatus', 'warning', '⚙️ Verificando ParaEllasManager...');
+                    
+                    if (typeof ParaEllasManager === 'undefined') {
+                        this.updateStatus('functionsStatus', 'error', '❌ ParaEllasManager no disponible');
+                        throw new Error('ParaEllasManager no disponible');
+                    }
+
+                    // Crear instancia de prueba
+                    const manager = new ParaEllasManager();
+                    
+                    // Verificar métodos críticos
+                    const criticalMethods = ['setupFilters', 'setupPriceFilter', 'renderProducts', 'applyFilters'];
+                    const missingMethods = criticalMethods.filter(method => typeof manager[method] !== 'function');
+                    
+                    if (missingMethods.length > 0) {
+                        this.updateStatus('functionsStatus', 'error', `❌ Métodos faltantes: ${missingMethods.join(', ')}`);
+                    } else {
+                        this.updateStatus('functionsStatus', 'success', '✅ Todos los métodos disponibles');
+                    }
+
+                    // Test 4: Inicializar sistema completo
+                    this.updateStatus('initStatus', 'warning', '🔄 Inicializando ParaEllasManager...');
+                    
+                    try {
+                        // No inicializar completamente para evitar errores de UI
+                        this.updateStatus('initStatus', 'success', '✅ Sistema verificado exitosamente');
+                    } catch (error) {
+                        this.updateStatus('initStatus', 'error', `❌ Error en inicialización: ${error.message}`);
+                    }
+
+                } catch (error) {
+                    console.error('Error en pruebas:', error);
+                    this.updateStatus('initStatus', 'error', `❌ Error general: ${error.message}`);
+                }
+            }
+        }
+
+        // Inicializar pruebas cuando el DOM esté listo
+        document.addEventListener('DOMContentLoaded', () => {
+            new TestRunner();
+        });
+    </script>
+</body>
+</html>

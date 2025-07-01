@@ -15,7 +15,38 @@ class ParaEllosManager {
         };
         
         this.init();
-    }    async init() {
+        this.initVideoHero();
+    }
+
+    // Inicializar el video hero
+    initVideoHero() {
+        document.addEventListener('DOMContentLoaded', () => {
+            const video = document.querySelector('.hero-video');
+            const overlay = document.querySelector('.video-overlay');
+            const textContent = document.querySelector('.video-text-content');
+            
+            if (video) {
+                // Asegurar que el video se reproduce automáticamente
+                video.addEventListener('loadeddata', () => {
+                    console.log('Video cargado correctamente');
+                    video.play().catch(e => {
+                        console.log('Error al reproducir video:', e);
+                    });
+                });
+                
+                // Forzar visibilidad del overlay
+                if (overlay && textContent) {
+                    overlay.style.display = 'flex';
+                    overlay.style.zIndex = '10';
+                    textContent.style.color = 'white';
+                    textContent.style.visibility = 'visible';
+                    textContent.style.opacity = '1';
+                    
+                    console.log('Overlay configurado correctamente');
+                }
+            }
+        });
+    }async init() {
         console.log('🚀 Inicializando ParaEllosManager...');
         
         // Hacer el manager disponible globalmente para reintentos

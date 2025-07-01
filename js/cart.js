@@ -102,6 +102,9 @@ class ShoppingCart {
         const cartButton = document.getElementById('cartButton');
         if (cartButton) {
             cartButton.addEventListener('click', () => this.toggleCart());
+            console.log('✅ Event listener configurado para botón del carrito');
+        } else {
+            console.log('⚠️ Botón del carrito no encontrado durante setupEventListeners');
         }
 
         // Cerrar carrito
@@ -617,6 +620,36 @@ class ShoppingCart {
         } else {
             console.error('❌ Producto no encontrado en carrito:', productId);
             console.log('🔍 IDs en carrito:', this.items.map(item => ({ id: item.id, nombre: item.nombre })));
+        }
+    }
+
+    // Método para reconfigurar event listeners (especialmente útil para el botón del carrito)
+    reconfigureEventListeners() {
+        console.log('🔄 Reconfigurando event listeners del carrito...');
+        
+        // Reconfigurar botón del carrito
+        const cartButton = document.getElementById('cartButton');
+        if (cartButton) {
+            try {
+                // Remover event listener existente si lo hay
+                const newCartButton = cartButton.cloneNode(true);
+                cartButton.parentNode.replaceChild(newCartButton, cartButton);
+                
+                // Asegurar que el nuevo botón tenga el event listener
+                const refreshedButton = document.getElementById('cartButton');
+                if (refreshedButton) {
+                    refreshedButton.addEventListener('click', () => this.toggleCart());
+                    console.log('✅ Event listener del botón del carrito reconfigurado');
+                } else {
+                    console.log('⚠️ No se pudo reconfigurar el botón del carrito');
+                }
+            } catch (error) {
+                console.log('⚠️ Error reconfigurando botón del carrito:', error.message);
+                // Fallback: simplemente agregar el event listener
+                cartButton.addEventListener('click', () => this.toggleCart());
+            }
+        } else {
+            console.log('⚠️ Botón del carrito no encontrado durante reconfiguración');
         }
     }
 }

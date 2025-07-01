@@ -14,12 +14,20 @@
     <div id="navbar-container"></div>
 
     <main class="magazine-main">
-        <!-- Collection Grid -->
-        <section class="collection-grid">
-            <div class="grid-title">
-                <h1>Fragancias Pour Homme</h1>
-                <p>Nuestra selección exclusiva de perfumes masculinos</p>
-            </div>              <!-- Search and Filter Section -->
+        <!-- Collection Grid -->        <section class="collection-grid">            <div class="video-title-section">
+                <video autoplay muted loop class="hero-video">
+                    <source src="../VIDEOS/VIDEOPARASECCIONPARAELLOS.mp4" type="video/mp4">
+                    Tu navegador no soporta el elemento de video.
+                </video>
+                <div class="video-overlay">
+                    <div class="video-text-content">
+                        <h1 class="video-title">Fragancias Masculinas</h1>
+                        <p class="video-subtitle">Descubre nuestra colección exclusiva de perfumes para caballero</p>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Search and Filter Section -->
             <div class="index-header">
                 <!-- Search Bar -->                <!-- Combined Search and Price Filter -->
                 <div class="search-and-filters-container">
@@ -153,6 +161,14 @@
                             initNavbar();
                         }
                     }, 150);
+                    
+                    // Reconfigurar event listeners del carrito después de cargar navbar
+                    setTimeout(() => {
+                        if (window.shoppingCart && typeof window.shoppingCart.reconfigureEventListeners === 'function') {
+                            window.shoppingCart.reconfigureEventListeners();
+                            console.log('✅ Event listeners del carrito reconfigurados en Para Ellos');
+                        }
+                    }, 500);
                 })
                 .catch(error => console.error('Error cargando navbar:', error));
         });    </script>    <!-- Supabase CDN -->
