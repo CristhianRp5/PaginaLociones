@@ -1,0 +1,297 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test - Problema de Guardado en Tarjetas</title>
+    <link rel="stylesheet" href="css/style.css">
+    <link rel="stylesheet" href="css/slide-cart.css">
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        
+        .test-section {
+            background: white;
+            border-radius: 10px;
+            padding: 20px;
+            margin: 20px 0;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        
+        .product-card {
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            padding: 15px;
+            margin: 10px;
+            display: inline-block;
+            width: 200px;
+            text-align: center;
+        }
+        
+        .btn {
+            padding: 10px 20px;
+            margin: 5px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 14px;
+        }
+        
+        .btn-primary { background: #007bff; color: white; }
+        .btn-success { background: #28a745; color: white; }
+        .btn-warning { background: #ffc107; color: black; }
+        .btn-danger { background: #dc3545; color: white; }
+        
+        .status {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 5px;
+            margin: 10px 0;
+            font-family: monospace;
+            white-space: pre-wrap;
+            max-height: 400px;
+            overflow-y: auto;
+        }
+        
+        .alert {
+            padding: 15px;
+            margin: 15px 0;
+            border-radius: 5px;
+            background: #d1ecf1;
+            border-left: 4px solid #0c5460;
+        }
+    </style>
+</head>
+<body>
+    <h1>🧪 Test - Problema de Guardado en Tarjetas</h1>
+    
+    <div class="alert">
+        <h3>🔍 Problema a Verificar</h3>
+        <p>Los productos solo se guardan cuando se agregan desde el carrito directamente (botones +), pero no cuando se agregan desde las tarjetas de productos.</p>
+        <p><strong>Pasos del test:</strong></p>
+        <ol>
+            <li>Agregar productos usando los botones de las tarjetas</li>
+            <li>Verificar si se guardan en localStorage</li>
+            <li>Comparar con agregar desde el carrito directamente</li>
+        </ol>
+    </div>
+    
+    <div class="test-section">
+        <h2>🛒 Productos de Prueba</h2>
+        <div class="product-card">
+            <h3>Colonia Test 1</h3>
+            <p>$45</p>
+            <button class="btn btn-success" onclick="addFromCard('test-001', 'Colonia Test 1', 45)">
+                ➕ Agregar al Carrito
+            </button>
+        </div>
+        
+        <div class="product-card">
+            <h3>Perfume Test 2</h3>
+            <p>$65</p>
+            <button class="btn btn-success" onclick="addFromCard('test-002', 'Perfume Test 2', 65)">
+                ➕ Agregar al Carrito
+            </button>
+        </div>
+        
+        <div class="product-card">
+            <h3>Fragancia Test 3</h3>
+            <p>$55</p>
+            <button class="btn btn-success" onclick="addFromCard('test-003', 'Fragancia Test 3', 55)">
+                ➕ Agregar al Carrito
+            </button>
+        </div>
+    </div>
+    
+    <div class="test-section">
+        <h2>🔍 Verificación y Debug</h2>
+        <button class="btn btn-primary" onclick="showCartStatus()">📊 Ver Estado del Carrito</button>
+        <button class="btn btn-warning" onclick="debugSave()">🔍 Debug Guardado</button>
+        <button class="btn btn-primary" onclick="openCart()">👁️ Abrir Carrito</button>
+        <button class="btn btn-danger" onclick="clearCart()">🗑️ Limpiar</button>
+        
+        <div id="status" class="status"></div>
+    </div>
+    
+    <div class="test-section">
+        <h2>⏱️ Timeline de Acciones</h2>
+        <div id="timeline" class="status"></div>
+    </div>
+
+    <!-- Scripts -->
+    <script src="js/cart.js"></script>
+    <script>
+        let actionCount = 0;
+        
+        function log(message) {
+            actionCount++;
+            const timestamp = new Date().toLocaleTimeString();
+            const timelineEntry = `[${timestamp}] ${actionCount}. ${message}`;
+            
+            console.log(message);
+            
+            // Agregar al timeline
+            const timeline = document.getElementById('timeline');
+            timeline.textContent = timelineEntry + '\n' + timeline.textContent;
+            
+            // Actualizar status
+            document.getElementById('status').textContent = message;
+        }
+        
+        function addFromCard(id, nombre, precio) {
+            log(`🛒 Intentando agregar "${nombre}" desde tarjeta...`);
+            
+            const product = {
+                id: id,
+                nombre: nombre,
+                marca: 'TestBrand',
+                precio: precio,
+                categoria: 'test',
+                imagen_url: '../IMAGENES/placeholder.png'
+            };
+            
+            // Simular el comportamiento de las tarjetas de productos
+            console.log('🔍 Estado antes de agregar:', {
+                cartExists: !!window.shoppingCart,
+                cartInitialized: window.shoppingCart ? window.shoppingCart.isInitialized : false,
+                itemCount: window.shoppingCart ? window.shoppingCart.items.length : 0
+            });
+            
+            if (window.shoppingCart && window.shoppingCart.isInitialized) {
+                log(`✅ Carrito disponible, agregando "${nombre}"`);
+                window.shoppingCart.addItem(product);
+                
+                // Verificar inmediatamente después
+                setTimeout(() => {
+                    const afterStatus = window.shoppingCart.getCartStatus();
+                    log(`📊 Después de agregar: ${afterStatus.totalItems} items`);
+                    
+                    // Verificar localStorage
+                    const saved = localStorage.getItem('shopping_cart');
+                    if (saved) {
+                        try {
+                            const parsed = JSON.parse(saved);
+                            const savedItems = parsed.items || parsed.i || [];
+                            log(`💾 En localStorage: ${savedItems.length} items`);
+                            
+                            if (afterStatus.totalItems !== savedItems.length) {
+                                log(`⚠️ PROBLEMA: Memoria (${afterStatus.totalItems}) != Storage (${savedItems.length})`);
+                            } else {
+                                log(`✅ Memoria y storage sincronizados`);
+                            }
+                        } catch (error) {
+                            log(`❌ Error parseando localStorage: ${error.message}`);
+                        }
+                    } else {
+                        log(`❌ PROBLEMA: No hay datos en localStorage`);
+                    }
+                }, 500);
+                
+            } else {
+                log(`❌ Carrito no disponible o no inicializado`);
+                
+                // Intentar usar singleton
+                if (window.getShoppingCartInstance) {
+                    log(`🔄 Intentando usar singleton...`);
+                    const cart = window.getShoppingCartInstance();
+                    if (cart && cart.isInitialized) {
+                        log(`✅ Singleton funcionó, agregando producto`);
+                        cart.addItem(product);
+                    } else {
+                        log(`❌ Singleton no funcionó`);
+                    }
+                } else {
+                    log(`❌ Función singleton no disponible`);
+                }
+            }
+        }
+        
+        function showCartStatus() {
+            if (!window.shoppingCart) {
+                log('❌ Carrito no disponible');
+                return;
+            }
+            
+            const status = window.shoppingCart.getCartStatus();
+            const info = 
+`📊 ESTADO DEL CARRITO:
+✅ Inicializado: ${status.isInitialized}
+📦 Items: ${status.totalItems}
+💰 Total: $${status.totalAmount}
+
+📋 PRODUCTOS:
+${status.itemsList.map((item, i) => 
+    `${i+1}. ${item.nombre} - $${item.precio} (x${item.quantity})`
+).join('\n')}`;
+            
+            document.getElementById('status').textContent = info;
+            log(`Estado mostrado: ${status.totalItems} items`);
+        }
+        
+        function debugSave() {
+            if (window.debugCartSave) {
+                window.debugCartSave();
+                log('🔍 Debug de guardado ejecutado - revisar consola');
+            } else {
+                log('❌ Función debugCartSave no disponible');
+            }
+        }
+        
+        function openCart() {
+            if (window.shoppingCart) {
+                window.shoppingCart.openCart();
+                log('👁️ Carrito abierto');
+            } else {
+                log('❌ Carrito no disponible');
+            }
+        }
+        
+        function clearCart() {
+            if (window.shoppingCart) {
+                window.shoppingCart.clearCart();
+                log('🗑️ Carrito limpiado');
+                showCartStatus();
+            } else {
+                log('❌ Carrito no disponible para limpiar');
+            }
+        }
+        
+        // Verificación inicial
+        document.addEventListener('DOMContentLoaded', function() {
+            setTimeout(() => {
+                log('🚀 Página de test cargada');
+                log(`Carrito disponible: ${!!window.shoppingCart}`);
+                log(`Carrito inicializado: ${window.shoppingCart ? window.shoppingCart.isInitialized : false}`);
+                log(`Función singleton: ${!!window.getShoppingCartInstance}`);
+                
+                if (window.shoppingCart) {
+                    showCartStatus();
+                }
+            }, 1000);
+        });
+        
+        // Monitorear cambios en localStorage
+        window.addEventListener('storage', function(e) {
+            if (e.key === 'shopping_cart') {
+                log(`💾 Cambio detectado en localStorage`);
+                if (e.newValue) {
+                    try {
+                        const parsed = JSON.parse(e.newValue);
+                        const items = parsed.items || parsed.i || [];
+                        log(`💾 Nuevos datos: ${items.length} items`);
+                    } catch (error) {
+                        log(`❌ Error parseando cambio: ${error.message}`);
+                    }
+                } else {
+                    log(`💾 localStorage limpiado`);
+                }
+            }
+        });
+    </script>
+</body>
+</html>

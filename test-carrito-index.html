@@ -1,0 +1,235 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Carrito - Index</title>
+    <link rel="stylesheet" href="css/style.css">
+    <link rel="stylesheet" href="css/navbar.css">
+    <link rel="stylesheet" href="css/cart.css">
+    <style>
+        .test-section {
+            padding: 100px 20px 50px;
+            max-width: 800px;
+            margin: 0 auto;
+            background: #f8f9fa;
+            border-radius: 10px;
+            margin-top: 20px;
+        }
+        .test-button {
+            background: #2c2c2c;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 6px;
+            cursor: pointer;
+            margin: 10px;
+            font-family: 'Montserrat', sans-serif;
+        }
+        .test-button:hover {
+            background: #404040;
+        }
+        .test-result {
+            background: #e9ecef;
+            padding: 15px;
+            border-radius: 6px;
+            margin: 10px 0;
+            font-family: monospace;
+            font-size: 14px;
+            overflow-x: auto;
+        }
+    </style>
+</head>
+<body>
+    <!-- Contenedor para la navbar -->
+    <div id="navbar-container"></div>
+    
+    <!-- Sección de pruebas -->
+    <section class="test-section">
+        <h1>🛒 Test de Carrito en Index.html</h1>
+        <p>Esta página prueba que el carrito funcione correctamente desde index.html</p>
+        
+        <div class="test-buttons">
+            <button class="test-button" onclick="testCartExistence()">¿Existe el carrito?</button>
+            <button class="test-button" onclick="testCartButton()">Verificar botón del carrito</button>
+            <button class="test-button" onclick="testAddItem()">Agregar producto de prueba</button>
+            <button class="test-button" onclick="testOpenCart()">Abrir carrito</button>
+            <button class="test-button" onclick="testCartStatus()">Estado del carrito</button>
+            <button class="test-button" onclick="clearTestResults()">Limpiar resultados</button>
+        </div>
+        
+        <div id="testResults"></div>
+    </section>
+
+    <!-- Scripts -->
+    <script src="js/cart.js"></script>
+    <script src="js/navbar.js"></script>
+    
+    <script>
+        let testCounter = 1;
+        
+        function addTestResult(message, isSuccess = true) {
+            const results = document.getElementById('testResults');
+            const result = document.createElement('div');
+            result.className = 'test-result';
+            result.style.borderLeft = isSuccess ? '4px solid #28a745' : '4px solid #dc3545';
+            result.innerHTML = `<strong>Test ${testCounter++}:</strong> ${message}`;
+            results.appendChild(result);
+            result.scrollIntoView({ behavior: 'smooth' });
+        }
+        
+        function clearTestResults() {
+            document.getElementById('testResults').innerHTML = '';
+            testCounter = 1;
+        }
+        
+        function testCartButton() {
+            const cartButton = document.getElementById('cartButton');
+            
+            if (!cartButton) {
+                addTestResult('❌ Botón del carrito no encontrado', false);
+                return;
+            }
+            
+            try {
+                // Verificar propiedades del botón
+                const buttonInfo = {
+                    exists: !!cartButton,
+                    id: cartButton.id,
+                    classList: Array.from(cartButton.classList),
+                    isVisible: cartButton.offsetParent !== null,
+                    hasClickListener: cartButton.onclick !== null || cartButton.addEventListener !== undefined
+                };
+                
+                // Simular click programático
+                console.log('🧪 Simulando click en el botón del carrito...');
+                cartButton.click();
+                
+                addTestResult(`
+                    ✅ Información del botón del carrito:<br>
+                    ID: ${buttonInfo.id}<br>
+                    Clases: ${buttonInfo.classList.join(', ')}<br>
+                    ¿Es visible? ${buttonInfo.isVisible ? '✅' : '❌'}<br>
+                    ¿Tiene listeners? ${buttonInfo.hasClickListener ? '✅' : '❌'}<br>
+                    Click simulado ejecutado
+                `, true);
+            } catch (error) {
+                addTestResult(`❌ Error verificando botón: ${error.message}`, false);
+            }
+        }
+        
+        function testCartExistence() {
+            const exists = typeof window.shoppingCart !== 'undefined';
+            const hasAddItem = exists && typeof window.shoppingCart.addItem === 'function';
+            const isInitialized = exists && window.shoppingCart.isInitialized;
+            
+            addTestResult(`
+                ¿Existe window.shoppingCart? ${exists ? '✅' : '❌'}<br>
+                ¿Tiene función addItem? ${hasAddItem ? '✅' : '❌'}<br>
+                ¿Está inicializado? ${isInitialized ? '✅' : '❌'}
+            `, exists && hasAddItem);
+        }
+        
+        function testAddItem() {
+            if (!window.shoppingCart) {
+                addTestResult('❌ Error: El carrito no existe', false);
+                return;
+            }
+            
+            const testProduct = {
+                id: 'test-001',
+                nombre: 'Perfume de Prueba',
+                marca: 'Test Brand',
+                precio: 99999,
+                categoria: 'para-ellas',
+                imagen_url: 'IMAGENES/PARA_ELLAS.png'
+            };
+            
+            try {
+                const itemsBefore = window.shoppingCart.getTotalItems();
+                window.shoppingCart.addItem(testProduct);
+                const itemsAfter = window.shoppingCart.getTotalItems();
+                
+                addTestResult(`
+                    ✅ Producto agregado exitosamente<br>
+                    Items antes: ${itemsBefore}<br>
+                    Items después: ${itemsAfter}<br>
+                    Producto: ${testProduct.nombre}
+                `, true);
+            } catch (error) {
+                addTestResult(`❌ Error agregando producto: ${error.message}`, false);
+            }
+        }
+        
+        function testOpenCart() {
+            if (!window.shoppingCart) {
+                addTestResult('❌ Error: El carrito no existe', false);
+                return;
+            }
+            
+            try {
+                window.shoppingCart.openCart();
+                addTestResult('✅ Carrito abierto exitosamente', true);
+            } catch (error) {
+                addTestResult(`❌ Error abriendo carrito: ${error.message}`, false);
+            }
+        }
+        
+        function testCartStatus() {
+            if (!window.shoppingCart) {
+                addTestResult('❌ Error: El carrito no existe', false);
+                return;
+            }
+            
+            try {
+                const status = window.shoppingCart.getCartStatus();
+                addTestResult(`
+                    ✅ Estado del carrito:<br>
+                    Total items: ${status.totalItems}<br>
+                    Valor total: $${status.totalValue.toLocaleString()}<br>
+                    Productos únicos: ${status.itemCount}<br>
+                    ¿Es válido? ${status.isValid ? '✅' : '❌'}
+                `, true);
+            } catch (error) {
+                addTestResult(`❌ Error obteniendo estado: ${error.message}`, false);
+            }
+        }
+        
+        // Cargar la navbar y luego inicializar
+        document.addEventListener('DOMContentLoaded', function() {
+            fetch('html/navbar.html')
+                .then(response => response.text())
+                .then(data => {
+                    document.getElementById('navbar-container').innerHTML = data;
+                    
+                    // Ajustar rutas para navegación desde index.html
+                    const navLinks = document.querySelectorAll('.navbar-menu a[href]:not([href^="http"]):not([href^="#"])');
+                    navLinks.forEach(link => {
+                        const currentHref = link.getAttribute('href');
+                        if (!currentHref.startsWith('html/') && currentHref !== 'index.html') {
+                            link.setAttribute('href', 'html/' + currentHref);
+                        }
+                    });
+                    
+                    // Inicializar navbar
+                    if (typeof initNavbar === 'function') {
+                        setTimeout(initNavbar, 100);
+                    }
+                    
+                    // Verificar el carrito después de un momento
+                    setTimeout(() => {
+                        addTestResult(`
+                            🔍 Verificación inicial del carrito:<br>
+                            ¿Existe ShoppingCart class? ${typeof ShoppingCart !== 'undefined' ? '✅' : '❌'}<br>
+                            ¿Existe window.shoppingCart? ${typeof window.shoppingCart !== 'undefined' ? '✅' : '❌'}<br>
+                            ¿Cart.js cargado? ${document.querySelector('script[src="js/cart.js"]') ? '✅' : '❌'}
+                        `);
+                    }, 1000);
+                })
+                .catch(error => {
+                    addTestResult(`❌ Error cargando navbar: ${error.message}`, false);
+                });
+        });
+    </script>
+</body>
+</html>

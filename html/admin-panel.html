@@ -11,6 +11,7 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
       <!-- CSS del panel -->
     <link rel="stylesheet" href="../css/admin-panel.css">
+    <link rel="stylesheet" href="../css/admin-panel-validacion.css">
     
     <!-- Supabase -->
     <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
@@ -199,33 +200,42 @@
                     <div class="image-upload-section">
                         <h3 class="section-title">
                             <i class="fas fa-image"></i>
-                            Imagen del Producto
+                            Imagen del Producto (URL)
                         </h3>
                         
                         <div class="image-upload-container">
-                            <div class="upload-tabs">
-                                <button type="button" class="tab-btn active" data-tab="url">
-                                    <i class="fas fa-link"></i> URL
-                                </button>
-                                <button type="button" class="tab-btn" data-tab="file">
-                                    <i class="fas fa-upload"></i> Seleccionar Archivo
+                            <div class="input-group">
+                                <input type="url" id="imagen_url" name="imagen_url" placeholder="https://images.unsplash.com/photo-1234567890/image.jpg" class="form-control" required>
+                                <button type="button" class="btn btn-secondary" onclick="adminPanel.previewImageFromUrl()">
+                                    <i class="fas fa-eye"></i> Vista Previa
                                 </button>
                             </div>
-                              <div class="tab-content active" id="url-tab">
-                                <div class="input-group">
-                                    <input type="url" id="imagen_url" name="imagen_url" placeholder="https://ejemplo.com/imagen.jpg" class="form-control">
-                                    <button type="button" class="btn btn-secondary" onclick="adminPanel.previewImageFromUrl()">
-                                        <i class="fas fa-eye"></i> Vista Previa
-                                    </button>
+                            <div class="help-text">
+                                <strong>Usa URLs directas de imágenes.</strong> Ejemplos:
+                                <ul style="margin: 10px 0; padding-left: 20px; font-size: 12px;">
+                                    <li>Unsplash: https://images.unsplash.com/photo-xxxxx?w=400&h=400</li>
+                                    <li>Pexels: https://images.pexels.com/photos/xxxxx/image.jpg?w=400&h=400</li>
+                                    <li>Directa: https://tu-dominio.com/imagen.jpg</li>
+                                </ul>
+                            </div>
+                            
+                            <div class="quick-images">
+                                <div class="quick-images-title">
+                                    <i class="fas fa-images"></i> Imágenes de Ejemplo (Clic para usar):
                                 </div>
-                                <div class="help-text">Pega la URL de una imagen en línea</div>
-                            </div>                            <div class="tab-content" id="file-tab">                                <div class="file-upload-area">
-                                    <input type="file" id="imagen_file" accept="image/*" class="form-control file-input">
-                                    <label for="imagen_file" class="file-upload-label">
-                                        <i class="fas fa-cloud-upload-alt"></i>
-                                        <span>Haz clic para seleccionar una imagen</span>
-                                        <span class="file-types">JPG, PNG, WEBP (máx. 5MB)</span>
-                                    </label>
+                                <div class="quick-images-grid">
+                                    <div class="quick-image" onclick="adminPanel.useQuickImage('https://images.unsplash.com/photo-1541643600914-78b084683601?w=400&h=400&fit=crop')">
+                                        <img src="https://images.unsplash.com/photo-1541643600914-78b084683601?w=100&h=100&fit=crop" alt="Perfume 1">
+                                    </div>
+                                    <div class="quick-image" onclick="adminPanel.useQuickImage('https://images.unsplash.com/photo-1523293182086-7651a899d37f?w=400&h=400&fit=crop')">
+                                        <img src="https://images.unsplash.com/photo-1523293182086-7651a899d37f?w=100&h=100&fit=crop" alt="Perfume 2">
+                                    </div>
+                                    <div class="quick-image" onclick="adminPanel.useQuickImage('https://images.unsplash.com/photo-1594035910387-fea47794261f?w=400&h=400&fit=crop')">
+                                        <img src="https://images.unsplash.com/photo-1594035910387-fea47794261f?w=100&h=100&fit=crop" alt="Perfume 3">
+                                    </div>
+                                    <div class="quick-image" onclick="adminPanel.useQuickImage('https://images.unsplash.com/photo-1595425970377-c9703cf48b6d?w=400&h=400&fit=crop')">
+                                        <img src="https://images.unsplash.com/photo-1595425970377-c9703cf48b6d?w=100&h=100&fit=crop" alt="Perfume 4">
+                                    </div>
                                 </div>
                             </div>
                             
@@ -337,8 +347,53 @@
         </div>    </div>
     
     <!-- Scripts en orden correcto -->
-    <script src="../js/supabase-config.js"></script>
+    <script src="../js/supabase-config-optimized.js"></script>
+    <script src="../js/admin-panel-validacion-mejorada.js"></script>
     <script src="../js/admin-panel-new.js"></script>
+    <script src="../js/admin-panel-integration.js"></script>
+    
+    <!-- Configuración de precios -->
+    <script>
+        // Configurar formato de precios
+        function setupPriceFormatting() {
+            const priceInput = document.getElementById('precio');
+            if (!priceInput) return;
+            
+            priceInput.addEventListener('input', function(e) {
+                formatPriceInput(e.target);
+            });
+            
+            priceInput.addEventListener('blur', function(e) {
+                formatPriceInput(e.target);
+            });
+        }
+        
+        function formatPriceInput(input) {
+            let value = parseFloat(input.value.replace(/[^0-9.]/g, ''));
+            
+            if (isNaN(value)) {
+                input.value = '';
+                return;
+            }
+            
+            const max = 10000000;
+            if (value > max) {
+                input.value = max;
+                if (window.adminPanel) {
+                    adminPanel.showAlert(`Precio ajustado al máximo permitido: $${new Intl.NumberFormat('es-CO').format(max)}`, 'warning');
+                }
+            }
+            
+            if (value < 0) {
+                input.value = 0;
+            }
+        }
+        
+        // Inicializar cuando el DOM esté listo
+        document.addEventListener('DOMContentLoaded', function() {
+            setupPriceFormatting();
+        });
+    </script>
     
     <!-- Inicialización del panel -->
     <script>
@@ -601,6 +656,14 @@
             }
         };
         
+    <!-- JavaScript del panel de administración -->
+    <script src="../js/supabase-config-optimized.js"></script>
+    <script src="../js/admin-panel-validacion-mejorada.js"></script>
+    <script src="../js/admin-panel-new.js"></script>
+    <script src="../js/admin-panel-integration.js"></script>
+    
+    <!-- Configuración de precios -->
+    <script>
         // Función para cambiar tabs de imagen
         window.switchImageTab = function(tabType) {
             const tabs = document.querySelectorAll('.tab-btn');

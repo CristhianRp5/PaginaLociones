@@ -1,0 +1,483 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Actualización de Productos</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            margin: 0;
+            padding: 20px;
+            color: white;
+        }
+        .container {
+            max-width: 1000px;
+            margin: 0 auto;
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            border-radius: 20px;
+            padding: 30px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+        }
+        .test-section {
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 15px;
+            padding: 20px;
+            margin: 20px 0;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+        .test-button {
+            background: linear-gradient(45deg, #ff6b6b, #ee5a24);
+            color: white;
+            border: none;
+            padding: 15px 30px;
+            border-radius: 25px;
+            font-size: 16px;
+            cursor: pointer;
+            margin: 10px;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+        }
+        .test-button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(0, 0, 0, 0.3);
+        }
+        .test-button:disabled {
+            background: #666;
+            cursor: not-allowed;
+            transform: none;
+        }
+        .results {
+            background: rgba(0, 0, 0, 0.2);
+            border-radius: 10px;
+            padding: 15px;
+            margin: 15px 0;
+            font-family: 'Courier New', monospace;
+            white-space: pre-wrap;
+            max-height: 400px;
+            overflow-y: auto;
+        }
+        .status {
+            padding: 10px;
+            border-radius: 5px;
+            margin: 10px 0;
+            text-align: center;
+            font-weight: bold;
+        }
+        .status.success { background: rgba(76, 175, 80, 0.3); }
+        .status.warning { background: rgba(255, 193, 7, 0.3); }
+        .status.error { background: rgba(244, 67, 54, 0.3); }
+        .product-card {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 10px;
+            padding: 15px;
+            margin: 10px 0;
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+        .product-image {
+            width: 80px;
+            height: 80px;
+            border-radius: 10px;
+            overflow: hidden;
+            flex-shrink: 0;
+        }
+        .product-image img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+        .product-info {
+            flex: 1;
+        }
+        .product-name {
+            font-size: 18px;
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+        .product-details {
+            font-size: 14px;
+            opacity: 0.8;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🧪 Test de Actualización de Productos</h1>
+        
+        <div class="test-section">
+            <h2>📦 Pruebas de CRUD con Imágenes</h2>
+            <button class="test-button" onclick="testActualizacion.crearProductoPrueba()">
+                ➕ Crear Producto de Prueba
+            </button>
+            <button class="test-button" onclick="testActualizacion.actualizarUltimoProducto()">
+                ✏️ Actualizar Último Producto
+            </button>
+            <button class="test-button" onclick="testActualizacion.cambiarImagenProducto()">
+                🖼️ Cambiar Imagen de Producto
+            </button>
+            <button class="test-button" onclick="testActualizacion.eliminarUltimoProducto()">
+                🗑️ Eliminar Último Producto
+            </button>
+        </div>
+
+        <div class="test-section">
+            <h2>🔍 Verificaciones</h2>
+            <button class="test-button" onclick="testActualizacion.verificarProductos()">
+                📋 Listar Productos
+            </button>
+            <button class="test-button" onclick="testActualizacion.verificarImagenes()">
+                🖼️ Verificar Imágenes
+            </button>
+            <button class="test-button" onclick="testActualizacion.testCompleto()">
+                🎯 Test Completo
+            </button>
+        </div>
+
+        <div class="test-section">
+            <h2>📊 Estado del Sistema</h2>
+            <div id="status"></div>
+        </div>
+
+        <div class="test-section">
+            <h2>📦 Productos Actuales</h2>
+            <div id="products"></div>
+        </div>
+
+        <div class="test-section">
+            <h2>📋 Log de Pruebas</h2>
+            <div id="results" class="results"></div>
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+    <script src="../js/supabase-config-optimized.js"></script>
+
+    <script>
+        class TestActualizacion {
+            constructor() {
+                this.productos = [];
+                this.ultimoProductoCreado = null;
+                this.init();
+            }
+
+            init() {
+                this.log('🚀 Iniciando test de actualización de productos...');
+                this.verificarEstadoSistema();
+                this.cargarProductos();
+            }
+
+            log(mensaje) {
+                const timestamp = new Date().toLocaleTimeString();
+                const formattedMessage = `[${timestamp}] ${mensaje}`;
+                console.log(formattedMessage);
+                
+                const resultsDiv = document.getElementById('results');
+                resultsDiv.textContent += formattedMessage + '\n';
+                resultsDiv.scrollTop = resultsDiv.scrollHeight;
+            }
+
+            async verificarEstadoSistema() {
+                const statusDiv = document.getElementById('status');
+                
+                try {
+                    if (!supabaseClient) {
+                        const initialized = initSupabase();
+                        if (!initialized) {
+                            statusDiv.innerHTML = '<div class="status error">❌ Error: Supabase no disponible</div>';
+                            return false;
+                        }
+                    }
+
+                    // Verificar conexión y servicio optimizado
+                    const hasService = typeof ProductosServiceOptimized !== 'undefined';
+                    
+                    if (hasService) {
+                        statusDiv.innerHTML = '<div class="status success">✅ Sistema listo para pruebas</div>';
+                        return true;
+                    } else {
+                        statusDiv.innerHTML = '<div class="status error">❌ ProductosServiceOptimized no disponible</div>';
+                        return false;
+                    }
+                    
+                } catch (error) {
+                    statusDiv.innerHTML = '<div class="status error">❌ Error del sistema: ' + error.message + '</div>';
+                    return false;
+                }
+            }
+
+            async cargarProductos() {
+                try {
+                    this.productos = await ProductosServiceOptimized.obtenerProductosOptimizado();
+                    this.log(`📦 Productos cargados: ${this.productos.length}`);
+                    this.mostrarProductos();
+                } catch (error) {
+                    this.log(`❌ Error cargando productos: ${error.message}`);
+                    this.productos = [];
+                }
+            }
+
+            mostrarProductos() {
+                const productsDiv = document.getElementById('products');
+                
+                if (this.productos.length === 0) {
+                    productsDiv.innerHTML = '<p>No hay productos disponibles</p>';
+                    return;
+                }
+
+                const productosHTML = this.productos.slice(0, 5).map(producto => `
+                    <div class="product-card">
+                        <div class="product-image">
+                            <img src="${producto.imagen || producto.imagen_url || 'https://via.placeholder.com/80'}" 
+                                 alt="${producto.nombre}"
+                                 onerror="this.src='https://via.placeholder.com/80'">
+                        </div>
+                        <div class="product-info">
+                            <div class="product-name">${producto.nombre}</div>
+                            <div class="product-details">
+                                ID: ${producto.id} | Marca: ${producto.marca} | Precio: $${producto.precio?.toLocaleString()}
+                                <br>Estado: ${producto.estado || 'N/A'} | Imagen: ${producto.imagen ? 'URL' : 'Sin imagen'}
+                            </div>
+                        </div>
+                    </div>
+                `).join('');
+
+                productsDiv.innerHTML = productosHTML;
+            }
+
+            async crearProductoPrueba() {
+                this.log('➕ Creando producto de prueba...');
+                
+                try {
+                    const timestamp = Date.now();
+                    const productoData = {
+                        nombre: `Producto Test ${timestamp}`,
+                        marca: 'Test Brand',
+                        precio: 50000,
+                        ml: 100,
+                        categoria: 'para-ellos',
+                        descripcion: 'Producto creado para testing de actualizaciones',
+                        imagen: 'https://images.unsplash.com/photo-1541643600914-78b084683601?w=400&h=400&fit=crop',
+                        imagen_url: 'https://images.unsplash.com/photo-1541643600914-78b084683601?w=400&h=400&fit=crop',
+                        estado: 'disponible',
+                        activo: true
+                    };
+
+                    const resultado = await ProductosServiceOptimized.crearProducto(productoData);
+                    
+                    if (resultado) {
+                        this.ultimoProductoCreado = resultado;
+                        this.log(`✅ Producto creado exitosamente: ID ${resultado.id}`);
+                        this.log(`📊 Datos guardados: ${JSON.stringify(resultado, null, 2)}`);
+                        
+                        // Recargar productos
+                        await this.cargarProductos();
+                    }
+
+                } catch (error) {
+                    this.log(`❌ Error creando producto: ${error.message}`);
+                }
+            }
+
+            async actualizarUltimoProducto() {
+                if (!this.ultimoProductoCreado) {
+                    this.log('⚠️ No hay producto creado para actualizar. Crea uno primero.');
+                    return;
+                }
+
+                this.log(`✏️ Actualizando producto ID ${this.ultimoProductoCreado.id}...`);
+                
+                try {
+                    const timestamp = Date.now();
+                    const datosActualizacion = {
+                        nombre: `Producto Actualizado ${timestamp}`,
+                        precio: 75000,
+                        descripcion: 'Producto actualizado en test de actualización',
+                        estado: 'oferta',
+                        descuento: 15
+                    };
+
+                    const resultado = await ProductosServiceOptimized.updateProduct(
+                        this.ultimoProductoCreado.id, 
+                        datosActualizacion
+                    );
+                    
+                    if (resultado) {
+                        this.log(`✅ Producto actualizado exitosamente`);
+                        this.log(`📊 Datos actualizados: ${JSON.stringify(resultado, null, 2)}`);
+                        
+                        // Actualizar referencia local
+                        this.ultimoProductoCreado = resultado;
+                        
+                        // Recargar productos
+                        await this.cargarProductos();
+                    }
+
+                } catch (error) {
+                    this.log(`❌ Error actualizando producto: ${error.message}`);
+                }
+            }
+
+            async cambiarImagenProducto() {
+                if (!this.ultimoProductoCreado) {
+                    this.log('⚠️ No hay producto creado para cambiar imagen. Crea uno primero.');
+                    return;
+                }
+
+                this.log(`🖼️ Cambiando imagen del producto ID ${this.ultimoProductoCreado.id}...`);
+                
+                try {
+                    const nuevasImagenes = [
+                        'https://images.unsplash.com/photo-1523293182086-7651a899d37f?w=400&h=400&fit=crop',
+                        'https://images.unsplash.com/photo-1594035910387-fea47794261f?w=400&h=400&fit=crop',
+                        'https://images.unsplash.com/photo-1595425970377-c9703cf48b6d?w=400&h=400&fit=crop'
+                    ];
+                    
+                    const nuevaImagen = nuevasImagenes[Math.floor(Math.random() * nuevasImagenes.length)];
+                    
+                    const datosActualizacion = {
+                        imagen: nuevaImagen,
+                        imagen_url: nuevaImagen
+                    };
+
+                    this.log(`🔗 Nueva imagen: ${nuevaImagen}`);
+
+                    const resultado = await ProductosServiceOptimized.updateProduct(
+                        this.ultimoProductoCreado.id, 
+                        datosActualizacion
+                    );
+                    
+                    if (resultado) {
+                        this.log(`✅ Imagen actualizada exitosamente`);
+                        this.log(`📊 Imagen guardada: ${resultado.imagen || resultado.imagen_url}`);
+                        
+                        // Verificar que la imagen se guardó correctamente
+                        if (resultado.imagen === nuevaImagen || resultado.imagen_url === nuevaImagen) {
+                            this.log(`✅ Verificación: Imagen guardada correctamente`);
+                        } else {
+                            this.log(`⚠️ Advertencia: Imagen guardada difiere de la enviada`);
+                            this.log(`📋 Enviada: ${nuevaImagen}`);
+                            this.log(`📋 Guardada: ${resultado.imagen || resultado.imagen_url}`);
+                        }
+                        
+                        // Actualizar referencia local
+                        this.ultimoProductoCreado = resultado;
+                        
+                        // Recargar productos
+                        await this.cargarProductos();
+                    }
+
+                } catch (error) {
+                    this.log(`❌ Error cambiando imagen: ${error.message}`);
+                }
+            }
+
+            async eliminarUltimoProducto() {
+                if (!this.ultimoProductoCreado) {
+                    this.log('⚠️ No hay producto creado para eliminar.');
+                    return;
+                }
+
+                this.log(`🗑️ Eliminando producto ID ${this.ultimoProductoCreado.id}...`);
+                
+                try {
+                    const resultado = await ProductosServiceOptimized.deleteProduct(this.ultimoProductoCreado.id);
+                    
+                    if (resultado && resultado.success) {
+                        this.log(`✅ Producto eliminado exitosamente`);
+                        this.ultimoProductoCreado = null;
+                        
+                        // Recargar productos
+                        await this.cargarProductos();
+                    }
+
+                } catch (error) {
+                    this.log(`❌ Error eliminando producto: ${error.message}`);
+                }
+            }
+
+            async verificarProductos() {
+                this.log('📋 Verificando productos...');
+                
+                try {
+                    await this.cargarProductos();
+                    this.log(`📊 Total de productos: ${this.productos.length}`);
+                    
+                    if (this.productos.length > 0) {
+                        this.log('📦 Últimos 3 productos:');
+                        this.productos.slice(-3).forEach(producto => {
+                            this.log(`   • ${producto.nombre} (ID: ${producto.id}) - Imagen: ${producto.imagen ? 'SÍ' : 'NO'}`);
+                        });
+                    }
+
+                } catch (error) {
+                    this.log(`❌ Error verificando productos: ${error.message}`);
+                }
+            }
+
+            async verificarImagenes() {
+                this.log('🖼️ Verificando imágenes de productos...');
+                
+                try {
+                    await this.cargarProductos();
+                    
+                    let conImagen = 0;
+                    let sinImagen = 0;
+                    let conImagenUrl = 0;
+                    
+                    this.productos.forEach(producto => {
+                        if (producto.imagen) conImagen++;
+                        if (producto.imagen_url) conImagenUrl++;
+                        if (!producto.imagen && !producto.imagen_url) sinImagen++;
+                    });
+                    
+                    this.log(`📊 Resumen de imágenes:`);
+                    this.log(`   • Con campo 'imagen': ${conImagen}`);
+                    this.log(`   • Con campo 'imagen_url': ${conImagenUrl}`);
+                    this.log(`   • Sin imagen: ${sinImagen}`);
+                    this.log(`   • Total productos: ${this.productos.length}`);
+
+                } catch (error) {
+                    this.log(`❌ Error verificando imágenes: ${error.message}`);
+                }
+            }
+
+            async testCompleto() {
+                this.log('🎯 Iniciando test completo...');
+                
+                try {
+                    // 1. Crear producto
+                    await this.crearProductoPrueba();
+                    await new Promise(resolve => setTimeout(resolve, 1000));
+                    
+                    // 2. Actualizar datos
+                    await this.actualizarUltimoProducto();
+                    await new Promise(resolve => setTimeout(resolve, 1000));
+                    
+                    // 3. Cambiar imagen
+                    await this.cambiarImagenProducto();
+                    await new Promise(resolve => setTimeout(resolve, 1000));
+                    
+                    // 4. Verificar estado
+                    await this.verificarProductos();
+                    
+                    this.log('🎉 Test completo finalizado exitosamente');
+
+                } catch (error) {
+                    this.log(`❌ Error en test completo: ${error.message}`);
+                }
+            }
+        }
+
+        // Inicializar test
+        const testActualizacion = new TestActualizacion();
+        
+        // Hacer disponible globalmente
+        window.testActualizacion = testActualizacion;
+    </script>
+</body>
+</html>

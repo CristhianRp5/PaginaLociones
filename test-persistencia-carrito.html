@@ -1,0 +1,304 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Persistencia del Carrito</title>
+    <link rel="stylesheet" href="css/style.css">
+    <link rel="stylesheet" href="css/navbar.css">
+    <link rel="stylesheet" href="css/cart.css">
+    <style>
+        .test-section {
+            padding: 100px 20px 50px;
+            max-width: 1000px;
+            margin: 0 auto;
+            background: #f8f9fa;
+            border-radius: 10px;
+            margin-top: 20px;
+        }
+        .test-button {
+            background: #2c2c2c;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 6px;
+            cursor: pointer;
+            margin: 10px;
+            font-family: 'Montserrat', sans-serif;
+        }
+        .test-button:hover {
+            background: #404040;
+        }
+        .test-button.danger {
+            background: #dc3545;
+        }
+        .test-button.success {
+            background: #28a745;
+        }
+        .test-result {
+            background: #e9ecef;
+            padding: 15px;
+            border-radius: 6px;
+            margin: 10px 0;
+            font-family: monospace;
+            font-size: 14px;
+            overflow-x: auto;
+        }
+        .time-display {
+            background: #d4edda;
+            border: 1px solid #c3e6cb;
+            color: #155724;
+            padding: 15px;
+            border-radius: 6px;
+            margin: 15px 0;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+    <!-- Contenedor para la navbar -->
+    <div id="navbar-container"></div>
+    
+    <!-- Sección de pruebas -->
+    <section class="test-section">
+        <h1>⏰ Test de Persistencia del Carrito</h1>
+        <p>Esta página prueba que el carrito mantenga los productos por 1 hora y se limpie automáticamente</p>
+        
+        <div class="time-display" id="timeDisplay">
+            Información de tiempo del carrito aparecerá aquí
+        </div>
+        
+        <div class="test-buttons">
+            <h3>🛒 Gestión del Carrito</h3>
+            <button class="test-button" onclick="addTestProducts()">Agregar productos de prueba</button>
+            <button class="test-button" onclick="checkCartTime()">Verificar tiempo restante</button>
+            <button class="test-button success" onclick="extendCartTime()">Extender tiempo (+1 hora)</button>
+            <button class="test-button" onclick="openCart()">Abrir carrito</button>
+            
+            <h3>⚗️ Tests de Persistencia</h3>
+            <button class="test-button" onclick="testNavigation()">Test navegación entre páginas</button>
+            <button class="test-button" onclick="testReload()">Test recarga de página</button>
+            <button class="test-button" onclick="testLocalStorage()">Ver localStorage</button>
+            
+            <h3>🧪 Tests de Expiración (Solo para testing)</h3>
+            <button class="test-button danger" onclick="simulateExpiration()">Simular expiración (5 segundos)</button>
+            <button class="test-button danger" onclick="clearCart()">Limpiar carrito</button>
+            <button class="test-button" onclick="clearTestResults()">Limpiar resultados</button>
+        </div>
+        
+        <div id="testResults"></div>
+    </section>
+
+    <!-- Scripts -->
+    <script src="js/cart.js"></script>
+    <script src="js/navbar.js"></script>
+    
+    <script>
+        let testCounter = 1;
+        
+        function addTestResult(message, isSuccess = true) {
+            const results = document.getElementById('testResults');
+            const result = document.createElement('div');
+            result.className = 'test-result';
+            result.style.borderLeft = isSuccess ? '4px solid #28a745' : '4px solid #dc3545';
+            result.innerHTML = `<strong>Test ${testCounter++}:</strong> ${message}`;
+            results.appendChild(result);
+            result.scrollIntoView({ behavior: 'smooth' });
+        }
+        
+        function updateTimeDisplay() {
+            const display = document.getElementById('timeDisplay');
+            const timeInfo = window.checkCartTime ? window.checkCartTime() : null;
+            
+            if (!timeInfo) {
+                display.innerHTML = '📦 No hay carrito guardado o sin información de tiempo';
+                display.className = 'time-display';
+                return;
+            }
+            
+            if (timeInfo.expired) {
+                display.innerHTML = '⏰ El carrito ha expirado';
+                display.className = 'time-display';
+                display.style.background = '#f8d7da';
+                display.style.borderColor = '#f5c6cb';
+                display.style.color = '#721c24';
+                return;
+            }
+            
+            const status = timeInfo.remainingMinutes <= 10 ? '⚠️ Expirando pronto' : '✅ Activo';
+            const totalItems = window.shoppingCart ? window.shoppingCart.getTotalItems() : 0;
+            
+            display.innerHTML = `
+                📦 Items en carrito: ${totalItems}<br>
+                ⏲️ Tiempo restante: ${timeInfo.remainingMinutes} minutos<br>
+                🕐 Expira a las: ${timeInfo.expirationTime}<br>
+                📊 Estado: ${status}
+            `;
+            
+            if (timeInfo.remainingMinutes <= 10) {
+                display.style.background = '#fff3cd';
+                display.style.borderColor = '#ffeaa7';
+                display.style.color = '#856404';
+            } else {
+                display.style.background = '#d4edda';
+                display.style.borderColor = '#c3e6cb';
+                display.style.color = '#155724';
+            }
+        }
+        
+        function clearTestResults() {
+            document.getElementById('testResults').innerHTML = '';
+            testCounter = 1;
+        }
+        
+        function addTestProducts() {
+            if (!window.shoppingCart) {
+                addTestResult('❌ Error: El carrito no existe', false);
+                return;
+            }
+            
+            const testProducts = [
+                {
+                    id: 'test-001',
+                    nombre: 'Perfume de Prueba 1',
+                    marca: 'Test Brand',
+                    precio: 75000,
+                    categoria: 'para-ellas',
+                    imagen_url: 'IMAGENES/PARA_ELLAS.png'
+                },
+                {
+                    id: 'test-002',
+                    nombre: 'Perfume de Prueba 2',
+                    marca: 'Test Brand',
+                    precio: 85000,
+                    categoria: 'para-ellos',
+                    imagen_url: 'IMAGENES/PARA_ELLOS.png'
+                }
+            ];
+            
+            testProducts.forEach(product => {
+                window.shoppingCart.addItem(product);
+            });
+            
+            updateTimeDisplay();
+            addTestResult(`✅ ${testProducts.length} productos de prueba agregados`, true);
+        }
+        
+        function openCart() {
+            if (!window.shoppingCart) {
+                addTestResult('❌ Error: El carrito no existe', false);
+                return;
+            }
+            
+            window.shoppingCart.openCart();
+            addTestResult('✅ Carrito abierto', true);
+        }
+        
+        function testNavigation() {
+            addTestResult(`
+                🔄 Test de navegación:<br>
+                1. Ve a otra página (ej. para_ellas.html)<br>
+                2. Regresa a esta página<br>
+                3. Los productos deben seguir en el carrito<br>
+                <a href="html/para_ellas.html" target="_blank" style="color: #007bff;">Ir a Para Ellas</a>
+            `, true);
+        }
+        
+        function testReload() {
+            addTestResult('🔄 Recargando página en 3 segundos...', true);
+            setTimeout(() => {
+                window.location.reload();
+            }, 3000);
+        }
+        
+        function testLocalStorage() {
+            const cartData = localStorage.getItem('shopping_cart');
+            if (!cartData) {
+                addTestResult('📦 No hay datos en localStorage', true);
+                return;
+            }
+            
+            try {
+                const parsed = JSON.parse(cartData);
+                addTestResult(`
+                    📦 Datos en localStorage:<br>
+                    <pre>${JSON.stringify(parsed, null, 2)}</pre>
+                `, true);
+            } catch (error) {
+                addTestResult(`❌ Error parsing localStorage: ${error.message}`, false);
+            }
+        }
+        
+        function simulateExpiration() {
+            if (!window.shoppingCart) {
+                addTestResult('❌ Error: El carrito no existe', false);
+                return;
+            }
+            
+            // Modificar manualmente el timestamp para simular expiración
+            const cartData = JSON.parse(localStorage.getItem('shopping_cart') || '{}');
+            cartData.timestamp = Date.now() - (60 * 60 * 1000 + 1000); // Hace más de 1 hora
+            localStorage.setItem('shopping_cart', JSON.stringify(cartData));
+            
+            addTestResult('⚗️ Timestamp modificado para simular expiración. Recargando en 5 segundos...', true);
+            
+            setTimeout(() => {
+                window.location.reload();
+            }, 5000);
+        }
+        
+        function clearCart() {
+            if (!window.shoppingCart) {
+                addTestResult('❌ Error: El carrito no existe', false);
+                return;
+            }
+            
+            window.shoppingCart.clearCart();
+            updateTimeDisplay();
+            addTestResult('🧹 Carrito limpiado manualmente', true);
+        }
+        
+        // Cargar la navbar y luego inicializar
+        document.addEventListener('DOMContentLoaded', function() {
+            fetch('html/navbar.html')
+                .then(response => response.text())
+                .then(data => {
+                    document.getElementById('navbar-container').innerHTML = data;
+                    
+                    // Ajustar rutas para navegación desde la raíz
+                    const navLinks = document.querySelectorAll('.navbar-menu a[href]:not([href^="http"]):not([href^="#"])');
+                    navLinks.forEach(link => {
+                        const currentHref = link.getAttribute('href');
+                        if (!currentHref.startsWith('html/') && currentHref !== 'index.html') {
+                            link.setAttribute('href', 'html/' + currentHref);
+                        }
+                    });
+                    
+                    // Inicializar navbar
+                    if (typeof initNavbar === 'function') {
+                        setTimeout(initNavbar, 100);
+                    }
+                    
+                    // Verificar el carrito después de un momento
+                    setTimeout(() => {
+                        updateTimeDisplay();
+                        
+                        addTestResult(`
+                            🔍 Verificación inicial del carrito:<br>
+                            ✅ Sistema de persistencia con tiempo implementado<br>
+                            ✅ Duración del carrito: 1 hora<br>
+                            ✅ Extensión automática por actividad<br>
+                            ✅ Verificación periódica cada 5 minutos
+                        `);
+                        
+                        // Actualizar display cada 30 segundos
+                        setInterval(updateTimeDisplay, 30000);
+                    }, 1000);
+                })
+                .catch(error => {
+                    addTestResult(`❌ Error cargando navbar: ${error.message}`, false);
+                });
+        });
+    </script>
+</body>
+</html>

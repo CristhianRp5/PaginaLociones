@@ -1,0 +1,548 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test de Tiempos - Productos por Sección</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .test-section {
+            margin: 20px 0;
+            padding: 20px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+        }
+        .test-result {
+            margin: 10px 0;
+            padding: 15px;
+            border-radius: 5px;
+            font-family: monospace;
+            font-size: 14px;
+            border-left: 4px solid #333;
+        }
+        .success { background-color: #d4edda; border-left-color: #28a745; }
+        .warning { background-color: #fff3cd; border-left-color: #ffc107; }
+        .error { background-color: #f8d7da; border-left-color: #dc3545; }
+        .info { background-color: #d1ecf1; border-left-color: #17a2b8; }
+        .loading { background-color: #e2e3e5; border-left-color: #6c757d; }
+        
+        .metrics-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+            margin: 20px 0;
+        }
+        .metric-card {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 8px;
+            text-align: center;
+            border: 1px solid #dee2e6;
+        }
+        .metric-title {
+            font-size: 18px;
+            font-weight: bold;
+            color: #333;
+            margin-bottom: 10px;
+        }
+        .metric-value {
+            font-size: 28px;
+            font-weight: bold;
+            margin: 10px 0;
+        }
+        .metric-detail {
+            font-size: 14px;
+            color: #666;
+            margin-top: 5px;
+        }
+        .fast { color: #28a745; }
+        .normal { color: #17a2b8; }
+        .slow { color: #ffc107; }
+        .very-slow { color: #dc3545; }
+        
+        button {
+            padding: 12px 24px;
+            margin: 8px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: bold;
+            transition: background-color 0.3s;
+        }
+        .btn-primary { background-color: #007bff; color: white; }
+        .btn-primary:hover { background-color: #0056b3; }
+        .btn-success { background-color: #28a745; color: white; }
+        .btn-success:hover { background-color: #1e7e34; }
+        .btn-warning { background-color: #ffc107; color: black; }
+        .btn-warning:hover { background-color: #d39e00; }
+        .btn-danger { background-color: #dc3545; color: white; }
+        .btn-danger:hover { background-color: #bd2130; }
+        
+        .progress-bar {
+            width: 100%;
+            height: 20px;
+            background-color: #e9ecef;
+            border-radius: 10px;
+            overflow: hidden;
+            margin: 10px 0;
+        }
+        .progress-fill {
+            height: 100%;
+            background-color: #007bff;
+            transition: width 0.3s ease;
+        }
+        
+        .comparison-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 20px 0;
+        }
+        .comparison-table th, .comparison-table td {
+            padding: 12px;
+            text-align: left;
+            border-bottom: 1px solid #ddd;
+        }
+        .comparison-table th {
+            background-color: #f8f9fa;
+            font-weight: bold;
+        }
+        .comparison-table tr:hover {
+            background-color: #f5f5f5;
+        }
+        
+        .status-indicator {
+            display: inline-block;
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            margin-right: 8px;
+        }
+        .status-success { background-color: #28a745; }
+        .status-warning { background-color: #ffc107; }
+        .status-error { background-color: #dc3545; }
+        .status-loading { background-color: #6c757d; animation: pulse 1s infinite; }
+        
+        @keyframes pulse {
+            0% { opacity: 1; }
+            50% { opacity: 0.5; }
+            100% { opacity: 1; }
+        }
+        
+        .test-controls {
+            text-align: center;
+            margin: 20px 0;
+        }
+        
+        .detailed-results {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 8px;
+            margin: 20px 0;
+            max-height: 400px;
+            overflow-y: auto;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>⏱️ Test de Tiempos - Productos por Sección</h1>
+        <p><strong>Prueba de rendimiento para Admin Panel, Para Ellos y Para Ellas</strong></p>
+        
+        <div class="test-controls">
+            <button class="btn-primary" onclick="testAllSections()">
+                🚀 Ejecutar Test Completo
+            </button>
+            <button class="btn-success" onclick="testAdminPanel()">
+                👨‍💼 Test Admin Panel
+            </button>
+            <button class="btn-warning" onclick="testParaEllos()">
+                👨 Test Para Ellos
+            </button>
+            <button class="btn-danger" onclick="testParaEllas()">
+                👩 Test Para Ellas
+            </button>
+        </div>
+
+        <div class="metrics-grid">
+            <div class="metric-card">
+                <div class="metric-title">Admin Panel</div>
+                <div class="metric-value fast" id="adminTime">-</div>
+                <div class="metric-detail">
+                    <span class="status-indicator" id="adminStatus"></span>
+                    <span id="adminProducts">- productos</span>
+                </div>
+                <div class="metric-detail" id="adminDetails">Esperando test...</div>
+            </div>
+            
+            <div class="metric-card">
+                <div class="metric-title">Para Ellos</div>
+                <div class="metric-value normal" id="ellosTime">-</div>
+                <div class="metric-detail">
+                    <span class="status-indicator" id="ellosStatus"></span>
+                    <span id="ellosProducts">- productos</span>
+                </div>
+                <div class="metric-detail" id="ellosDetails">Esperando test...</div>
+            </div>
+            
+            <div class="metric-card">
+                <div class="metric-title">Para Ellas</div>
+                <div class="metric-value normal" id="ellasTime">-</div>
+                <div class="metric-detail">
+                    <span class="status-indicator" id="ellasStatus"></span>
+                    <span id="ellasProducts">- productos</span>
+                </div>
+                <div class="metric-detail" id="ellasDetails">Esperando test...</div>
+            </div>
+        </div>
+
+        <div class="test-section">
+            <h3>📊 Tabla de Comparación</h3>
+            <table class="comparison-table">
+                <thead>
+                    <tr>
+                        <th>Sección</th>
+                        <th>Tiempo (ms)</th>
+                        <th>Productos</th>
+                        <th>Velocidad</th>
+                        <th>Estado</th>
+                    </tr>
+                </thead>
+                <tbody id="comparisonTable">
+                    <tr>
+                        <td>Admin Panel</td>
+                        <td id="adminTimeTable">-</td>
+                        <td id="adminProductsTable">-</td>
+                        <td id="adminSpeedTable">-</td>
+                        <td id="adminStatusTable">Esperando...</td>
+                    </tr>
+                    <tr>
+                        <td>Para Ellos</td>
+                        <td id="ellosTimeTable">-</td>
+                        <td id="ellosProductsTable">-</td>
+                        <td id="ellosSpeedTable">-</td>
+                        <td id="ellosStatusTable">Esperando...</td>
+                    </tr>
+                    <tr>
+                        <td>Para Ellas</td>
+                        <td id="ellasTimeTable">-</td>
+                        <td id="ellasProductsTable">-</td>
+                        <td id="ellasSpeedTable">-</td>
+                        <td id="ellasStatusTable">Esperando...</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <div class="test-section">
+            <h3>📋 Resultados Detallados</h3>
+            <div class="progress-bar">
+                <div class="progress-fill" id="progressFill" style="width: 0%"></div>
+            </div>
+            <div class="detailed-results" id="detailedResults">
+                <div class="test-result info">
+                    <strong>Listo para ejecutar tests:</strong> Presiona cualquier botón para comenzar
+                </div>
+            </div>
+        </div>
+
+        <div class="test-section">
+            <h3>💡 Interpretación de Resultados</h3>
+            <div class="test-result info">
+                <strong>Tiempos de Referencia:</strong><br>
+                • 🟢 Excelente: < 500ms<br>
+                • 🟡 Bueno: 500ms - 1000ms<br>
+                • 🟠 Aceptable: 1000ms - 2000ms<br>
+                • 🔴 Lento: > 2000ms<br>
+                • ⚫ Muy Lento: > 5000ms
+            </div>
+        </div>
+    </div>
+
+    <!-- Scripts necesarios -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="js/supabase-config.js"></script>
+    
+    <script>
+        // Variables globales para almacenar resultados
+        let testResults = {
+            admin: { time: 0, products: 0, error: null },
+            ellos: { time: 0, products: 0, error: null },
+            ellas: { time: 0, products: 0, error: null }
+        };
+
+        // Función para agregar resultados detallados
+        function addDetailedResult(message, type = 'info') {
+            const resultDiv = document.getElementById('detailedResults');
+            const resultElement = document.createElement('div');
+            resultElement.className = `test-result ${type}`;
+            resultElement.innerHTML = `<strong>${new Date().toLocaleTimeString()}</strong>: ${message}`;
+            resultDiv.appendChild(resultElement);
+            resultDiv.scrollTop = resultDiv.scrollHeight;
+        }
+
+        // Función para actualizar el progreso
+        function updateProgress(percentage) {
+            document.getElementById('progressFill').style.width = percentage + '%';
+        }
+
+        // Función para determinar la clase de velocidad
+        function getSpeedClass(timeMs) {
+            if (timeMs < 500) return 'fast';
+            if (timeMs < 1000) return 'normal';
+            if (timeMs < 2000) return 'slow';
+            return 'very-slow';
+        }
+
+        // Función para determinar el texto de velocidad
+        function getSpeedText(timeMs) {
+            if (timeMs < 500) return 'Excelente';
+            if (timeMs < 1000) return 'Bueno';
+            if (timeMs < 2000) return 'Aceptable';
+            if (timeMs < 5000) return 'Lento';
+            return 'Muy Lento';
+        }
+
+        // Función para actualizar la UI de una sección
+        function updateSectionUI(section, time, products, error = null) {
+            const timeElement = document.getElementById(`${section}Time`);
+            const statusElement = document.getElementById(`${section}Status`);
+            const productsElement = document.getElementById(`${section}Products`);
+            const detailsElement = document.getElementById(`${section}Details`);
+            
+            // Actualizar tabla
+            const timeTableElement = document.getElementById(`${section}TimeTable`);
+            const productsTableElement = document.getElementById(`${section}ProductsTable`);
+            const speedTableElement = document.getElementById(`${section}SpeedTable`);
+            const statusTableElement = document.getElementById(`${section}StatusTable`);
+
+            if (error) {
+                timeElement.textContent = 'Error';
+                timeElement.className = 'metric-value very-slow';
+                statusElement.className = 'status-indicator status-error';
+                productsElement.textContent = '0 productos';
+                detailsElement.textContent = `Error: ${error}`;
+                
+                // Tabla
+                timeTableElement.textContent = 'Error';
+                productsTableElement.textContent = '0';
+                speedTableElement.textContent = 'Error';
+                statusTableElement.textContent = 'Error';
+            } else {
+                timeElement.textContent = time + 'ms';
+                timeElement.className = 'metric-value ' + getSpeedClass(time);
+                statusElement.className = 'status-indicator status-success';
+                productsElement.textContent = products + ' productos';
+                detailsElement.textContent = `Cargado en ${time}ms`;
+                
+                // Tabla
+                timeTableElement.textContent = time + 'ms';
+                productsTableElement.textContent = products;
+                speedTableElement.textContent = getSpeedText(time);
+                statusTableElement.textContent = 'Completado';
+            }
+        }
+
+        // Función para test del Admin Panel
+        async function testAdminPanel() {
+            addDetailedResult('🚀 Iniciando test del Admin Panel...', 'info');
+            
+            const statusElement = document.getElementById('adminStatus');
+            statusElement.className = 'status-indicator status-loading';
+            
+            try {
+                // Inicializar Supabase
+                if (!supabaseClient) {
+                    const initialized = initSupabase();
+                    if (!initialized) {
+                        throw new Error('No se pudo inicializar Supabase');
+                    }
+                }
+
+                const startTime = Date.now();
+                
+                // Simular la carga del Admin Panel (todos los productos)
+                const productos = await ProductosService.obtenerProductos();
+                
+                const endTime = Date.now();
+                const duration = endTime - startTime;
+
+                testResults.admin = { time: duration, products: productos.length, error: null };
+                
+                addDetailedResult(`✅ Admin Panel: ${productos.length} productos cargados en ${duration}ms`, 'success');
+                updateSectionUI('admin', duration, productos.length);
+                
+                return { success: true, time: duration, products: productos.length };
+                
+            } catch (error) {
+                const errorMsg = error.message || 'Error desconocido';
+                testResults.admin = { time: 0, products: 0, error: errorMsg };
+                
+                addDetailedResult(`❌ Error en Admin Panel: ${errorMsg}`, 'error');
+                updateSectionUI('admin', 0, 0, errorMsg);
+                
+                return { success: false, error: errorMsg };
+            }
+        }
+
+        // Función para test de Para Ellos
+        async function testParaEllos() {
+            addDetailedResult('🚀 Iniciando test de Para Ellos...', 'info');
+            
+            const statusElement = document.getElementById('ellosStatus');
+            statusElement.className = 'status-indicator status-loading';
+            
+            try {
+                // Inicializar Supabase
+                if (!supabaseClient) {
+                    const initialized = initSupabase();
+                    if (!initialized) {
+                        throw new Error('No se pudo inicializar Supabase');
+                    }
+                }
+
+                const startTime = Date.now();
+                
+                // Test específico para Para Ellos
+                const productos = await ProductosService.obtenerProductosPorCategoria('Para Ellos');
+                
+                const endTime = Date.now();
+                const duration = endTime - startTime;
+
+                testResults.ellos = { time: duration, products: productos.length, error: null };
+                
+                addDetailedResult(`✅ Para Ellos: ${productos.length} productos cargados en ${duration}ms`, 'success');
+                updateSectionUI('ellos', duration, productos.length);
+                
+                return { success: true, time: duration, products: productos.length };
+                
+            } catch (error) {
+                const errorMsg = error.message || 'Error desconocido';
+                testResults.ellos = { time: 0, products: 0, error: errorMsg };
+                
+                addDetailedResult(`❌ Error en Para Ellos: ${errorMsg}`, 'error');
+                updateSectionUI('ellos', 0, 0, errorMsg);
+                
+                return { success: false, error: errorMsg };
+            }
+        }
+
+        // Función para test de Para Ellas
+        async function testParaEllas() {
+            addDetailedResult('🚀 Iniciando test de Para Ellas...', 'info');
+            
+            const statusElement = document.getElementById('ellasStatus');
+            statusElement.className = 'status-indicator status-loading';
+            
+            try {
+                // Inicializar Supabase
+                if (!supabaseClient) {
+                    const initialized = initSupabase();
+                    if (!initialized) {
+                        throw new Error('No se pudo inicializar Supabase');
+                    }
+                }
+
+                const startTime = Date.now();
+                
+                // Test específico para Para Ellas
+                const productos = await ProductosService.obtenerProductosPorCategoria('Para Ellas');
+                
+                const endTime = Date.now();
+                const duration = endTime - startTime;
+
+                testResults.ellas = { time: duration, products: productos.length, error: null };
+                
+                addDetailedResult(`✅ Para Ellas: ${productos.length} productos cargados en ${duration}ms`, 'success');
+                updateSectionUI('ellas', duration, productos.length);
+                
+                return { success: true, time: duration, products: productos.length };
+                
+            } catch (error) {
+                const errorMsg = error.message || 'Error desconocido';
+                testResults.ellas = { time: 0, products: 0, error: errorMsg };
+                
+                addDetailedResult(`❌ Error en Para Ellas: ${errorMsg}`, 'error');
+                updateSectionUI('ellas', 0, 0, errorMsg);
+                
+                return { success: false, error: errorMsg };
+            }
+        }
+
+        // Función para test completo
+        async function testAllSections() {
+            addDetailedResult('🚀 Iniciando test completo de todas las secciones...', 'info');
+            updateProgress(0);
+            
+            try {
+                // Test Admin Panel
+                updateProgress(10);
+                const adminResult = await testAdminPanel();
+                updateProgress(40);
+                
+                // Esperar un poco entre tests
+                await new Promise(resolve => setTimeout(resolve, 500));
+                
+                // Test Para Ellos
+                updateProgress(50);
+                const ellosResult = await testParaEllos();
+                updateProgress(70);
+                
+                // Esperar un poco entre tests
+                await new Promise(resolve => setTimeout(resolve, 500));
+                
+                // Test Para Ellas
+                updateProgress(80);
+                const ellasResult = await testParaEllas();
+                updateProgress(100);
+                
+                // Resumen final
+                addDetailedResult('📊 Test completo finalizado. Resumen:', 'info');
+                addDetailedResult(`• Admin Panel: ${adminResult.success ? adminResult.time + 'ms (' + adminResult.products + ' productos)' : 'Error'}`, adminResult.success ? 'success' : 'error');
+                addDetailedResult(`• Para Ellos: ${ellosResult.success ? ellosResult.time + 'ms (' + ellosResult.products + ' productos)' : 'Error'}`, ellosResult.success ? 'success' : 'error');
+                addDetailedResult(`• Para Ellas: ${ellasResult.success ? ellasResult.time + 'ms (' + ellasResult.products + ' productos)' : 'Error'}`, ellasResult.success ? 'success' : 'error');
+                
+                // Análisis de rendimiento
+                const totalTime = (adminResult.time || 0) + (ellosResult.time || 0) + (ellasResult.time || 0);
+                const avgTime = totalTime / 3;
+                
+                addDetailedResult(`📈 Análisis: Tiempo promedio ${avgTime.toFixed(0)}ms`, avgTime < 1000 ? 'success' : avgTime < 2000 ? 'warning' : 'error');
+                
+                if (adminResult.success && adminResult.time > 2000) {
+                    addDetailedResult('⚠️ Recomendación: Admin Panel necesita paginación', 'warning');
+                }
+                
+                if (ellosResult.success && ellosResult.products === 0) {
+                    addDetailedResult('⚠️ Problema: Para Ellos no tiene productos', 'warning');
+                }
+                
+                if (ellasResult.success && ellasResult.products === 0) {
+                    addDetailedResult('⚠️ Problema: Para Ellas no tiene productos', 'warning');
+                }
+                
+            } catch (error) {
+                addDetailedResult(`❌ Error en test completo: ${error.message}`, 'error');
+                updateProgress(100);
+            }
+        }
+
+        // Inicializar la página
+        document.addEventListener('DOMContentLoaded', function() {
+            addDetailedResult('🎯 Test de tiempos inicializado correctamente', 'success');
+            addDetailedResult('📋 Presiona cualquier botón para comenzar los tests', 'info');
+        });
+    </script>
+</body>
+</html>

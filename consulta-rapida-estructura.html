@@ -1,0 +1,362 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Consulta Rápida - Estructura BD</title>
+    <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+        }
+        h1 {
+            color: #333;
+            text-align: center;
+        }
+        .status {
+            padding: 10px;
+            border-radius: 4px;
+            margin: 10px 0;
+            font-weight: bold;
+        }
+        .status.success {
+            background: #d4edda;
+            color: #155724;
+        }
+        .status.error {
+            background: #f8d7da;
+            color: #721c24;
+        }
+        .status.info {
+            background: #d1ecf1;
+            color: #0c5460;
+        }
+        .data-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 15px;
+            margin-top: 20px;
+        }
+        .data-card {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 4px;
+            border: 1px solid #dee2e6;
+        }
+        .data-title {
+            font-weight: bold;
+            color: #495057;
+            margin-bottom: 10px;
+        }
+        .data-content {
+            font-family: monospace;
+            font-size: 12px;
+            color: #343a40;
+            white-space: pre-wrap;
+        }
+        button {
+            background: #3498db;
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            margin-right: 10px;
+        }
+        button:hover {
+            background: #2980b9;
+        }
+        .result-section {
+            margin-top: 20px;
+            padding: 15px;
+            background: #f8f9fa;
+            border-radius: 4px;
+            border: 1px solid #dee2e6;
+        }
+        .highlight {
+            background: #fff3cd;
+            padding: 2px 4px;
+            border-radius: 2px;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔍 Consulta Rápida - Estructura BD</h1>
+        
+        <button onclick="analizarEstructura()">📊 Analizar Estructura Completa</button>
+        <button onclick="analizarImagenes()">🖼️ Analizar Campos de Imagen</button>
+        <button onclick="mostrarMuestra()">📋 Mostrar Muestra de Productos</button>
+        
+        <div id="resultado" class="result-section" style="display: none;">
+            <h3>📋 Resultados del Análisis</h3>
+            <div id="contenidoResultado"></div>
+        </div>
+    </div>
+
+    <script>
+        // Configuración de Supabase
+        const supabaseUrl = 'https://uojdxqmfmtpfrbmlcsya.supabase.co';
+        const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVvamR4cW1mbXRwZnJibWxjc3lhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3MzA4MzYzMjksImV4cCI6MjA0NjQxMjMyOX0.TcDpb_kTOKfRJNJC9XPNLgL8GQCLzMT8lCOKvnGzOKA';
+        const supabaseClient = supabase.createClient(supabaseUrl, supabaseKey);
+
+        let productosGlobales = [];
+
+        // Función para mostrar resultado
+        function mostrarResultado(html) {
+            document.getElementById('contenidoResultado').innerHTML = html;
+            document.getElementById('resultado').style.display = 'block';
+        }
+
+        // Analizar estructura completa
+        async function analizarEstructura() {
+            try {
+                const { data: productos, error } = await supabaseClient
+                    .from('productos')
+                    .select('*')
+                    .order('id', { ascending: true });
+
+                if (error) throw error;
+
+                productosGlobales = productos;
+
+                // Análisis de estructura
+                const estructura = {};
+                if (productos.length > 0) {
+                    const campos = Object.keys(productos[0]);
+                    
+                    campos.forEach(campo => {
+                        const allValues = productos.map(p => p[campo]);
+                        const nonNullValues = allValues.filter(v => v !== null);
+                        const nonEmptyValues = nonNullValues.filter(v => v !== '');
+                        
+                        estructura[campo] = {
+                            tipo: typeof productos[0][campo],
+                            total: productos.length,
+                            nulos: allValues.filter(v => v === null).length,
+                            vacios: nonNullValues.filter(v => v === '').length,
+                            validos: nonEmptyValues.length,
+                            completitud: ((nonEmptyValues.length / productos.length) * 100).toFixed(1) + '%',
+                            ejemplos: [...new Set(nonEmptyValues.slice(0, 3))],
+                            valoresUnicos: [...new Set(allValues)].length
+                        };
+                    });
+                }
+
+                let html = `
+                    <div class="status success">
+                        <strong>✅ Estructura Analizada</strong><br>
+                        Total productos: ${productos.length}<br>
+                        Campos encontrados: ${Object.keys(estructura).length}
+                    </div>
+                    
+                    <div class="data-grid">
+                `;
+
+                Object.entries(estructura).forEach(([campo, info]) => {
+                    html += `
+                        <div class="data-card">
+                            <div class="data-title">${campo}</div>
+                            <div class="data-content">Tipo: ${info.tipo}
+Completitud: ${info.completitud}
+Válidos: ${info.validos}/${info.total}
+Nulos: ${info.nulos}
+Vacíos: ${info.vacios}
+Únicos: ${info.valoresUnicos}
+
+Ejemplos:
+${info.ejemplos.map(ej => {
+    if (typeof ej === 'string' && ej.length > 50) {
+        return ej.substring(0, 50) + '...';
+    }
+    return ej;
+}).join('\n')}</div>
+                        </div>
+                    `;
+                });
+
+                html += '</div>';
+                mostrarResultado(html);
+
+            } catch (error) {
+                mostrarResultado(`
+                    <div class="status error">
+                        <strong>❌ Error:</strong> ${error.message}
+                    </div>
+                `);
+            }
+        }
+
+        // Analizar campos de imagen
+        async function analizarImagenes() {
+            try {
+                if (productosGlobales.length === 0) {
+                    const { data: productos, error } = await supabaseClient
+                        .from('productos')
+                        .select('*')
+                        .order('id', { ascending: true });
+
+                    if (error) throw error;
+                    productosGlobales = productos;
+                }
+
+                const productos = productosGlobales;
+
+                // Análisis de imágenes
+                let conImagen = 0;
+                let conImagenUrl = 0;
+                let conAmbas = 0;
+                let sinImagen = 0;
+
+                const tiposImagen = {};
+                const tiposImagenUrl = {};
+
+                productos.forEach(producto => {
+                    const tieneImagen = producto.imagen && producto.imagen.trim() !== '';
+                    const tieneImagenUrl = producto.imagen_url && producto.imagen_url.trim() !== '';
+
+                    if (tieneImagen) {
+                        conImagen++;
+                        if (producto.imagen.startsWith('data:')) {
+                            tiposImagen.base64 = (tiposImagen.base64 || 0) + 1;
+                        } else if (producto.imagen.startsWith('http')) {
+                            tiposImagen.url = (tiposImagen.url || 0) + 1;
+                        } else {
+                            tiposImagen.path = (tiposImagen.path || 0) + 1;
+                        }
+                    }
+
+                    if (tieneImagenUrl) {
+                        conImagenUrl++;
+                        if (producto.imagen_url.startsWith('data:')) {
+                            tiposImagenUrl.base64 = (tiposImagenUrl.base64 || 0) + 1;
+                        } else if (producto.imagen_url.startsWith('http')) {
+                            tiposImagenUrl.url = (tiposImagenUrl.url || 0) + 1;
+                        } else {
+                            tiposImagenUrl.path = (tiposImagenUrl.path || 0) + 1;
+                        }
+                    }
+
+                    if (tieneImagen && tieneImagenUrl) conAmbas++;
+                    if (!tieneImagen && !tieneImagenUrl) sinImagen++;
+                });
+
+                let html = `
+                    <div class="status info">
+                        <strong>🖼️ Análisis de Imágenes</strong><br>
+                        Total productos: ${productos.length}
+                    </div>
+                    
+                    <div class="data-grid">
+                        <div class="data-card">
+                            <div class="data-title">📊 Estadísticas Generales</div>
+                            <div class="data-content">Con campo "imagen": ${conImagen}
+Con campo "imagen_url": ${conImagenUrl}
+Con ambos campos: ${conAmbas}
+Sin imagen: ${sinImagen}
+
+${conImagenUrl > conImagen ? '✅ Mayoría usa "imagen_url"' : '⚠️ Mayoría usa "imagen"'}</div>
+                        </div>
+                        
+                        <div class="data-card">
+                            <div class="data-title">🔍 Tipos en "imagen"</div>
+                            <div class="data-content">${Object.entries(tiposImagen).map(([tipo, cant]) => `${tipo}: ${cant}`).join('\n') || 'Sin datos'}</div>
+                        </div>
+                        
+                        <div class="data-card">
+                            <div class="data-title">🔍 Tipos en "imagen_url"</div>
+                            <div class="data-content">${Object.entries(tiposImagenUrl).map(([tipo, cant]) => `${tipo}: ${cant}`).join('\n') || 'Sin datos'}</div>
+                        </div>
+                        
+                        <div class="data-card">
+                            <div class="data-title">💡 Recomendaciones</div>
+                            <div class="data-content">Panel admin debe:
+1. Leer <span class="highlight">imagen_url</span> primero
+2. Usar <span class="highlight">imagen</span> como fallback
+3. Guardar nuevas en <span class="highlight">imagen_url</span>
+4. Validar URLs accesibles</div>
+                        </div>
+                    </div>
+                `;
+
+                mostrarResultado(html);
+
+            } catch (error) {
+                mostrarResultado(`
+                    <div class="status error">
+                        <strong>❌ Error:</strong> ${error.message}
+                    </div>
+                `);
+            }
+        }
+
+        // Mostrar muestra de productos
+        async function mostrarMuestra() {
+            try {
+                const { data: productos, error } = await supabaseClient
+                    .from('productos')
+                    .select('*')
+                    .limit(3);
+
+                if (error) throw error;
+
+                let html = `
+                    <div class="status info">
+                        <strong>📋 Muestra de Productos</strong><br>
+                        Primeros 3 productos de la base de datos
+                    </div>
+                    
+                    <div class="data-grid">
+                `;
+
+                productos.forEach((producto, index) => {
+                    html += `
+                        <div class="data-card">
+                            <div class="data-title">Producto ${index + 1} - ${producto.nombre}</div>
+                            <div class="data-content">ID: ${producto.id}
+Precio: ${producto.precio}
+Activo: ${producto.activo}
+
+Campo "imagen":
+${producto.imagen ? (producto.imagen.substring(0, 100) + '...') : 'NULL'}
+
+Campo "imagen_url":
+${producto.imagen_url ? (producto.imagen_url.substring(0, 100) + '...') : 'NULL'}
+
+Imagen final:
+${producto.imagen_url || producto.imagen || 'Sin imagen'}</div>
+                        </div>
+                    `;
+                });
+
+                html += '</div>';
+                mostrarResultado(html);
+
+            } catch (error) {
+                mostrarResultado(`
+                    <div class="status error">
+                        <strong>❌ Error:</strong> ${error.message}
+                    </div>
+                `);
+            }
+        }
+
+        // Inicializar
+        window.addEventListener('load', () => {
+            console.log('🚀 Consulta rápida iniciada');
+        });
+    </script>
+</body>
+</html>

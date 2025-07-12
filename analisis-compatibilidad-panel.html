@@ -1,0 +1,801 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Análisis Panel Admin - Estructura de Datos</title>
+    <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+        }
+        h1 {
+            color: #333;
+            text-align: center;
+        }
+        .section {
+            margin-bottom: 30px;
+            padding: 20px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+        }
+        .section h2 {
+            color: #2c3e50;
+            margin-top: 0;
+            border-bottom: 2px solid #3498db;
+            padding-bottom: 10px;
+        }
+        .status {
+            padding: 10px;
+            border-radius: 4px;
+            margin: 10px 0;
+            font-weight: bold;
+        }
+        .status.success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        .status.error {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+        .status.warning {
+            background: #fff3cd;
+            color: #856404;
+            border: 1px solid #ffeaa7;
+        }
+        .status.info {
+            background: #d1ecf1;
+            color: #0c5460;
+            border: 1px solid #bee5eb;
+        }
+        button {
+            background: #3498db;
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+            margin: 5px;
+        }
+        button:hover {
+            background: #2980b9;
+        }
+        .btn-success {
+            background: #27ae60;
+        }
+        .btn-success:hover {
+            background: #219a52;
+        }
+        .log-container {
+            background: #2c3e50;
+            color: #ecf0f1;
+            padding: 15px;
+            border-radius: 4px;
+            height: 300px;
+            overflow-y: auto;
+            font-family: monospace;
+            font-size: 12px;
+            line-height: 1.4;
+        }
+        .comparison-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 15px 0;
+        }
+        .comparison-table th,
+        .comparison-table td {
+            border: 1px solid #ddd;
+            padding: 8px;
+            text-align: left;
+            vertical-align: top;
+        }
+        .comparison-table th {
+            background: #f4f4f4;
+            font-weight: bold;
+        }
+        .comparison-table tr:nth-child(even) {
+            background: #f9f9f9;
+        }
+        .field-match {
+            background: #d4edda;
+            color: #155724;
+        }
+        .field-mismatch {
+            background: #f8d7da;
+            color: #721c24;
+        }
+        .field-warning {
+            background: #fff3cd;
+            color: #856404;
+        }
+        .json-viewer {
+            background: #2c3e50;
+            color: #ecf0f1;
+            padding: 15px;
+            border-radius: 4px;
+            font-family: monospace;
+            font-size: 12px;
+            line-height: 1.4;
+            white-space: pre-wrap;
+            max-height: 400px;
+            overflow-y: auto;
+        }
+        .grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+        }
+        .compatibility-indicator {
+            display: inline-block;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 12px;
+            font-weight: bold;
+        }
+        .compatible {
+            background: #d4edda;
+            color: #155724;
+        }
+        .incompatible {
+            background: #f8d7da;
+            color: #721c24;
+        }
+        .partial {
+            background: #fff3cd;
+            color: #856404;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔍 Análisis Panel Admin - Estructura de Datos</h1>
+        
+        <div class="section">
+            <h2>🎯 Análisis de Compatibilidad</h2>
+            <p>Esta herramienta analiza la estructura de datos entre la base de datos y el panel admin para identificar incompatibilidades.</p>
+            
+            <button onclick="analyzeCompatibility()">🔍 Analizar Compatibilidad</button>
+            <button onclick="testDataFlow()">🔄 Probar Flujo de Datos</button>
+            <button onclick="verifyImageHandling()">🖼️ Verificar Manejo de Imágenes</button>
+            <button onclick="clearLog()">🧹 Limpiar Log</button>
+        </div>
+
+        <div class="section">
+            <h2>📊 Resultados del Análisis</h2>
+            <div id="analysisResults"></div>
+        </div>
+
+        <div class="section">
+            <h2>🔄 Comparación de Estructuras</h2>
+            <div class="grid">
+                <div>
+                    <h3>📦 Estructura de BD</h3>
+                    <div id="dbStructure" class="json-viewer"></div>
+                </div>
+                <div>
+                    <h3>🎨 Estructura Panel Admin</h3>
+                    <div id="panelStructure" class="json-viewer"></div>
+                </div>
+            </div>
+        </div>
+
+        <div class="section">
+            <h2>📋 Compatibilidad de Campos</h2>
+            <div id="fieldCompatibility"></div>
+        </div>
+
+        <div class="section">
+            <h2>🖼️ Análisis de Imágenes</h2>
+            <div id="imageAnalysis"></div>
+        </div>
+
+        <div class="section">
+            <h2>📝 Log de Análisis</h2>
+            <div id="analysisLog" class="log-container"></div>
+        </div>
+    </div>
+
+    <script src="js/supabase-config-optimized.js"></script>
+    <script>
+        // Variables globales
+        let dbStructure = null;
+        let panelStructure = null;
+        let sampleProducts = [];
+        let compatibilityReport = null;
+
+        // Función de logging
+        function log(message, type = 'info') {
+            const timestamp = new Date().toLocaleTimeString();
+            const logElement = document.getElementById('analysisLog');
+            const logEntry = document.createElement('div');
+            logEntry.innerHTML = `<span style="color: #7f8c8d;">[${timestamp}]</span> ${message}`;
+            logElement.appendChild(logEntry);
+            logElement.scrollTop = logElement.scrollHeight;
+            
+            // También log en consola para debugging
+            console.log(`[${type.toUpperCase()}] ${message}`);
+        }
+
+        // Inicializar conexión a Supabase
+        async function initSupabase() {
+            try {
+                log('🔌 Inicializando conexión a Supabase...');
+                
+                if (typeof supabaseClient === 'undefined') {
+                    log('❌ supabaseClient no está definido', 'error');
+                    return false;
+                }
+                
+                // Probar conexión
+                const { data, error } = await supabaseClient
+                    .from('productos')
+                    .select('count')
+                    .limit(1);
+                
+                if (error) {
+                    log(`❌ Error conectando a Supabase: ${error.message}`, 'error');
+                    return false;
+                }
+                
+                log('✅ Conexión a Supabase exitosa');
+                return true;
+                
+            } catch (error) {
+                log(`❌ Error inicializando Supabase: ${error.message}`, 'error');
+                return false;
+            }
+        }
+
+        // Analizar estructura de la base de datos
+        async function analyzeDbStructure() {
+            try {
+                log('🗄️ Analizando estructura de la base de datos...');
+                
+                // Obtener muestra de productos
+                const { data: products, error } = await supabaseClient
+                    .from('productos')
+                    .select('*')
+                    .limit(10);
+                
+                if (error) throw error;
+                
+                sampleProducts = products;
+                
+                if (products.length === 0) {
+                    log('⚠️ No hay productos en la base de datos', 'warning');
+                    return null;
+                }
+                
+                // Analizar estructura del primer producto
+                const firstProduct = products[0];
+                const structure = {};
+                
+                Object.keys(firstProduct).forEach(key => {
+                    const value = firstProduct[key];
+                    structure[key] = {
+                        type: typeof value,
+                        nullable: value === null,
+                        example: value === null ? 'NULL' : 
+                                typeof value === 'string' && value.length > 100 ? 
+                                value.substring(0, 100) + '...' : value
+                    };
+                });
+                
+                // Analizar patrones en todos los productos
+                products.forEach(product => {
+                    Object.keys(product).forEach(key => {
+                        if (structure[key]) {
+                            const value = product[key];
+                            if (value === null) {
+                                structure[key].hasNulls = true;
+                            }
+                            if (typeof value === 'string' && value.trim() === '') {
+                                structure[key].hasEmptyStrings = true;
+                            }
+                        }
+                    });
+                });
+                
+                dbStructure = structure;
+                log(`✅ Estructura de BD analizada: ${Object.keys(structure).length} campos`);
+                
+                return structure;
+                
+            } catch (error) {
+                log(`❌ Error analizando estructura de BD: ${error.message}`, 'error');
+                return null;
+            }
+        }
+
+        // Definir estructura esperada por el panel admin
+        function analyzePanelStructure() {
+            log('🎨 Analizando estructura esperada por el panel admin...');
+            
+            // Basado en el código del panel admin
+            const expectedStructure = {
+                id: {
+                    type: 'number',
+                    required: true,
+                    usage: 'Identificador único del producto'
+                },
+                nombre: {
+                    type: 'string',
+                    required: true,
+                    usage: 'Nombre del producto mostrado en la interfaz'
+                },
+                marca: {
+                    type: 'string',
+                    required: false,
+                    usage: 'Marca del producto, se muestra en la card'
+                },
+                precio: {
+                    type: 'number',
+                    required: false,
+                    usage: 'Precio del producto, procesado por getPrecioInfo()'
+                },
+                categoria: {
+                    type: 'string',
+                    required: false,
+                    usage: 'Categoría del producto, mapeada por getCategoryName()'
+                },
+                estado: {
+                    type: 'string',
+                    required: false,
+                    usage: 'Estado del producto, procesado por getEstadoBadge()'
+                },
+                activo: {
+                    type: 'boolean',
+                    required: false,
+                    usage: 'Determina si el producto está activo'
+                },
+                imagen: {
+                    type: 'string',
+                    required: false,
+                    usage: 'Imagen del producto (prioridad alta en getImagePath())'
+                },
+                imagen_url: {
+                    type: 'string',
+                    required: false,
+                    usage: 'URL de imagen del producto (prioridad baja en getImagePath())'
+                },
+                descripcion: {
+                    type: 'string',
+                    required: false,
+                    usage: 'Descripción del producto'
+                },
+                fecha_creacion: {
+                    type: 'string',
+                    required: false,
+                    usage: 'Fecha de creación del producto'
+                },
+                fecha_actualizacion: {
+                    type: 'string',
+                    required: false,
+                    usage: 'Fecha de última actualización'
+                }
+            };
+            
+            panelStructure = expectedStructure;
+            log(`✅ Estructura del panel analizada: ${Object.keys(expectedStructure).length} campos esperados`);
+            
+            return expectedStructure;
+        }
+
+        // Comparar estructuras y generar reporte de compatibilidad
+        function compareStructures() {
+            log('🔍 Comparando estructuras...');
+            
+            if (!dbStructure || !panelStructure) {
+                log('❌ Faltan estructuras para comparar', 'error');
+                return null;
+            }
+            
+            const report = {
+                compatible: [],
+                incompatible: [],
+                missing: [],
+                extra: [],
+                warnings: []
+            };
+            
+            // Verificar campos requeridos por el panel
+            Object.keys(panelStructure).forEach(field => {
+                const panelField = panelStructure[field];
+                const dbField = dbStructure[field];
+                
+                if (!dbField) {
+                    if (panelField.required) {
+                        report.missing.push({
+                            field: field,
+                            issue: 'Campo requerido por el panel no existe en BD',
+                            severity: 'error'
+                        });
+                    } else {
+                        report.missing.push({
+                            field: field,
+                            issue: 'Campo opcional del panel no existe en BD',
+                            severity: 'warning'
+                        });
+                    }
+                } else {
+                    // Verificar tipos
+                    if (panelField.type === dbField.type) {
+                        report.compatible.push({
+                            field: field,
+                            status: 'Tipo compatible',
+                            dbType: dbField.type,
+                            panelType: panelField.type
+                        });
+                    } else {
+                        report.incompatible.push({
+                            field: field,
+                            issue: `Tipo incompatible: BD(${dbField.type}) vs Panel(${panelField.type})`,
+                            severity: 'error'
+                        });
+                    }
+                    
+                    // Verificar nulls en campos requeridos
+                    if (panelField.required && dbField.hasNulls) {
+                        report.warnings.push({
+                            field: field,
+                            issue: 'Campo requerido por el panel tiene valores null en BD',
+                            severity: 'warning'
+                        });
+                    }
+                }
+            });
+            
+            // Verificar campos extra en BD
+            Object.keys(dbStructure).forEach(field => {
+                if (!panelStructure[field]) {
+                    report.extra.push({
+                        field: field,
+                        issue: 'Campo en BD no usado por el panel',
+                        severity: 'info'
+                    });
+                }
+            });
+            
+            compatibilityReport = report;
+            log(`✅ Comparación completada: ${report.compatible.length} compatibles, ${report.incompatible.length} incompatibles`);
+            
+            return report;
+        }
+
+        // Mostrar resultados del análisis
+        function displayAnalysisResults() {
+            const container = document.getElementById('analysisResults');
+            
+            if (!compatibilityReport) {
+                container.innerHTML = '<p>No hay resultados disponibles. Ejecuta el análisis primero.</p>';
+                return;
+            }
+            
+            const report = compatibilityReport;
+            
+            let html = '<div class="status-grid">';
+            
+            // Resumen general
+            const totalFields = Object.keys(panelStructure).length;
+            const compatibleCount = report.compatible.length;
+            const incompatibleCount = report.incompatible.length;
+            const missingCount = report.missing.length;
+            
+            const overallStatus = incompatibleCount === 0 && missingCount === 0 ? 'compatible' : 
+                                 incompatibleCount > 0 ? 'incompatible' : 'partial';
+            
+            html += `
+                <div class="status ${overallStatus === 'compatible' ? 'success' : overallStatus === 'incompatible' ? 'error' : 'warning'}">
+                    <strong>Estado General: </strong>
+                    <span class="compatibility-indicator ${overallStatus}">
+                        ${overallStatus === 'compatible' ? '✅ COMPATIBLE' : 
+                          overallStatus === 'incompatible' ? '❌ INCOMPATIBLE' : 
+                          '⚠️ PARCIALMENTE COMPATIBLE'}
+                    </span>
+                    <br><br>
+                    <strong>Resumen:</strong><br>
+                    • Campos compatibles: ${compatibleCount}/${totalFields}<br>
+                    • Campos incompatibles: ${incompatibleCount}<br>
+                    • Campos faltantes: ${missingCount}<br>
+                    • Campos extra en BD: ${report.extra.length}
+                </div>
+            `;
+            
+            // Mostrar problemas críticos
+            if (report.incompatible.length > 0) {
+                html += `
+                    <div class="status error">
+                        <strong>❌ Problemas Críticos:</strong><br>
+                        ${report.incompatible.map(item => `• ${item.field}: ${item.issue}`).join('<br>')}
+                    </div>
+                `;
+            }
+            
+            // Mostrar advertencias
+            if (report.warnings.length > 0) {
+                html += `
+                    <div class="status warning">
+                        <strong>⚠️ Advertencias:</strong><br>
+                        ${report.warnings.map(item => `• ${item.field}: ${item.issue}`).join('<br>')}
+                    </div>
+                `;
+            }
+            
+            html += '</div>';
+            container.innerHTML = html;
+        }
+
+        // Mostrar comparación de estructuras
+        function displayStructureComparison() {
+            const dbContainer = document.getElementById('dbStructure');
+            const panelContainer = document.getElementById('panelStructure');
+            
+            if (dbStructure) {
+                dbContainer.textContent = JSON.stringify(dbStructure, null, 2);
+            }
+            
+            if (panelStructure) {
+                panelContainer.textContent = JSON.stringify(panelStructure, null, 2);
+            }
+        }
+
+        // Mostrar compatibilidad de campos
+        function displayFieldCompatibility() {
+            const container = document.getElementById('fieldCompatibility');
+            
+            if (!compatibilityReport) {
+                container.innerHTML = '<p>No hay datos de compatibilidad disponibles.</p>';
+                return;
+            }
+            
+            const report = compatibilityReport;
+            
+            let html = `
+                <table class="comparison-table">
+                    <thead>
+                        <tr>
+                            <th>Campo</th>
+                            <th>Tipo BD</th>
+                            <th>Tipo Panel</th>
+                            <th>Estado</th>
+                            <th>Notas</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+            `;
+            
+            // Campos compatibles
+            report.compatible.forEach(item => {
+                html += `
+                    <tr class="field-match">
+                        <td>${item.field}</td>
+                        <td>${item.dbType}</td>
+                        <td>${item.panelType}</td>
+                        <td>✅ Compatible</td>
+                        <td>${panelStructure[item.field].usage}</td>
+                    </tr>
+                `;
+            });
+            
+            // Campos incompatibles
+            report.incompatible.forEach(item => {
+                html += `
+                    <tr class="field-mismatch">
+                        <td>${item.field}</td>
+                        <td>${dbStructure[item.field]?.type || 'N/A'}</td>
+                        <td>${panelStructure[item.field]?.type || 'N/A'}</td>
+                        <td>❌ Incompatible</td>
+                        <td>${item.issue}</td>
+                    </tr>
+                `;
+            });
+            
+            // Campos faltantes
+            report.missing.forEach(item => {
+                html += `
+                    <tr class="field-warning">
+                        <td>${item.field}</td>
+                        <td>N/A</td>
+                        <td>${panelStructure[item.field]?.type || 'N/A'}</td>
+                        <td>⚠️ Faltante</td>
+                        <td>${item.issue}</td>
+                    </tr>
+                `;
+            });
+            
+            html += '</tbody></table>';
+            container.innerHTML = html;
+        }
+
+        // Verificar manejo de imágenes específicamente
+        async function verifyImageHandling() {
+            log('🖼️ Verificando manejo de imágenes...');
+            
+            try {
+                // Analizar campos de imagen en productos existentes
+                const imageAnalysis = {
+                    total: sampleProducts.length,
+                    withImagen: 0,
+                    withImagenUrl: 0,
+                    withBothFields: 0,
+                    base64Count: 0,
+                    urlCount: 0,
+                    nullCount: 0
+                };
+                
+                sampleProducts.forEach(product => {
+                    const hasImagen = product.imagen && product.imagen.trim() !== '';
+                    const hasImagenUrl = product.imagen_url && product.imagen_url.trim() !== '';
+                    
+                    if (hasImagen) imageAnalysis.withImagen++;
+                    if (hasImagenUrl) imageAnalysis.withImagenUrl++;
+                    if (hasImagen && hasImagenUrl) imageAnalysis.withBothFields++;
+                    
+                    // Analizar tipo de imagen
+                    if (hasImagen) {
+                        if (product.imagen.startsWith('data:')) {
+                            imageAnalysis.base64Count++;
+                        } else if (product.imagen.startsWith('http')) {
+                            imageAnalysis.urlCount++;
+                        }
+                    }
+                    
+                    if (!hasImagen && !hasImagenUrl) {
+                        imageAnalysis.nullCount++;
+                    }
+                });
+                
+                // Mostrar análisis
+                const container = document.getElementById('imageAnalysis');
+                container.innerHTML = `
+                    <div class="status ${imageAnalysis.nullCount > imageAnalysis.total / 2 ? 'warning' : 'success'}">
+                        <strong>📊 Análisis de Imágenes:</strong><br>
+                        • Total de productos: ${imageAnalysis.total}<br>
+                        • Con campo 'imagen': ${imageAnalysis.withImagen}<br>
+                        • Con campo 'imagen_url': ${imageAnalysis.withImagenUrl}<br>
+                        • Con ambos campos: ${imageAnalysis.withBothFields}<br>
+                        • Imágenes Base64: ${imageAnalysis.base64Count}<br>
+                        • URLs de imágenes: ${imageAnalysis.urlCount}<br>
+                        • Sin imagen: ${imageAnalysis.nullCount}
+                    </div>
+                    
+                    <div class="status info">
+                        <strong>🔍 Comportamiento del Panel Admin:</strong><br>
+                        • Prioridad: campo 'imagen' > 'imagen_url' > placeholder<br>
+                        • Al guardar: asigna a ambos campos ('imagen' y 'imagen_url')<br>
+                        • Soporta: URLs externas y datos Base64<br>
+                        • Fallback: imagen placeholder en caso de error
+                    </div>
+                `;
+                
+                log(`✅ Análisis de imágenes completado: ${imageAnalysis.withImagen + imageAnalysis.withImagenUrl} productos con imágenes`);
+                
+            } catch (error) {
+                log(`❌ Error verificando manejo de imágenes: ${error.message}`, 'error');
+            }
+        }
+
+        // Probar flujo de datos completo
+        async function testDataFlow() {
+            log('🔄 Probando flujo de datos completo...');
+            
+            try {
+                // 1. Simular carga de productos como lo hace el panel admin
+                log('📦 Simulando carga de productos...');
+                
+                if (typeof ProductosServiceOptimized === 'undefined') {
+                    log('❌ ProductosServiceOptimized no disponible', 'error');
+                    return;
+                }
+                
+                const productos = await ProductosServiceOptimized.obtenerProductosOptimizado();
+                log(`✅ Productos cargados: ${productos.length}`);
+                
+                // 2. Verificar estructura de productos devueltos
+                if (productos.length > 0) {
+                    const firstProduct = productos[0];
+                    log('🔍 Estructura del primer producto:', JSON.stringify(firstProduct, null, 2));
+                    
+                    // 3. Simular procesamiento como lo hace el panel admin
+                    const imagePath = getImagePath(firstProduct);
+                    const categoryName = getCategoryName(firstProduct.categoria);
+                    const precioInfo = getPrecioInfo(firstProduct);
+                    
+                    log('✅ Procesamiento exitoso:', {
+                        imagePath: imagePath.substring(0, 50) + '...',
+                        categoryName: categoryName,
+                        precioInfo: precioInfo
+                    });
+                }
+                
+                log('✅ Flujo de datos completado exitosamente');
+                
+            } catch (error) {
+                log(`❌ Error en flujo de datos: ${error.message}`, 'error');
+            }
+        }
+
+        // Funciones auxiliares del panel admin para testing
+        function getImagePath(product) {
+            if (product.imagen) return product.imagen;
+            if (product.imagen_url) return product.imagen_url;
+            return './IMAGENES/placeholder.jpg';
+        }
+
+        function getCategoryName(category) {
+            const categories = {
+                'para-ellos': 'Para Ellos',
+                'para-ellas': 'Para Ellas',
+                'unisex': 'Unisex'
+            };
+            return categories[category] || category || 'Sin categoría';
+        }
+
+        function getPrecioInfo(product) {
+            if (!product.precio) return 'Precio no disponible';
+            return `$${product.precio.toLocaleString()}`;
+        }
+
+        // Función principal de análisis
+        async function analyzeCompatibility() {
+            log('🚀 Iniciando análisis de compatibilidad...');
+            
+            try {
+                // 1. Inicializar Supabase
+                const supabaseOk = await initSupabase();
+                if (!supabaseOk) {
+                    log('❌ No se pudo inicializar Supabase', 'error');
+                    return;
+                }
+                
+                // 2. Analizar estructuras
+                await analyzeDbStructure();
+                analyzePanelStructure();
+                
+                // 3. Comparar estructuras
+                compareStructures();
+                
+                // 4. Mostrar resultados
+                displayAnalysisResults();
+                displayStructureComparison();
+                displayFieldCompatibility();
+                
+                // 5. Verificar imágenes
+                await verifyImageHandling();
+                
+                log('✅ Análisis de compatibilidad completado');
+                
+            } catch (error) {
+                log(`❌ Error en análisis: ${error.message}`, 'error');
+            }
+        }
+
+        // Limpiar log
+        function clearLog() {
+            document.getElementById('analysisLog').innerHTML = '';
+            log('🧹 Log limpiado');
+        }
+
+        // Inicializar al cargar la página
+        window.addEventListener('load', () => {
+            log('🚀 Análisis de compatibilidad iniciado');
+            log('📋 Usa los botones para ejecutar diferentes análisis');
+        });
+    </script>
+</body>
+</html>

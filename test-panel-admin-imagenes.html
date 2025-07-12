@@ -1,0 +1,456 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Panel Admin - Imágenes</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            background: #f8f9fa;
+        }
+        .test-section {
+            margin: 20px 0;
+            padding: 20px;
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .test-section h2 {
+            color: #333;
+            margin-top: 0;
+        }
+        .status-indicator {
+            display: inline-block;
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            margin-right: 8px;
+        }
+        .status-success { background-color: #28a745; }
+        .status-error { background-color: #dc3545; }
+        .status-warning { background-color: #ffc107; }
+        .status-info { background-color: #17a2b8; }
+        
+        .log-container {
+            background: #f8f9fa;
+            border: 1px solid #dee2e6;
+            border-radius: 4px;
+            padding: 15px;
+            margin: 10px 0;
+            font-family: monospace;
+            font-size: 12px;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+        .log-entry {
+            margin: 5px 0;
+            padding: 2px 0;
+        }
+        .log-success { color: #28a745; }
+        .log-error { color: #dc3545; }
+        .log-warning { color: #ffc107; }
+        .log-info { color: #17a2b8; }
+        
+        .product-test-card {
+            border: 1px solid #dee2e6;
+            border-radius: 8px;
+            padding: 15px;
+            margin: 10px 0;
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+        .product-test-image {
+            width: 80px;
+            height: 80px;
+            border-radius: 4px;
+            object-fit: cover;
+            border: 1px solid #dee2e6;
+        }
+        .product-test-info {
+            flex: 1;
+        }
+        .product-test-debug {
+            background: #e9ecef;
+            padding: 8px;
+            border-radius: 4px;
+            font-size: 11px;
+            font-family: monospace;
+            margin-top: 8px;
+        }
+        
+        .btn {
+            padding: 8px 16px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+            margin: 5px;
+        }
+        .btn-primary { background: #007bff; color: white; }
+        .btn-secondary { background: #6c757d; color: white; }
+        .btn-success { background: #28a745; color: white; }
+        .btn-danger { background: #dc3545; color: white; }
+        .btn:hover { opacity: 0.8; }
+        
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin: 20px 0;
+        }
+        .stat-card {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 8px;
+            text-align: center;
+        }
+        .stat-number {
+            font-size: 24px;
+            font-weight: bold;
+            color: #007bff;
+        }
+        .stat-label {
+            font-size: 14px;
+            color: #6c757d;
+            margin-top: 5px;
+        }
+    </style>
+</head>
+<body>
+    <h1>🧪 Test Panel Admin - Verificación de Imágenes</h1>
+    
+    <div class="test-section">
+        <h2><span class="status-indicator status-info"></span>Estado del Sistema</h2>
+        
+        <div class="stats-grid">
+            <div class="stat-card">
+                <div class="stat-number" id="connectionStatus">❌</div>
+                <div class="stat-label">Conexión Supabase</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number" id="serviceStatus">❌</div>
+                <div class="stat-label">Servicio Optimizado</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number" id="productsCount">0</div>
+                <div class="stat-label">Productos Cargados</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number" id="imagesCount">0</div>
+                <div class="stat-label">Imágenes Válidas</div>
+            </div>
+        </div>
+        
+        <div style="margin-top: 20px;">
+            <button class="btn btn-primary" onclick="runTests()">🔄 Ejecutar Tests</button>
+            <button class="btn btn-secondary" onclick="clearCache()">🗑️ Limpiar Cache</button>
+            <button class="btn btn-success" onclick="testImageFunction()">📸 Test Función Imagen</button>
+            <button class="btn btn-danger" onclick="clearLogs()">🧹 Limpiar Logs</button>
+        </div>
+    </div>
+    
+    <div class="test-section">
+        <h2><span class="status-indicator status-info"></span>Log de Actividad</h2>
+        <div class="log-container" id="logContainer">
+            <div class="log-entry log-info">🚀 Iniciando tests...</div>
+        </div>
+    </div>
+    
+    <div class="test-section">
+        <h2><span class="status-indicator status-info"></span>Productos de Test</h2>
+        <div id="productsContainer">
+            <div class="log-entry log-warning">⏳ Esperando carga de productos...</div>
+        </div>
+    </div>
+    
+    <div class="test-section">
+        <h2><span class="status-indicator status-info"></span>Análisis de Imágenes</h2>
+        <div id="imageAnalysis">
+            <div class="log-entry log-warning">⏳ Esperando análisis...</div>
+        </div>
+    </div>
+
+    <!-- Scripts necesarios -->
+    <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+    <script src="js/supabase-config-optimized.js"></script>
+    <script src="js/admin-panel-mejorado.js"></script>
+    
+    <script>
+        let testProducts = [];
+        let testLog = [];
+        
+        // Función para agregar log
+        function addLog(message, type = 'info') {
+            const timestamp = new Date().toLocaleTimeString();
+            const logEntry = {
+                timestamp,
+                message,
+                type
+            };
+            
+            testLog.push(logEntry);
+            
+            const container = document.getElementById('logContainer');
+            const logDiv = document.createElement('div');
+            logDiv.className = `log-entry log-${type}`;
+            logDiv.textContent = `[${timestamp}] ${message}`;
+            
+            container.appendChild(logDiv);
+            container.scrollTop = container.scrollHeight;
+            
+            // Mantener solo los últimos 50 logs
+            if (testLog.length > 50) {
+                testLog.shift();
+                container.removeChild(container.firstChild);
+            }
+        }
+        
+        // Limpiar logs
+        function clearLogs() {
+            testLog = [];
+            document.getElementById('logContainer').innerHTML = '';
+            addLog('🧹 Logs limpiados');
+        }
+        
+        // Función para limpiar cache
+        function clearCache() {
+            try {
+                if (typeof ProductosServiceOptimized !== 'undefined' && ProductosServiceOptimized.clearCache) {
+                    ProductosServiceOptimized.clearCache();
+                    addLog('🗑️ Cache limpiado correctamente', 'success');
+                } else {
+                    addLog('⚠️ Servicio de cache no disponible', 'warning');
+                }
+            } catch (error) {
+                addLog(`❌ Error limpiando cache: ${error.message}`, 'error');
+            }
+        }
+        
+        // Función para probar la función de imagen
+        function testImageFunction() {
+            addLog('📸 Probando función getImagePath...', 'info');
+            
+            const testData = [
+                { id: 1, nombre: 'Test URL', imagen_url: 'https://via.placeholder.com/300x300/4CAF50/white?text=URL_OK', imagen: null },
+                { id: 2, nombre: 'Test Legacy', imagen_url: null, imagen: 'https://via.placeholder.com/300x300/FF9800/white?text=Legacy_OK' },
+                { id: 3, nombre: 'Test Sin Imagen', imagen_url: null, imagen: null },
+                { id: 4, nombre: 'Test URL Vacía', imagen_url: '', imagen: 'https://via.placeholder.com/300x300/9C27B0/white?text=Fallback' },
+                { id: 5, nombre: 'Test Object', imagen_url: {}, imagen: 'https://via.placeholder.com/300x300/F44336/white?text=Object_Error' }
+            ];
+            
+            // Verificar si tenemos acceso a la función
+            if (typeof window.adminPanel === 'undefined') {
+                addLog('❌ AdminPanel no disponible', 'error');
+                return;
+            }
+            
+            testData.forEach(product => {
+                try {
+                    const result = window.adminPanel.getImagePath(product);
+                    addLog(`✅ ${product.nombre}: ${result}`, 'success');
+                } catch (error) {
+                    addLog(`❌ Error en ${product.nombre}: ${error.message}`, 'error');
+                }
+            });
+        }
+        
+        // Ejecutar tests completos
+        async function runTests() {
+            addLog('🚀 Iniciando tests completos...', 'info');
+            
+            try {
+                // Test 1: Verificar conexión Supabase
+                addLog('🔍 Verificando conexión Supabase...', 'info');
+                
+                if (typeof window.supabase === 'undefined') {
+                    addLog('❌ Supabase no disponible', 'error');
+                    document.getElementById('connectionStatus').textContent = '❌';
+                    return;
+                }
+                
+                // Esperar inicialización
+                await new Promise(resolve => setTimeout(resolve, 1000));
+                
+                if (typeof supabaseClient === 'undefined') {
+                    addLog('❌ Cliente Supabase no inicializado', 'error');
+                    document.getElementById('connectionStatus').textContent = '❌';
+                    return;
+                }
+                
+                // Test de conexión
+                const { data, error } = await supabaseClient.from('productos').select('id').limit(1);
+                
+                if (error) {
+                    addLog(`❌ Error de conexión: ${error.message}`, 'error');
+                    document.getElementById('connectionStatus').textContent = '❌';
+                    return;
+                }
+                
+                addLog('✅ Conexión Supabase OK', 'success');
+                document.getElementById('connectionStatus').textContent = '✅';
+                
+                // Test 2: Verificar servicio optimizado
+                addLog('🔍 Verificando servicio optimizado...', 'info');
+                
+                if (typeof ProductosServiceOptimized === 'undefined') {
+                    addLog('❌ Servicio optimizado no disponible', 'error');
+                    document.getElementById('serviceStatus').textContent = '❌';
+                    return;
+                }
+                
+                addLog('✅ Servicio optimizado OK', 'success');
+                document.getElementById('serviceStatus').textContent = '✅';
+                
+                // Test 3: Cargar productos
+                addLog('🔍 Cargando productos...', 'info');
+                
+                const productos = await ProductosServiceOptimized.obtenerProductosOptimizado();
+                testProducts = productos;
+                
+                addLog(`✅ Productos cargados: ${productos.length}`, 'success');
+                document.getElementById('productsCount').textContent = productos.length;
+                
+                // Test 4: Analizar imágenes
+                analyzeImages(productos);
+                
+                // Test 5: Renderizar productos
+                renderTestProducts(productos.slice(0, 5));
+                
+                addLog('🎉 Tests completados exitosamente', 'success');
+                
+            } catch (error) {
+                addLog(`❌ Error en tests: ${error.message}`, 'error');
+            }
+        }
+        
+        // Analizar imágenes
+        function analyzeImages(productos) {
+            addLog('🔍 Analizando imágenes...', 'info');
+            
+            let withImagenUrl = 0;
+            let withImagen = 0;
+            let withValidImages = 0;
+            
+            const imageAnalysis = productos.map(product => {
+                const hasImagenUrl = product.imagen_url && 
+                                   typeof product.imagen_url === 'string' && 
+                                   product.imagen_url.trim() !== '';
+                const hasImagen = product.imagen && 
+                                typeof product.imagen === 'string' && 
+                                product.imagen.trim() !== '';
+                
+                if (hasImagenUrl) withImagenUrl++;
+                if (hasImagen) withImagen++;
+                if (hasImagenUrl || hasImagen) withValidImages++;
+                
+                return {
+                    id: product.id,
+                    nombre: product.nombre,
+                    imagen_url: product.imagen_url,
+                    imagen: product.imagen,
+                    hasImagenUrl,
+                    hasImagen,
+                    hasValidImage: hasImagenUrl || hasImagen
+                };
+            });
+            
+            document.getElementById('imagesCount').textContent = withValidImages;
+            
+            const container = document.getElementById('imageAnalysis');
+            container.innerHTML = `
+                <div class="log-entry log-info">📊 Análisis de ${productos.length} productos:</div>
+                <div class="log-entry log-info">• Con imagen_url: ${withImagenUrl}</div>
+                <div class="log-entry log-info">• Con imagen: ${withImagen}</div>
+                <div class="log-entry log-info">• Con imágenes válidas: ${withValidImages}</div>
+                <div class="log-entry log-info">• Sin imágenes: ${productos.length - withValidImages}</div>
+            `;
+            
+            addLog(`📊 Análisis completado: ${withValidImages}/${productos.length} con imágenes válidas`, 'success');
+        }
+        
+        // Renderizar productos de test
+        function renderTestProducts(productos) {
+            addLog('🎨 Renderizando productos de test...', 'info');
+            
+            const container = document.getElementById('productsContainer');
+            
+            if (productos.length === 0) {
+                container.innerHTML = '<div class="log-entry log-warning">⚠️ No hay productos para mostrar</div>';
+                return;
+            }
+            
+            // Verificar si tenemos acceso a la función getImagePath
+            const hasGetImagePath = typeof window.adminPanel !== 'undefined' && 
+                                   typeof window.adminPanel.getImagePath === 'function';
+            
+            const productsHTML = productos.map(product => {
+                let imageSrc = 'https://via.placeholder.com/300x300/6C757D/white?text=No+Image';
+                let debugInfo = 'getImagePath no disponible';
+                
+                if (hasGetImagePath) {
+                    try {
+                        imageSrc = window.adminPanel.getImagePath(product);
+                        debugInfo = `getImagePath: ${imageSrc}`;
+                    } catch (error) {
+                        debugInfo = `Error en getImagePath: ${error.message}`;
+                    }
+                }
+                
+                return `
+                    <div class="product-test-card">
+                        <img src="${imageSrc}" 
+                             alt="${product.nombre || 'Producto'}"
+                             class="product-test-image"
+                             onerror="this.style.border='2px solid red'">
+                        <div class="product-test-info">
+                            <h4>${product.nombre || 'Sin nombre'}</h4>
+                            <p><strong>Marca:</strong> ${product.marca || 'Sin marca'}</p>
+                            <p><strong>Precio:</strong> ${product.precio || 0}</p>
+                            <div class="product-test-debug">
+                                <div>ID: ${product.id}</div>
+                                <div>imagen_url: ${JSON.stringify(product.imagen_url)}</div>
+                                <div>imagen: ${JSON.stringify(product.imagen)}</div>
+                                <div>${debugInfo}</div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+            
+            container.innerHTML = productsHTML;
+            
+            addLog(`🎨 Renderizados ${productos.length} productos`, 'success');
+        }
+        
+        // Inicializar cuando esté listo
+        document.addEventListener('DOMContentLoaded', function() {
+            addLog('🚀 Página cargada, esperando dependencias...', 'info');
+            
+            // Esperar un poco para que se carguen los scripts
+            setTimeout(async () => {
+                if (typeof window.adminPanel === 'undefined') {
+                    addLog('⚠️ AdminPanel no disponible, inicializando...', 'warning');
+                    // Esperar más tiempo
+                    setTimeout(() => {
+                        if (typeof window.adminPanel !== 'undefined') {
+                            addLog('✅ AdminPanel disponible', 'success');
+                        } else {
+                            addLog('❌ AdminPanel no se pudo inicializar', 'error');
+                        }
+                    }, 3000);
+                } else {
+                    addLog('✅ AdminPanel disponible', 'success');
+                }
+                
+                // Ejecutar tests automáticamente
+                setTimeout(runTests, 2000);
+            }, 1000);
+        });
+    </script>
+</body>
+</html>

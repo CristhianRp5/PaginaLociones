@@ -1,0 +1,383 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test - Datos Reales BD</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        .test-section {
+            margin: 20px 0;
+            padding: 20px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+        }
+        .product-card {
+            border: 1px solid #eee;
+            border-radius: 8px;
+            padding: 15px;
+            margin: 10px 0;
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+        .product-image {
+            width: 80px;
+            height: 80px;
+            border-radius: 4px;
+            object-fit: cover;
+        }
+        .product-info {
+            flex: 1;
+        }
+        .debug-info {
+            background: #f8f9fa;
+            padding: 10px;
+            border-radius: 4px;
+            margin-top: 10px;
+            font-size: 12px;
+            font-family: monospace;
+        }
+        .log {
+            background: #e9ecef;
+            padding: 10px;
+            border-radius: 4px;
+            margin: 10px 0;
+            font-family: monospace;
+            font-size: 12px;
+        }
+        .loading {
+            text-align: center;
+            padding: 20px;
+            color: #666;
+        }
+        .error {
+            color: #dc3545;
+            background: #f8d7da;
+            padding: 10px;
+            border-radius: 4px;
+            margin: 10px 0;
+        }
+        .success {
+            color: #155724;
+            background: #d4edda;
+            padding: 10px;
+            border-radius: 4px;
+            margin: 10px 0;
+        }
+        .table-responsive {
+            overflow-x: auto;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 10px 0;
+        }
+        th, td {
+            border: 1px solid #ddd;
+            padding: 8px;
+            text-align: left;
+        }
+        th {
+            background-color: #f8f9fa;
+            font-weight: 600;
+        }
+        .image-preview {
+            max-width: 60px;
+            max-height: 60px;
+            object-fit: cover;
+            border-radius: 4px;
+        }
+    </style>
+</head>
+<body>
+    <h1>Test - Datos Reales de Base de Datos</h1>
+    
+    <div class="test-section">
+        <h2>Estado de Conexión</h2>
+        <div id="connectionStatus" class="loading">Conectando a Supabase...</div>
+    </div>
+    
+    <div class="test-section">
+        <h2>Productos en Base de Datos</h2>
+        <div id="productsData" class="loading">Cargando productos...</div>
+    </div>
+    
+    <div class="test-section">
+        <h2>Análisis de Campos de Imagen</h2>
+        <div id="imageAnalysis" class="loading">Analizando...</div>
+    </div>
+    
+    <div class="test-section">
+        <h2>Renderizado Visual</h2>
+        <div id="visualRender" class="loading">Renderizando...</div>
+    </div>
+
+    <!-- Supabase -->
+    <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+    <script src="js/supabase-config-optimized.js"></script>
+    
+    <script>
+        let productosReales = [];
+        
+        // Función getImagePath (copiada del panel admin)
+        function getImagePath(product) {
+            const getImageValue = (imageField) => {
+                if (!imageField) return null;
+                if (typeof imageField === 'object') return null;
+                if (typeof imageField === 'string' && imageField.trim() !== '') {
+                    return imageField.trim();
+                }
+                return null;
+            };
+            
+            const imagen_url = getImageValue(product.imagen_url);
+            if (imagen_url) return imagen_url;
+            
+            const imagen = getImageValue(product.imagen);
+            if (imagen) return imagen;
+            
+            return getPlaceholderImagePath();
+        }
+
+        function getPlaceholderImagePath() {
+            return 'https://via.placeholder.com/300x300/6C757D/white?text=No+Image';
+        }
+
+        function cleanFieldValue(value, fallback = '') {
+            if (value === null || value === undefined) return fallback;
+            if (typeof value === 'object') return fallback;
+            return String(value).trim() || fallback;
+        }
+
+        // Verificar conexión a Supabase
+        async function checkConnection() {
+            const statusDiv = document.getElementById('connectionStatus');
+            
+            try {
+                // Esperar a que las dependencias estén disponibles
+                await waitForDependencies();
+                
+                // Probar conexión
+                const { data, error } = await supabaseClient.from('productos').select('id').limit(1);
+                
+                if (error) {
+                    statusDiv.innerHTML = `<div class="error">Error de conexión: ${error.message}</div>`;
+                    return false;
+                }
+                
+                statusDiv.innerHTML = `<div class="success">✅ Conectado a Supabase correctamente</div>`;
+                return true;
+                
+            } catch (error) {
+                statusDiv.innerHTML = `<div class="error">Error: ${error.message}</div>`;
+                return false;
+            }
+        }
+
+        // Esperar dependencias
+        async function waitForDependencies() {
+            const maxAttempts = 50;
+            let attempts = 0;
+            
+            while (attempts < maxAttempts) {
+                const hasSupabase = typeof window.supabase !== 'undefined';
+                const hasSupabaseClient = typeof supabaseClient !== 'undefined';
+                
+                if (hasSupabase && hasSupabaseClient) {
+                    return;
+                }
+                
+                attempts++;
+                await new Promise(resolve => setTimeout(resolve, 100));
+            }
+            
+            throw new Error('Timeout esperando dependencias');
+        }
+
+        // Cargar productos reales
+        async function loadRealProducts() {
+            const container = document.getElementById('productsData');
+            
+            try {
+                const { data: productos, error } = await supabaseClient
+                    .from('productos')
+                    .select('*')
+                    .order('created_at', { ascending: false })
+                    .limit(20);
+                
+                if (error) {
+                    container.innerHTML = `<div class="error">Error cargando productos: ${error.message}</div>`;
+                    return;
+                }
+                
+                if (!productos || productos.length === 0) {
+                    container.innerHTML = `<div class="log">No se encontraron productos en la base de datos</div>`;
+                    return;
+                }
+                
+                productosReales = productos;
+                
+                // Mostrar tabla con datos
+                const tableHTML = `
+                    <div class="table-responsive">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>ID</th>
+                                    <th>Nombre</th>
+                                    <th>imagen_url</th>
+                                    <th>imagen</th>
+                                    <th>Tipo imagen_url</th>
+                                    <th>Tipo imagen</th>
+                                    <th>Resultado getImagePath</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                ${productos.map(product => `
+                                    <tr>
+                                        <td>${product.id}</td>
+                                        <td>${cleanFieldValue(product.nombre, 'Sin nombre')}</td>
+                                        <td style="max-width: 200px; overflow: hidden; text-overflow: ellipsis;">
+                                            ${JSON.stringify(product.imagen_url)}
+                                        </td>
+                                        <td style="max-width: 200px; overflow: hidden; text-overflow: ellipsis;">
+                                            ${JSON.stringify(product.imagen)}
+                                        </td>
+                                        <td>${typeof product.imagen_url}</td>
+                                        <td>${typeof product.imagen}</td>
+                                        <td style="max-width: 200px; overflow: hidden; text-overflow: ellipsis;">
+                                            ${getImagePath(product)}
+                                        </td>
+                                    </tr>
+                                `).join('')}
+                            </tbody>
+                        </table>
+                    </div>
+                `;
+                
+                container.innerHTML = tableHTML;
+                
+                // Análisis de campos de imagen
+                analyzeImageFields();
+                
+                // Renderizado visual
+                visualRender();
+                
+            } catch (error) {
+                container.innerHTML = `<div class="error">Error: ${error.message}</div>`;
+            }
+        }
+
+        // Analizar campos de imagen
+        function analyzeImageFields() {
+            const container = document.getElementById('imageAnalysis');
+            
+            if (productosReales.length === 0) {
+                container.innerHTML = '<div class="log">No hay productos para analizar</div>';
+                return;
+            }
+            
+            let withImagenUrl = 0;
+            let withImagen = 0;
+            let withBoth = 0;
+            let withNeither = 0;
+            let imagenUrlTypes = {};
+            let imagenTypes = {};
+            
+            productosReales.forEach(product => {
+                const hasImagenUrl = product.imagen_url && 
+                                   typeof product.imagen_url === 'string' && 
+                                   product.imagen_url.trim() !== '';
+                const hasImagen = product.imagen && 
+                                typeof product.imagen === 'string' && 
+                                product.imagen.trim() !== '';
+                
+                if (hasImagenUrl) withImagenUrl++;
+                if (hasImagen) withImagen++;
+                if (hasImagenUrl && hasImagen) withBoth++;
+                if (!hasImagenUrl && !hasImagen) withNeither++;
+                
+                // Contar tipos
+                const imgUrlType = typeof product.imagen_url;
+                const imgType = typeof product.imagen;
+                
+                imagenUrlTypes[imgUrlType] = (imagenUrlTypes[imgUrlType] || 0) + 1;
+                imagenTypes[imgType] = (imagenTypes[imgType] || 0) + 1;
+            });
+            
+            const analysisHTML = `
+                <div class="log">
+                    <strong>Análisis de ${productosReales.length} productos:</strong><br>
+                    • Con imagen_url válida: ${withImagenUrl}<br>
+                    • Con imagen válida: ${withImagen}<br>
+                    • Con ambas: ${withBoth}<br>
+                    • Sin ninguna: ${withNeither}<br><br>
+                    
+                    <strong>Tipos de imagen_url:</strong><br>
+                    ${Object.entries(imagenUrlTypes).map(([type, count]) => `• ${type}: ${count}`).join('<br>')}<br><br>
+                    
+                    <strong>Tipos de imagen:</strong><br>
+                    ${Object.entries(imagenTypes).map(([type, count]) => `• ${type}: ${count}`).join('<br>')}
+                </div>
+            `;
+            
+            container.innerHTML = analysisHTML;
+        }
+
+        // Renderizado visual
+        function visualRender() {
+            const container = document.getElementById('visualRender');
+            
+            if (productosReales.length === 0) {
+                container.innerHTML = '<div class="log">No hay productos para renderizar</div>';
+                return;
+            }
+            
+            const productsHTML = productosReales.slice(0, 10).map(product => {
+                const imageSrc = getImagePath(product);
+                const productName = cleanFieldValue(product.nombre, 'Producto sin nombre');
+                const productBrand = cleanFieldValue(product.marca, '');
+                const placeholderSrc = getPlaceholderImagePath();
+                
+                return `
+                <div class="product-card">
+                    <div class="product-image">
+                        <img src="${imageSrc}" 
+                             alt="${productName}"
+                             onerror="this.src='${placeholderSrc}'"
+                             loading="lazy"
+                             class="image-preview">
+                    </div>
+                    <div class="product-info">
+                        <h3>${productName}</h3>
+                        <p>${productBrand}</p>
+                        <div class="debug-info">
+                            <div>ID: ${product.id}</div>
+                            <div>imagen_url: ${JSON.stringify(product.imagen_url)} (${typeof product.imagen_url})</div>
+                            <div>imagen: ${JSON.stringify(product.imagen)} (${typeof product.imagen})</div>
+                            <div>Resultado: ${imageSrc}</div>
+                        </div>
+                    </div>
+                </div>
+                `;
+            }).join('');
+
+            container.innerHTML = productsHTML + '<div class="log">Mostrando los primeros 10 productos</div>';
+        }
+
+        // Ejecutar tests
+        document.addEventListener('DOMContentLoaded', async function() {
+            const connected = await checkConnection();
+            if (connected) {
+                await loadRealProducts();
+            }
+        });
+    </script>
+</body>
+</html>

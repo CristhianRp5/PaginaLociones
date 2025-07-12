@@ -90,19 +90,30 @@ class ShoppingCart {
 
     async insertCartHTML() {
         try {
-            // Cargar template del carrito
-            const response = await fetch('../html/cart-template.html');
+            // Usar el método corregido para cargar template
+            if (typeof CartErrorFixer !== 'undefined') {
+                const cartHTML = await CartErrorFixer.loadCartTemplate();
+                document.body.insertAdjacentHTML('beforeend', cartHTML);
+                return;
+            }
+            
+            // Fallback al método original con rutas dinámicas
+            const currentPath = window.location.pathname;
+            const isInRoot = !currentPath.includes('/html/') && currentPath.endsWith('.html');
+            const templatePath = isInRoot ? 'html/cart-template.html' : '../html/cart-template.html';
+            
+            console.log(`🔄 Intentando cargar template desde: ${templatePath}`);
+            const response = await fetch(templatePath);
+            
             if (!response.ok) {
-                throw new Error('No se pudo cargar el template del carrito');
+                throw new Error(`HTTP ${response.status}: ${response.statusText}`);
             }
             
             const cartHTML = await response.text();
-            
-            // Insertar al final del body
             document.body.insertAdjacentHTML('beforeend', cartHTML);
             
         } catch (error) {
-            console.warn('⚠️ No se pudo cargar template externo, usando HTML inline');
+            console.warn('⚠️ No se pudo cargar template externo, usando HTML inline:', error.message);
             
             // Fallback: HTML inline
             const cartHTML = `
@@ -151,6 +162,15 @@ class ShoppingCart {
     }
 
     setupEventListeners() {
+        // Usar configuración segura si está disponible
+        if (typeof CartErrorFixer !== 'undefined') {
+            CartErrorFixer.setupSafeEventListeners(this);
+            return;
+        }
+        
+        // Fallback al método original
+        console.log('⚠️ Usando configuración de event listeners original');
+        
         // Botón del carrito en navbar
         const cartButton = document.getElementById('cartButton');
         if (cartButton) {
@@ -427,16 +447,29 @@ class ShoppingCart {
             this.updateCartTotal();
         }
     }    renderCartItems() {
+        // Usar renderizado seguro si está disponible
+        if (typeof CartErrorFixer !== 'undefined') {
+            CartErrorFixer.renderCartItemsSafe(this, this.items);
+            return;
+        }
+        
+        // Fallback al método original con mejoras
         const cartItems = document.getElementById('cartItems');
         if (!cartItems) return;
         
+        console.log('⚠️ Usando renderizado original (considera usar cart-error-fixes.js para mejor compatibilidad)');
+        
         cartItems.innerHTML = this.items.map(item => {
-            // Determinar placeholder correcto según la categoría del producto
-            let placeholder = '../IMAGENES/placeholder.png';
+            // Usar placeholders con rutas dinámicas
+            const currentPath = window.location.pathname;
+            const isInHtmlFolder = currentPath.includes('/html/');
+            const basePath = isInHtmlFolder ? '../IMAGENES/' : 'IMAGENES/';
+            
+            let placeholder = `${basePath}placeholder.png`;
             if (item.categoria === 'para-ellas') {
-                placeholder = '../IMAGENES/PARA_ELLAS.png';
+                placeholder = `${basePath}PARA_ELLAS.png`;
             } else if (item.categoria === 'para-ellos') {
-                placeholder = '../IMAGENES/PARA_ELLOS.png';
+                placeholder = `${basePath}PARA_ELLOS.png`;
             }
             
             return `
@@ -453,14 +486,14 @@ class ShoppingCart {
                     
                     <div class="cart-item-controls">
                         <div class="cart-item-quantity">
-                            <button class="quantity-btn" onclick="window.shoppingCart.decreaseQuantity('${item.id}')" ${item.quantity <= 1 ? 'disabled' : ''}>-</button>
+                            <button class="quantity-btn" onclick="if(window.shoppingCart && window.shoppingCart.decreaseQuantity) window.shoppingCart.decreaseQuantity('${item.id}')" ${item.quantity <= 1 ? 'disabled' : ''}>-</button>
                             <span class="quantity-display">${item.quantity}</span>
-                            <button class="quantity-btn" onclick="window.shoppingCart.increaseQuantity('${item.id}')">+</button>
+                            <button class="quantity-btn" onclick="if(window.shoppingCart && window.shoppingCart.increaseQuantity) window.shoppingCart.increaseQuantity('${item.id}')">+</button>
                         </div>
                         
                         <span class="cart-item-price">$${this.formatPrice(item.precio * item.quantity)}</span>
                         
-                        <button class="cart-item-remove" onclick="window.shoppingCart.removeItem('${item.id}')" title="Eliminar producto">
+                        <button class="cart-item-remove" onclick="if(window.shoppingCart && window.shoppingCart.removeItem) window.shoppingCart.removeItem('${item.id}')" title="Eliminar producto">
                             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                                 <line x1="18" y1="6" x2="6" y2="18"></line>
                                 <line x1="6" y1="6" x2="18" y2="18"></line>
@@ -1475,11 +1508,18 @@ window.forceInitCart = function() {
     }
 };
 
-// SINGLETON: Función para obtener o crear la instancia única del carrito
+// SINGLETON MEJORADO: Función para obtener o crear la instancia única del carrito
 window.getShoppingCartInstance = function() {
+    // Prevenir inicialización múltiple
+    if (window._cartInitialized && window.shoppingCart) {
+        console.log('✅ Reutilizando instancia existente del carrito (mejorada)');
+        return window.shoppingCart;
+    }
+    
     // Si ya existe y está correctamente inicializado, devolverlo
     if (window.shoppingCart && window.shoppingCart.isInitialized) {
         console.log('✅ Reutilizando instancia existente del carrito');
+        window._cartInitialized = true;
         return window.shoppingCart;
     }
     
@@ -1499,12 +1539,14 @@ window.getShoppingCartInstance = function() {
             window.shoppingCart.updateCartUI();
         }
         
+        window._cartInitialized = true;
         return window.shoppingCart;
     }
     
     // Si no existe, crear nueva instancia
     console.log('🛒 Creando nueva instancia única del carrito...');
     window.shoppingCart = new ShoppingCart();
+    window._cartInitialized = true;
     return window.shoppingCart;
 };
 

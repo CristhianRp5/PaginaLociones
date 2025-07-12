@@ -165,10 +165,13 @@
                     // Reconfigurar event listeners del carrito después de cargar navbar
                     setTimeout(() => {
                         if (window.shoppingCart && typeof window.shoppingCart.reconfigureEventListeners === 'function') {
+                            console.log('🔄 Reconfigurando carrito en Para Ellos...');
                             window.shoppingCart.reconfigureEventListeners();
                             console.log('✅ Event listeners del carrito reconfigurados en Para Ellos');
+                        } else {
+                            console.warn('⚠️ Carrito no disponible para reconfigurar en Para Ellos');
                         }
-                    }, 500);
+                    }, 800);
                 })
                 .catch(error => console.error('Error cargando navbar:', error));
         });    </script>    <!-- Supabase CDN -->
@@ -176,34 +179,22 @@
     <!-- Scripts de la aplicación -->
     <script src="../js/supabase-config.js"></script>
     <script src="../js/cart.js"></script>
+    <script src="../js/cart-error-fixes.js"></script>
+    <script src="../js/limpiar-productos-prueba.js"></script>
     <script src="../js/navbar.js"></script>
     <script src="../js/para_ellos.js"></script>
     
-    <!-- Verificación de inicialización del carrito -->
+    <!-- Verificación simple del carrito -->
     <script>
-        // Asegurar que el carrito esté inicializado antes de renderizar productos
+        // Solo verificar que el carrito esté listo, sin forzar inicializaciones
         document.addEventListener('DOMContentLoaded', function() {
-            let cartCheckInterval = setInterval(() => {
-                if (window.shoppingCart && typeof window.shoppingCart.increaseQuantity === 'function') {
-                    console.log('✅ Carrito verificado y listo');
-                    clearInterval(cartCheckInterval);
-                } else {
-                    console.log('⏳ Esperando inicialización del carrito...');
-                    // Forzar inicialización si no existe
-                    if (typeof ShoppingCart !== 'undefined' && !window.shoppingCart) {
-                        window.shoppingCart = new ShoppingCart();
-                    }
-                }
-            }, 100);
-            
-            // Timeout de seguridad
             setTimeout(() => {
-                clearInterval(cartCheckInterval);
-                if (!window.shoppingCart) {
-                    console.error('❌ Timeout: carrito no se inicializó en 10s');
-                    console.log('🔧 Usa window.checkCartStatus() para diagnosticar');
+                if (window.shoppingCart && typeof window.shoppingCart.getTotalItems === 'function') {
+                    console.log('✅ Carrito listo en Para Ellos');
+                } else {
+                    console.warn('⚠️ Carrito no detectado en Para Ellos');
                 }
-            }, 10000);
+            }, 1000);
         });
     </script>
 </body>

@@ -1,0 +1,761 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Consulta Directa - Tabla Productos</title>
+    <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+        }
+        h1 {
+            color: #333;
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        .section {
+            margin-bottom: 30px;
+            padding: 20px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+        }
+        .section h2 {
+            color: #2c3e50;
+            margin-top: 0;
+            border-bottom: 2px solid #3498db;
+            padding-bottom: 10px;
+        }
+        .status {
+            padding: 10px;
+            border-radius: 4px;
+            margin: 10px 0;
+            font-weight: bold;
+        }
+        .status.success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        .status.error {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+        .status.warning {
+            background: #fff3cd;
+            color: #856404;
+            border: 1px solid #ffeaa7;
+        }
+        .status.info {
+            background: #d1ecf1;
+            color: #0c5460;
+            border: 1px solid #bee5eb;
+        }
+        button {
+            background: #3498db;
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+            margin-right: 10px;
+            margin-bottom: 10px;
+        }
+        button:hover {
+            background: #2980b9;
+        }
+        .btn-success {
+            background: #27ae60;
+        }
+        .btn-success:hover {
+            background: #219a52;
+        }
+        .data-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 15px;
+            font-size: 12px;
+            max-height: 500px;
+            overflow-y: auto;
+            display: block;
+        }
+        .data-table thead, .data-table tbody {
+            display: table;
+            width: 100%;
+            table-layout: fixed;
+        }
+        .data-table th,
+        .data-table td {
+            border: 1px solid #ddd;
+            padding: 8px;
+            text-align: left;
+            vertical-align: top;
+            word-wrap: break-word;
+            overflow: hidden;
+        }
+        .data-table th {
+            background: #f4f4f4;
+            font-weight: bold;
+            position: sticky;
+            top: 0;
+            z-index: 10;
+        }
+        .data-table tr:nth-child(even) {
+            background: #f9f9f9;
+        }
+        .json-viewer {
+            background: #2c3e50;
+            color: #ecf0f1;
+            padding: 15px;
+            border-radius: 4px;
+            font-family: monospace;
+            font-size: 12px;
+            line-height: 1.4;
+            white-space: pre-wrap;
+            max-height: 400px;
+            overflow-y: auto;
+        }
+        .log-container {
+            background: #2c3e50;
+            color: #ecf0f1;
+            padding: 15px;
+            border-radius: 4px;
+            height: 200px;
+            overflow-y: auto;
+            font-family: monospace;
+            font-size: 12px;
+            line-height: 1.4;
+        }
+        .field-analysis {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 15px;
+            margin-top: 15px;
+        }
+        .field-card {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 4px;
+            border: 1px solid #dee2e6;
+        }
+        .field-name {
+            font-weight: bold;
+            color: #495057;
+            margin-bottom: 5px;
+        }
+        .field-type {
+            font-size: 11px;
+            color: #6c757d;
+            background: #e9ecef;
+            padding: 2px 6px;
+            border-radius: 3px;
+            display: inline-block;
+            margin-bottom: 5px;
+        }
+        .field-sample {
+            font-family: monospace;
+            font-size: 11px;
+            color: #343a40;
+            background: #ffffff;
+            padding: 5px;
+            border-radius: 3px;
+            border: 1px solid #ced4da;
+            word-break: break-all;
+            max-height: 100px;
+            overflow-y: auto;
+        }
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+        .stat-card {
+            background: #fff;
+            padding: 15px;
+            border-radius: 4px;
+            border: 1px solid #ddd;
+            text-align: center;
+        }
+        .stat-number {
+            font-size: 24px;
+            font-weight: bold;
+            color: #3498db;
+        }
+        .stat-label {
+            font-size: 12px;
+            color: #666;
+            margin-top: 5px;
+        }
+        .null-indicator {
+            color: #dc3545;
+            font-style: italic;
+        }
+        .empty-indicator {
+            color: #ffc107;
+            font-style: italic;
+        }
+        .image-preview {
+            max-width: 100px;
+            max-height: 100px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            margin: 5px 0;
+        }
+        .tabs {
+            display: flex;
+            border-bottom: 1px solid #ddd;
+            margin-bottom: 20px;
+        }
+        .tab {
+            padding: 10px 20px;
+            cursor: pointer;
+            border: 1px solid #ddd;
+            border-bottom: none;
+            background: #f8f9fa;
+            margin-right: 5px;
+        }
+        .tab.active {
+            background: white;
+            border-bottom: 1px solid white;
+            position: relative;
+            z-index: 1;
+        }
+        .tab-content {
+            display: none;
+        }
+        .tab-content.active {
+            display: block;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🗄️ Consulta Directa - Tabla Productos</h1>
+        
+        <div class="section">
+            <h2>🎯 Consulta a la Base de Datos</h2>
+            <p>Esta herramienta hace consultas directas a la tabla productos para ver exactamente qué debe consumir el panel admin.</p>
+            
+            <button onclick="consultarTodos()">📊 Consultar Todos los Productos</button>
+            <button onclick="consultarEstructura()">🔍 Analizar Estructura</button>
+            <button onclick="consultarImagenes()">🖼️ Analizar Imágenes</button>
+            <button onclick="consultarMuestra()">📋 Muestra de 5 Productos</button>
+            <button onclick="exportarDatos()">💾 Exportar Datos</button>
+            <button onclick="clearLog()">🧹 Limpiar Log</button>
+        </div>
+
+        <div class="section">
+            <h2>📈 Estadísticas Generales</h2>
+            <div id="estadisticas"></div>
+        </div>
+
+        <div class="section">
+            <h2>📋 Datos de la Tabla</h2>
+            <div class="tabs">
+                <div class="tab active" onclick="showTab('tabla')">📊 Tabla Completa</div>
+                <div class="tab" onclick="showTab('json')">📄 JSON Raw</div>
+                <div class="tab" onclick="showTab('estructura')">🔍 Estructura</div>
+                <div class="tab" onclick="showTab('imagenes')">🖼️ Imágenes</div>
+            </div>
+            
+            <div id="tabla" class="tab-content active">
+                <div id="datosTabla"></div>
+            </div>
+            
+            <div id="json" class="tab-content">
+                <div id="datosJson" class="json-viewer"></div>
+            </div>
+            
+            <div id="estructura" class="tab-content">
+                <div id="datosEstructura"></div>
+            </div>
+            
+            <div id="imagenes" class="tab-content">
+                <div id="datosImagenes"></div>
+            </div>
+        </div>
+
+        <div class="section">
+            <h2>📝 Log de Consultas</h2>
+            <div id="consultaLog" class="log-container"></div>
+        </div>
+    </div>
+
+    <script src="js/supabase-config-optimized.js"></script>
+    <script>
+        // Variables globales
+        let productosData = [];
+        let estructuraData = null;
+        let imagenesData = [];
+
+        // Función de logging
+        function log(message, type = 'info') {
+            const timestamp = new Date().toLocaleTimeString();
+            const logElement = document.getElementById('consultaLog');
+            const logEntry = document.createElement('div');
+            logEntry.innerHTML = `<span style="color: #7f8c8d;">[${timestamp}]</span> ${message}`;
+            logElement.appendChild(logEntry);
+            logElement.scrollTop = logElement.scrollHeight;
+            
+            console.log(`[${type.toUpperCase()}] ${message}`);
+        }
+
+        // Función para cambiar tabs
+        function showTab(tabName) {
+            // Ocultar todos los tabs
+            document.querySelectorAll('.tab').forEach(tab => tab.classList.remove('active'));
+            document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
+            
+            // Mostrar tab seleccionado
+            document.querySelector(`[onclick="showTab('${tabName}')"]`).classList.add('active');
+            document.getElementById(tabName).classList.add('active');
+        }
+
+        // Consultar todos los productos
+        async function consultarTodos() {
+            log('📊 Consultando todos los productos...');
+            
+            try {
+                if (typeof supabaseClient === 'undefined') {
+                    throw new Error('supabaseClient no está disponible');
+                }
+                
+                const { data, error } = await supabaseClient
+                    .from('productos')
+                    .select('*')
+                    .order('id', { ascending: true });
+                
+                if (error) {
+                    throw error;
+                }
+                
+                productosData = data || [];
+                log(`✅ ${productosData.length} productos obtenidos`);
+                
+                // Mostrar estadísticas
+                mostrarEstadisticas();
+                
+                // Mostrar datos en tabla
+                mostrarTabla();
+                
+                // Mostrar JSON raw
+                mostrarJson();
+                
+            } catch (error) {
+                log(`❌ Error consultando productos: ${error.message}`, 'error');
+                
+                const container = document.getElementById('datosTabla');
+                container.innerHTML = `
+                    <div class="status error">
+                        <strong>Error:</strong> ${error.message}
+                    </div>
+                `;
+            }
+        }
+
+        // Mostrar estadísticas
+        function mostrarEstadisticas() {
+            const container = document.getElementById('estadisticas');
+            
+            if (productosData.length === 0) {
+                container.innerHTML = '<div class="status warning">No hay productos para analizar</div>';
+                return;
+            }
+            
+            // Calcular estadísticas
+            const stats = {
+                total: productosData.length,
+                conImagen: productosData.filter(p => p.imagen && p.imagen.trim() !== '').length,
+                conImagenUrl: productosData.filter(p => p.imagen_url && p.imagen_url.trim() !== '').length,
+                conAmbosImagenes: productosData.filter(p => 
+                    p.imagen && p.imagen.trim() !== '' && 
+                    p.imagen_url && p.imagen_url.trim() !== ''
+                ).length,
+                sinImagen: productosData.filter(p => 
+                    (!p.imagen || p.imagen.trim() === '') && 
+                    (!p.imagen_url || p.imagen_url.trim() === '')
+                ).length,
+                activos: productosData.filter(p => p.activo !== false).length,
+                conPrecio: productosData.filter(p => p.precio && p.precio > 0).length
+            };
+            
+            const html = `
+                <div class="stats-grid">
+                    <div class="stat-card">
+                        <div class="stat-number">${stats.total}</div>
+                        <div class="stat-label">Total Productos</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-number">${stats.conImagen}</div>
+                        <div class="stat-label">Con campo "imagen"</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-number">${stats.conImagenUrl}</div>
+                        <div class="stat-label">Con campo "imagen_url"</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-number">${stats.conAmbosImagenes}</div>
+                        <div class="stat-label">Con ambos campos</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-number">${stats.sinImagen}</div>
+                        <div class="stat-label">Sin imagen</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-number">${stats.activos}</div>
+                        <div class="stat-label">Productos activos</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-number">${stats.conPrecio}</div>
+                        <div class="stat-label">Con precio</div>
+                    </div>
+                </div>
+            `;
+            
+            container.innerHTML = html;
+        }
+
+        // Mostrar datos en tabla
+        function mostrarTabla() {
+            const container = document.getElementById('datosTabla');
+            
+            if (productosData.length === 0) {
+                container.innerHTML = '<div class="status warning">No hay productos para mostrar</div>';
+                return;
+            }
+            
+            // Obtener todas las columnas
+            const columns = Object.keys(productosData[0]);
+            
+            let html = `
+                <div class="status info">
+                    <strong>Total:</strong> ${productosData.length} productos | 
+                    <strong>Columnas:</strong> ${columns.length}
+                </div>
+                <div class="data-table">
+                    <thead>
+                        <tr>
+                            ${columns.map(col => `<th>${col}</th>`).join('')}
+                        </tr>
+                    </thead>
+                    <tbody>
+            `;
+            
+            productosData.forEach(producto => {
+                html += '<tr>';
+                columns.forEach(col => {
+                    let value = producto[col];
+                    let cellClass = '';
+                    
+                    if (value === null) {
+                        value = '<span class="null-indicator">NULL</span>';
+                    } else if (value === '' || (typeof value === 'string' && value.trim() === '')) {
+                        value = '<span class="empty-indicator">EMPTY</span>';
+                    } else if (typeof value === 'string') {
+                        // Truncar valores largos
+                        if (value.length > 100) {
+                            value = value.substring(0, 100) + '...';
+                        }
+                        // Detectar si es una imagen
+                        if (col === 'imagen' || col === 'imagen_url') {
+                            if (value.startsWith('data:image')) {
+                                value = `<div>Base64 (${(value.length / 1024).toFixed(1)}KB)</div>`;
+                            } else if (value.startsWith('http')) {
+                                value = `<div><a href="${value}" target="_blank">${value.substring(0, 50)}...</a></div>`;
+                            }
+                        }
+                    }
+                    
+                    html += `<td>${value}</td>`;
+                });
+                html += '</tr>';
+            });
+            
+            html += '</tbody></div>';
+            container.innerHTML = html;
+        }
+
+        // Mostrar JSON raw
+        function mostrarJson() {
+            const container = document.getElementById('datosJson');
+            
+            if (productosData.length === 0) {
+                container.textContent = 'No hay datos disponibles';
+                return;
+            }
+            
+            // Mostrar primeros 3 productos con formato
+            const sample = productosData.slice(0, 3);
+            container.textContent = JSON.stringify(sample, null, 2);
+        }
+
+        // Analizar estructura
+        async function consultarEstructura() {
+            log('🔍 Analizando estructura de la tabla...');
+            
+            if (productosData.length === 0) {
+                log('⚠️ Primero consulta los productos', 'warning');
+                return;
+            }
+            
+            try {
+                // Analizar estructura del primer producto
+                const firstProduct = productosData[0];
+                const estructura = {};
+                
+                Object.keys(firstProduct).forEach(key => {
+                    const allValues = productosData.map(p => p[key]);
+                    const nonNullValues = allValues.filter(v => v !== null);
+                    const nonEmptyValues = nonNullValues.filter(v => v !== '');
+                    
+                    estructura[key] = {
+                        type: typeof firstProduct[key],
+                        nullable: allValues.some(v => v === null),
+                        empty: nonNullValues.some(v => v === ''),
+                        totalCount: productosData.length,
+                        nullCount: allValues.filter(v => v === null).length,
+                        emptyCount: nonNullValues.filter(v => v === '').length,
+                        validCount: nonEmptyValues.length,
+                        examples: [...new Set(nonEmptyValues.slice(0, 3))],
+                        uniqueValues: [...new Set(allValues)].length
+                    };
+                });
+                
+                estructuraData = estructura;
+                mostrarEstructura();
+                
+                log(`✅ Estructura analizada: ${Object.keys(estructura).length} campos`);
+                
+            } catch (error) {
+                log(`❌ Error analizando estructura: ${error.message}`, 'error');
+            }
+        }
+
+        // Mostrar estructura
+        function mostrarEstructura() {
+            const container = document.getElementById('datosEstructura');
+            
+            if (!estructuraData) {
+                container.innerHTML = '<div class="status warning">Primero analiza la estructura</div>';
+                return;
+            }
+            
+            let html = '<div class="field-analysis">';
+            
+            Object.entries(estructuraData).forEach(([fieldName, field]) => {
+                const completeness = ((field.validCount / field.totalCount) * 100).toFixed(1);
+                
+                html += `
+                    <div class="field-card">
+                        <div class="field-name">${fieldName}</div>
+                        <div class="field-type">${field.type}</div>
+                        
+                        <div style="margin: 10px 0; font-size: 12px;">
+                            <strong>Completitud:</strong> ${completeness}% (${field.validCount}/${field.totalCount})<br>
+                            <strong>Nulos:</strong> ${field.nullCount}<br>
+                            <strong>Vacíos:</strong> ${field.emptyCount}<br>
+                            <strong>Valores únicos:</strong> ${field.uniqueValues}
+                        </div>
+                        
+                        <div class="field-sample">
+                            <strong>Ejemplos:</strong><br>
+                            ${field.examples.map(ex => {
+                                if (typeof ex === 'string' && ex.length > 50) {
+                                    return ex.substring(0, 50) + '...';
+                                }
+                                return ex;
+                            }).join('<br>')}
+                        </div>
+                    </div>
+                `;
+            });
+            
+            html += '</div>';
+            container.innerHTML = html;
+        }
+
+        // Analizar imágenes específicamente
+        async function consultarImagenes() {
+            log('🖼️ Analizando campos de imagen...');
+            
+            if (productosData.length === 0) {
+                log('⚠️ Primero consulta los productos', 'warning');
+                return;
+            }
+            
+            try {
+                const imageAnalysis = [];
+                
+                for (const producto of productosData.slice(0, 10)) { // Analizar primeros 10
+                    const analysis = {
+                        id: producto.id,
+                        nombre: producto.nombre,
+                        imagen: producto.imagen,
+                        imagen_url: producto.imagen_url,
+                        imagenType: null,
+                        imagenUrlType: null,
+                        finalImage: null
+                    };
+                    
+                    // Analizar tipo de imagen
+                    if (analysis.imagen) {
+                        if (analysis.imagen.startsWith('data:')) {
+                            analysis.imagenType = 'base64';
+                        } else if (analysis.imagen.startsWith('http')) {
+                            analysis.imagenType = 'url';
+                        } else {
+                            analysis.imagenType = 'path';
+                        }
+                    }
+                    
+                    if (analysis.imagen_url) {
+                        if (analysis.imagen_url.startsWith('data:')) {
+                            analysis.imagenUrlType = 'base64';
+                        } else if (analysis.imagen_url.startsWith('http')) {
+                            analysis.imagenUrlType = 'url';
+                        } else {
+                            analysis.imagenUrlType = 'path';
+                        }
+                    }
+                    
+                    // Determinar imagen final (como lo hace el panel admin)
+                    if (analysis.imagen && analysis.imagen.trim() !== '') {
+                        analysis.finalImage = analysis.imagen;
+                    } else if (analysis.imagen_url && analysis.imagen_url.trim() !== '') {
+                        analysis.finalImage = analysis.imagen_url;
+                    } else {
+                        analysis.finalImage = 'placeholder';
+                    }
+                    
+                    imageAnalysis.push(analysis);
+                }
+                
+                imagenesData = imageAnalysis;
+                mostrarImagenes();
+                
+                log(`✅ Análisis de imágenes completado para ${imageAnalysis.length} productos`);
+                
+            } catch (error) {
+                log(`❌ Error analizando imágenes: ${error.message}`, 'error');
+            }
+        }
+
+        // Mostrar análisis de imágenes
+        function mostrarImagenes() {
+            const container = document.getElementById('datosImagenes');
+            
+            if (imagenesData.length === 0) {
+                container.innerHTML = '<div class="status warning">Primero analiza las imágenes</div>';
+                return;
+            }
+            
+            let html = '<div class="field-analysis">';
+            
+            imagenesData.forEach(item => {
+                html += `
+                    <div class="field-card">
+                        <div class="field-name">${item.nombre} (ID: ${item.id})</div>
+                        
+                        <div style="margin: 10px 0; font-size: 12px;">
+                            <strong>Campo 'imagen':</strong><br>
+                            ${item.imagen ? `${item.imagenType} - ${item.imagen.substring(0, 50)}...` : 'Vacío'}<br><br>
+                            
+                            <strong>Campo 'imagen_url':</strong><br>
+                            ${item.imagen_url ? `${item.imagenUrlType} - ${item.imagen_url.substring(0, 50)}...` : 'Vacío'}<br><br>
+                            
+                            <strong>Imagen final:</strong><br>
+                            ${item.finalImage === 'placeholder' ? 'Placeholder' : item.finalImage.substring(0, 50) + '...'}
+                        </div>
+                        
+                        ${item.finalImage !== 'placeholder' && item.finalImage.startsWith('http') ? 
+                            `<img src="${item.finalImage}" class="image-preview" onerror="this.style.border='2px solid red'" onload="this.style.border='2px solid green'">` : 
+                            '<div style="background: #f0f0f0; padding: 20px; text-align: center; border: 1px solid #ddd;">Sin imagen válida</div>'
+                        }
+                    </div>
+                `;
+            });
+            
+            html += '</div>';
+            container.innerHTML = html;
+        }
+
+        // Consultar muestra de productos
+        async function consultarMuestra() {
+            log('📋 Consultando muestra de 5 productos...');
+            
+            try {
+                const { data, error } = await supabaseClient
+                    .from('productos')
+                    .select('*')
+                    .limit(5);
+                
+                if (error) throw error;
+                
+                const container = document.getElementById('datosJson');
+                container.textContent = JSON.stringify(data, null, 2);
+                
+                // Cambiar a tab JSON
+                showTab('json');
+                
+                log(`✅ Muestra de ${data.length} productos obtenida`);
+                
+            } catch (error) {
+                log(`❌ Error consultando muestra: ${error.message}`, 'error');
+            }
+        }
+
+        // Exportar datos
+        function exportarDatos() {
+            if (productosData.length === 0) {
+                log('⚠️ No hay datos para exportar', 'warning');
+                return;
+            }
+            
+            const exportData = {
+                timestamp: new Date().toISOString(),
+                totalProductos: productosData.length,
+                estructura: estructuraData,
+                productos: productosData,
+                imagenesAnalisis: imagenesData
+            };
+            
+            const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `productos-bd-${new Date().toISOString().split('T')[0]}.json`;
+            a.click();
+            
+            URL.revokeObjectURL(url);
+            log('📊 Datos exportados exitosamente');
+        }
+
+        // Limpiar log
+        function clearLog() {
+            document.getElementById('consultaLog').innerHTML = '';
+            log('🧹 Log limpiado');
+        }
+
+        // Inicializar
+        window.addEventListener('load', () => {
+            log('🚀 Consulta directa a tabla productos iniciada');
+            log('📋 Usa los botones para hacer consultas específicas');
+        });
+    </script>
+</body>
+</html>

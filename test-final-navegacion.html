@@ -1,0 +1,349 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Final - Persistencia del Carrito</title>
+    <link rel="stylesheet" href="css/style.css">
+    <link rel="stylesheet" href="css/slide-cart.css">
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        
+        .test-card {
+            background: white;
+            border-radius: 10px;
+            padding: 20px;
+            margin: 20px 0;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        
+        .btn {
+            padding: 10px 20px;
+            margin: 5px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 14px;
+        }
+        
+        .btn-primary { background: #007bff; color: white; }
+        .btn-success { background: #28a745; color: white; }
+        .btn-warning { background: #ffc107; color: black; }
+        .btn-danger { background: #dc3545; color: white; }
+        
+        .nav-links {
+            display: flex;
+            gap: 15px;
+            margin: 20px 0;
+        }
+        
+        .nav-links a {
+            padding: 12px 24px;
+            background: #333;
+            color: white;
+            text-decoration: none;
+            border-radius: 5px;
+        }
+        
+        .status {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 5px;
+            margin: 10px 0;
+            font-family: monospace;
+            max-height: 400px;
+            overflow-y: auto;
+        }
+        
+        .alert {
+            padding: 15px;
+            margin: 15px 0;
+            border-radius: 5px;
+        }
+        
+        .alert-info { background: #d1ecf1; border-left: 4px solid #0c5460; }
+        .alert-success { background: #d4edda; border-left: 4px solid #155724; }
+        .alert-warning { background: #fff3cd; border-left: 4px solid #856404; }
+    </style>
+</head>
+<body>
+    <h1>🧪 Test Final - Persistencia del Carrito</h1>
+    
+    <div class="alert alert-info">
+        <h3>📝 Plan de Pruebas</h3>
+        <p>Este test verifica que el carrito NO se borre al navegar entre páginas</p>
+        <ol>
+            <li>Agrega productos aquí</li>
+            <li>Navega a "Para Ellos" y agrega más productos</li>
+            <li>Ve a "Index" - ¿Los productos siguen ahí?</li>
+            <li>Navega de vuelta - ¿Todo persiste?</li>
+        </ol>
+    </div>
+    
+    <div class="nav-links">
+        <a href="index.html">🏠 Index</a>
+        <a href="html/para_ellos.html">👨 Para Ellos</a>
+        <a href="html/para_ellas.html">👩 Para Ellas</a>
+        <a href="test-navegacion-singleton.html">🔧 Test Singleton</a>
+        <a href="test-secciones-productos.html">📊 Test Secciones</a>
+        <a href="test-productos-timing.html">⏱️ Test Timing</a>
+        <a href="test-database-performance.html">📊 Test BD</a>
+    </div>
+    
+    <div class="test-card">
+        <h2>🛒 Agregar Productos de Prueba</h2>
+        <button class="btn btn-success" onclick="addProduct('cologne-1', 'Colonia Test 1', 'TestBrand', 45)">
+            ➕ Colonia ($45)
+        </button>
+        <button class="btn btn-success" onclick="addProduct('perfume-1', 'Perfume Test 1', 'TestBrand', 65)">
+            ➕ Perfume ($65)
+        </button>
+        <button class="btn btn-success" onclick="addProduct('fragrance-1', 'Fragancia Test 1', 'TestBrand', 55)">
+            ➕ Fragancia ($55)
+        </button>
+        <button class="btn btn-primary" onclick="toggleCart()">
+            👁️ Ver Carrito
+        </button>
+    </div>
+    
+    <div class="test-card">
+        <h2>📊 Estado Actual</h2>
+        <button class="btn btn-primary" onclick="showStatus()">🔍 Mostrar Estado</button>
+        <button class="btn btn-warning" onclick="verifyIntegrity()">🔧 Verificar Integridad</button>
+        <button class="btn btn-warning" onclick="simulateNav()">🚀 Simular Navegación</button>
+        <button class="btn btn-warning" onclick="debugSaveIssue()">🔍 Debug Guardado</button>
+        <button class="btn btn-danger" onclick="clearAll()">🗑️ Limpiar Todo</button>
+        
+        <div id="status" class="status"></div>
+    </div>
+    
+    <div class="test-card">
+        <h2>⏰ Control de Tiempo</h2>
+        <button class="btn btn-primary" onclick="checkTime()">⏰ Ver Tiempo</button>
+        <button class="btn btn-warning" onclick="extendTime()">⏲️ Extender Tiempo</button>
+        <div id="timeStatus" class="status"></div>
+    </div>
+    
+    <div class="test-card">
+        <h2>💾 Gestión de LocalStorage</h2>
+        <button class="btn btn-primary" onclick="monitorStorage()">
+            📊 Monitor LocalStorage
+        </button>
+        <button class="btn btn-warning" onclick="cleanStorage()">
+            🧹 Limpiar LocalStorage
+        </button>
+        <button class="btn btn-danger" onclick="testStorageLimit()">
+            🧪 Test Límites Storage
+        </button>
+        <div id="storageInfo" class="status"></div>
+    </div>
+
+    <!-- Scripts -->
+    <script src="js/cart.js"></script>
+    <script>
+        function addProduct(id, nombre, marca, precio) {
+            const product = {
+                id: id,
+                nombre: nombre,
+                marca: marca,
+                precio: precio,
+                categoria: 'test',
+                imagen_url: '../IMAGENES/placeholder.png'
+            };
+            
+            if (window.shoppingCart) {
+                window.shoppingCart.addItem(product);
+                log(`✅ Agregado: ${nombre} ($${precio})`);
+                showStatus();
+            } else {
+                log('❌ Carrito no disponible');
+            }
+        }
+        
+        function toggleCart() {
+            if (window.shoppingCart) {
+                window.shoppingCart.toggleCart();
+                log('🔄 Carrito toggled');
+            } else {
+                log('❌ Carrito no disponible');
+            }
+        }
+        
+        function showStatus() {
+            if (!window.shoppingCart) {
+                log('❌ Carrito no disponible');
+                return;
+            }
+            
+            const status = window.shoppingCart.getCartStatus();
+            const info = 
+`📊 ESTADO DEL CARRITO:
+Items: ${status.totalItems}
+Total: $${status.totalAmount}
+Inicializado: ${status.isInitialized}
+
+📦 PRODUCTOS:
+${status.itemsList.map((item, i) => 
+    `${i+1}. ${item.nombre} - $${item.precio} (x${item.quantity})`
+).join('\n')}
+
+🆔 INSTANCIA:
+Tipo: ${typeof window.shoppingCart}
+Constructor: ${window.shoppingCart.constructor.name}`;
+            
+            document.getElementById('status').textContent = info;
+        }
+        
+        function verifyIntegrity() {
+            if (window.verifyCartIntegrity) {
+                const result = window.verifyCartIntegrity();
+                log(`🔧 Integridad verificada: ${result}`);
+                showStatus();
+            } else {
+                log('❌ Función de verificación no disponible');
+            }
+        }
+        
+        function simulateNav() {
+            if (window.simulateNavigation) {
+                const success = window.simulateNavigation();
+                log(success ? '✅ Simulación exitosa' : '❌ Simulación falló');
+                showStatus();
+            } else {
+                log('❌ Función de simulación no disponible');
+            }
+        }
+        
+        function clearAll() {
+            if (confirm('¿Limpiar todo el carrito?')) {
+                if (window.shoppingCart) {
+                    window.shoppingCart.clearCart();
+                    log('🗑️ Carrito limpiado');
+                    showStatus();
+                }
+            }
+        }
+        
+        function checkTime() {
+            if (window.checkCartTime) {
+                const timeInfo = window.checkCartTime();
+                if (timeInfo) {
+                    const info = 
+`⏰ INFORMACIÓN DE TIEMPO:
+Minutos restantes: ${timeInfo.remainingMinutes}
+Expira: ${timeInfo.expirationTime}
+Estado: ${timeInfo.remainingMinutes <= 10 ? '⚠️ Expirando pronto' : '✅ Activo'}`;
+                    document.getElementById('timeStatus').textContent = info;
+                } else {
+                    document.getElementById('timeStatus').textContent = '❌ No hay información de tiempo';
+                }
+            }
+        }
+        
+        function extendTime() {
+            if (window.extendCartTime) {
+                const success = window.extendCartTime();
+                log(success ? '✅ Tiempo extendido' : '❌ No se pudo extender');
+                checkTime();
+            }
+        }
+        
+        function monitorStorage() {
+            if (window.monitorLocalStorage) {
+                const info = window.monitorLocalStorage();
+                if (info) {
+                    const infoText = 
+`💾 INFORMACIÓN DE LOCALSTORAGE:
+Tamaño total: ${info.totalSize}
+Elementos: ${info.itemCount}
+
+📊 ITEMS MÁS GRANDES:
+${info.items.slice(0, 5).map((item, i) => 
+    `${i+1}. ${item.key}: ${item.size}`
+).join('\n')}`;
+                    document.getElementById('storageInfo').textContent = infoText;
+                }
+            } else {
+                log('❌ Función monitorLocalStorage no disponible');
+            }
+        }
+        
+        function cleanStorage() {
+            if (window.cleanLocalStorage) {
+                const success = window.cleanLocalStorage();
+                log(success ? '✅ LocalStorage limpiado' : '❌ Error limpiando localStorage');
+                
+                // Actualizar información después de limpiar
+                setTimeout(monitorStorage, 500);
+            } else {
+                log('❌ Función cleanLocalStorage no disponible');
+            }
+        }
+        
+        function testStorageLimit() {
+            if (window.testLocalStorageLimit) {
+                log('🧪 Iniciando test de límites... (ver consola)');
+                window.testLocalStorageLimit();
+                log('✅ Test de límites completado - ver consola para detalles');
+            } else {
+                log('❌ Función testLocalStorageLimit no disponible');
+            }
+        }
+        
+        function debugSaveIssue() {
+            if (window.debugCartSave) {
+                window.debugCartSave();
+                log('🔍 Diagnóstico de guardado ejecutado - ver consola para detalles');
+            } else {
+                log('❌ Función debugCartSave no disponible');
+            }
+        }
+        
+        function log(message) {
+            console.log(message);
+            const timestamp = new Date().toLocaleTimeString();
+            const current = document.getElementById('status').textContent;
+            document.getElementById('status').textContent = `[${timestamp}] ${message}\n\n${current}`;
+        }
+        
+        // Verificación inicial
+        document.addEventListener('DOMContentLoaded', function() {
+            setTimeout(() => {
+                log(`🚀 Test page loaded`);
+                log(`Carrito disponible: ${!!window.shoppingCart}`);
+                log(`Singleton function: ${!!window.getShoppingCartInstance}`);
+                
+                if (window.shoppingCart) {
+                    showStatus();
+                }
+            }, 1000);
+        });
+        
+        // Log cuando se sale de la página
+        window.addEventListener('beforeunload', function() {
+            if (window.shoppingCart && window.shoppingCart.items) {
+                console.log(`📦 ANTES DE NAVEGAR: ${window.shoppingCart.items.length} items en carrito`);
+                window.shoppingCart.items.forEach(item => {
+                    console.log(`  - ${item.nombre} (${item.id})`);
+                });
+            }
+        });
+        
+        // Log cuando vuelve a la página (si se detecta)
+        window.addEventListener('pageshow', function(event) {
+            if (event.persisted) {
+                console.log('🔄 Página restaurada desde cache');
+                if (window.shoppingCart && window.shoppingCart.items) {
+                    console.log(`📦 DESPUÉS DE VOLVER: ${window.shoppingCart.items.length} items en carrito`);
+                }
+            }
+        });
+    </script>
+</body>
+</html>

@@ -1,0 +1,269 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Navegación Carrito</title>
+    <link rel="stylesheet" href="css/style.css">
+    <link rel="stylesheet" href="css/navbar.css">
+    <link rel="stylesheet" href="css/cart.css">
+    <style>
+        .test-section {
+            padding: 100px 20px 50px;
+            max-width: 1000px;
+            margin: 0 auto;
+            background: #f8f9fa;
+            border-radius: 10px;
+            margin-top: 20px;
+        }
+        .nav-button {
+            background: #007bff;
+            color: white;
+            border: none;
+            padding: 15px 25px;
+            border-radius: 6px;
+            cursor: pointer;
+            margin: 10px;
+            font-family: 'Montserrat', sans-serif;
+            font-size: 16px;
+            text-decoration: none;
+            display: inline-block;
+        }
+        .nav-button:hover {
+            background: #0056b3;
+        }
+        .test-button {
+            background: #28a745;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 6px;
+            cursor: pointer;
+            margin: 10px;
+            font-family: 'Montserrat', sans-serif;
+        }
+        .test-button:hover {
+            background: #1e7e34;
+        }
+        .debug-button {
+            background: #6c757d;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 6px;
+            cursor: pointer;
+            margin: 5px;
+            font-family: 'Montserrat', sans-serif;
+            font-size: 14px;
+        }
+        .status-display {
+            background: #d4edda;
+            border: 1px solid #c3e6cb;
+            color: #155724;
+            padding: 15px;
+            border-radius: 6px;
+            margin: 15px 0;
+            font-family: monospace;
+        }
+        .warning {
+            background: #fff3cd;
+            border-color: #ffeaa7;
+            color: #856404;
+        }
+        .error {
+            background: #f8d7da;
+            border-color: #f5c6cb;
+            color: #721c24;
+        }
+    </style>
+</head>
+<body>
+    <!-- Contenedor para la navbar -->
+    <div id="navbar-container"></div>
+    
+    <!-- Sección de pruebas -->
+    <section class="test-section">
+        <h1>🔄 Test de Navegación del Carrito</h1>
+        <p>Esta página permite probar que el carrito mantenga los productos al navegar entre páginas</p>
+        
+        <div class="status-display" id="statusDisplay">
+            Estado del carrito aparecerá aquí
+        </div>
+        
+        <div>
+            <h3>🛒 Acciones del Carrito</h3>
+            <button class="test-button" onclick="addTestProduct()">Agregar Producto de Prueba</button>
+            <button class="test-button" onclick="openCart()">Abrir Carrito</button>
+            <button class="test-button" onclick="updateStatus()">Actualizar Estado</button>
+        </div>
+        
+        <div>
+            <h3>🔄 Navegación</h3>
+            <a href="html/para_ellos.html" class="nav-button">Ir a Para Ellos</a>
+            <a href="html/para_ellas.html" class="nav-button">Ir a Para Ellas</a>
+            <a href="index.html" class="nav-button">Ir a Index</a>
+            <a href="test-persistencia-carrito.html" class="nav-button">Test Persistencia</a>
+        </div>
+        
+        <div>
+            <h3>🔧 Debug</h3>
+            <button class="debug-button" onclick="debugCart()">Debug Carrito</button>
+            <button class="debug-button" onclick="debugLocalStorage()">Debug localStorage</button>
+            <button class="debug-button" onclick="checkCartTime()">Ver Tiempo</button>
+            <button class="debug-button" onclick="showConsoleInfo()">Mostrar Info Console</button>
+        </div>
+        
+        <div>
+            <h3>📋 Instrucciones de Prueba</h3>
+            <ol>
+                <li><strong>Agregar producto:</strong> Haz clic en "Agregar Producto de Prueba"</li>
+                <li><strong>Verificar estado:</strong> El status debe mostrar 1 item en carrito</li>
+                <li><strong>Navegar:</strong> Ve a "Para Ellos" o "Para Ellas"</li>
+                <li><strong>Agregar más productos:</strong> Agrega productos desde esas páginas</li>
+                <li><strong>Regresar:</strong> Vuelve a esta página</li>
+                <li><strong>Verificar:</strong> Los productos deben seguir en el carrito</li>
+            </ol>
+        </div>
+    </section>
+
+    <!-- Scripts -->
+    <script src="js/cart.js"></script>
+    <script src="js/navbar.js"></script>
+    
+    <script>
+        function updateStatus() {
+            const display = document.getElementById('statusDisplay');
+            
+            if (!window.shoppingCart) {
+                display.innerHTML = '❌ Carrito no disponible';
+                display.className = 'status-display error';
+                return;
+            }
+            
+            const totalItems = window.shoppingCart.getTotalItems();
+            const totalValue = window.shoppingCart.getTotal();
+            const itemsDetail = window.shoppingCart.items.map(item => 
+                `${item.nombre} (${item.marca}) x${item.quantity}`
+            ).join('<br>');
+            
+            if (totalItems === 0) {
+                display.innerHTML = '📦 Carrito vacío';
+                display.className = 'status-display warning';
+            } else {
+                display.innerHTML = `
+                    ✅ Items en carrito: ${totalItems}<br>
+                    💰 Valor total: $${totalValue.toLocaleString()}<br>
+                    📋 Productos:<br>${itemsDetail}
+                `;
+                display.className = 'status-display';
+            }
+            
+            // Mostrar tiempo si está disponible
+            const timeInfo = window.shoppingCart.getCartTimeInfo ? window.shoppingCart.getCartTimeInfo() : null;
+            if (timeInfo && !timeInfo.expired) {
+                display.innerHTML += `<br>⏰ Expira en: ${timeInfo.remainingMinutes} minutos`;
+            }
+        }
+        
+        function addTestProduct() {
+            if (!window.shoppingCart) {
+                alert('❌ Carrito no disponible');
+                return;
+            }
+            
+            const testProduct = {
+                id: `test-nav-${Date.now()}`,
+                nombre: 'Producto Test Navegación',
+                marca: 'Test Brand',
+                precio: 50000,
+                categoria: 'para-ellos',
+                imagen_url: 'IMAGENES/PARA_ELLOS.png'
+            };
+            
+            window.shoppingCart.addItem(testProduct);
+            updateStatus();
+            console.log('✅ Producto de prueba agregado');
+        }
+        
+        function openCart() {
+            if (!window.shoppingCart) {
+                alert('❌ Carrito no disponible');
+                return;
+            }
+            
+            window.shoppingCart.openCart();
+        }
+        
+        function debugCart() {
+            if (!window.shoppingCart) {
+                console.log('❌ Carrito no disponible');
+                return;
+            }
+            
+            window.shoppingCart.debugCart();
+        }
+        
+        function debugLocalStorage() {
+            if (!window.shoppingCart || !window.shoppingCart.debugLocalStorage) {
+                console.log('❌ Método debugLocalStorage no disponible');
+                return;
+            }
+            
+            window.shoppingCart.debugLocalStorage();
+        }
+        
+        function showConsoleInfo() {
+            console.group('📊 INFORMACIÓN COMPLETA DEL CARRITO');
+            console.log('URL actual:', window.location.href);
+            console.log('Timestamp:', new Date().toLocaleString());
+            
+            if (window.shoppingCart) {
+                console.log('Carrito existe:', true);
+                console.log('Inicializado:', window.shoppingCart.isInitialized);
+                console.log('Items:', window.shoppingCart.items);
+                console.log('Total items:', window.shoppingCart.getTotalItems());
+            } else {
+                console.log('Carrito existe:', false);
+            }
+            
+            console.log('localStorage raw:', localStorage.getItem('shopping_cart'));
+            console.groupEnd();
+        }
+        
+        // Cargar la navbar y luego inicializar
+        document.addEventListener('DOMContentLoaded', function() {
+            fetch('html/navbar.html')
+                .then(response => response.text())
+                .then(data => {
+                    document.getElementById('navbar-container').innerHTML = data;
+                    
+                    // Ajustar rutas para navegación desde la raíz
+                    const navLinks = document.querySelectorAll('.navbar-menu a[href]:not([href^="http"]):not([href^="#"])');
+                    navLinks.forEach(link => {
+                        const currentHref = link.getAttribute('href');
+                        if (!currentHref.startsWith('html/') && currentHref !== 'index.html') {
+                            link.setAttribute('href', 'html/' + currentHref);
+                        }
+                    });
+                    
+                    // Inicializar navbar
+                    if (typeof initNavbar === 'function') {
+                        setTimeout(initNavbar, 100);
+                    }
+                    
+                    // Actualizar status después de cargar
+                    setTimeout(() => {
+                        updateStatus();
+                        showConsoleInfo();
+                        
+                        // Actualizar cada 30 segundos
+                        setInterval(updateStatus, 30000);
+                    }, 1000);
+                })
+                .catch(error => {
+                    console.error('Error cargando navbar:', error);
+                });
+        });
+    </script>
+</body>
+</html>

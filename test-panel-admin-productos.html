@@ -1,0 +1,478 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Panel Admin - Consumo de Productos</title>
+    <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+    <link rel="stylesheet" href="../css/admin-panel.css">
+    <style>
+        .test-container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        .test-panel {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+        }
+        .test-header {
+            border-bottom: 2px solid #3498db;
+            padding-bottom: 10px;
+            margin-bottom: 20px;
+        }
+        .test-buttons {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+        .test-button {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+            background: #3498db;
+            color: white;
+        }
+        .test-button:hover {
+            background: #2980b9;
+        }
+        .test-button.success {
+            background: #27ae60;
+        }
+        .test-button.error {
+            background: #e74c3c;
+        }
+        .test-results {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 4px;
+            border: 1px solid #dee2e6;
+            margin-top: 10px;
+        }
+        .console-output {
+            background: #2c3e50;
+            color: #ecf0f1;
+            padding: 15px;
+            border-radius: 4px;
+            font-family: monospace;
+            font-size: 12px;
+            height: 200px;
+            overflow-y: auto;
+            white-space: pre-wrap;
+        }
+        .admin-preview {
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            padding: 10px;
+            margin-top: 10px;
+            max-height: 400px;
+            overflow-y: auto;
+        }
+        .product-mini-card {
+            display: flex;
+            align-items: center;
+            padding: 10px;
+            border: 1px solid #eee;
+            border-radius: 4px;
+            margin-bottom: 5px;
+            background: #fafafa;
+        }
+        .product-mini-image {
+            width: 50px;
+            height: 50px;
+            object-fit: cover;
+            border-radius: 4px;
+            margin-right: 10px;
+        }
+        .product-mini-info {
+            flex: 1;
+        }
+        .status-indicator {
+            display: inline-block;
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            margin-right: 5px;
+        }
+        .status-success {
+            background: #27ae60;
+        }
+        .status-error {
+            background: #e74c3c;
+        }
+        .status-warning {
+            background: #f39c12;
+        }
+        .metrics {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+        .metric-card {
+            background: #fff;
+            padding: 15px;
+            border-radius: 4px;
+            border: 1px solid #ddd;
+            text-align: center;
+        }
+        .metric-number {
+            font-size: 24px;
+            font-weight: bold;
+            color: #3498db;
+        }
+        .metric-label {
+            font-size: 12px;
+            color: #666;
+            margin-top: 5px;
+        }
+    </style>
+</head>
+<body>
+    <div class="test-container">
+        <div class="test-panel">
+            <div class="test-header">
+                <h1>🔍 Test Panel Admin - Consumo de Productos</h1>
+                <p>Verificación del consumo de productos desde la base de datos</p>
+            </div>
+            
+            <div class="test-buttons">
+                <button class="test-button" onclick="testConnection()">🔗 Test Conexión</button>
+                <button class="test-button" onclick="loadAdminPanel()">🚀 Cargar Panel</button>
+                <button class="test-button" onclick="testProductsLoading()">📦 Test Productos</button>
+                <button class="test-button" onclick="testFullWorkflow()">🔄 Test Completo</button>
+                <button class="test-button" onclick="clearConsole()">🧹 Limpiar</button>
+            </div>
+            
+            <div class="metrics">
+                <div class="metric-card">
+                    <div class="metric-number" id="connectionStatus">-</div>
+                    <div class="metric-label">Conexión</div>
+                </div>
+                <div class="metric-card">
+                    <div class="metric-number" id="panelStatus">-</div>
+                    <div class="metric-label">Panel</div>
+                </div>
+                <div class="metric-card">
+                    <div class="metric-number" id="productsCount">-</div>
+                    <div class="metric-label">Productos</div>
+                </div>
+                <div class="metric-card">
+                    <div class="metric-number" id="loadTime">-</div>
+                    <div class="metric-label">Tiempo (ms)</div>
+                </div>
+            </div>
+            
+            <div class="console-output" id="consoleOutput"></div>
+        </div>
+        
+        <div class="test-panel">
+            <div class="test-header">
+                <h2>📊 Vista Previa del Panel Admin</h2>
+            </div>
+            <div class="admin-preview" id="adminPreview">
+                <p>Cargar el panel de administración para ver la vista previa...</p>
+            </div>
+        </div>
+        
+        <div class="test-panel">
+            <div class="test-header">
+                <h2>🔧 Diagnóstico Detallado</h2>
+            </div>
+            <div class="test-results" id="diagnosticResults">
+                <p>Ejecutar tests para ver diagnóstico detallado...</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Cargar scripts del panel admin -->
+    <script src="../js/supabase-config-optimized.js"></script>
+    <script src="../js/admin-panel-new.js"></script>
+    <script src="../diagnostico-panel-admin.js"></script>
+    
+    <script>
+        // Variables para el test
+        let testResults = {
+            connection: false,
+            panel: false,
+            products: [],
+            loadTime: 0
+        };
+
+        // Función para log en consola
+        function log(message, type = 'info') {
+            const timestamp = new Date().toLocaleTimeString();
+            const consoleOutput = document.getElementById('consoleOutput');
+            const line = `[${timestamp}] ${message}\n`;
+            consoleOutput.textContent += line;
+            consoleOutput.scrollTop = consoleOutput.scrollHeight;
+            
+            console.log(message);
+        }
+
+        // Función para actualizar métricas
+        function updateMetric(id, value, type = 'info') {
+            const element = document.getElementById(id);
+            if (element) {
+                element.textContent = value;
+                element.className = `metric-number ${type}`;
+            }
+        }
+
+        // Test de conexión
+        async function testConnection() {
+            log('🔍 Probando conexión a base de datos...');
+            
+            try {
+                if (typeof supabaseClient === 'undefined') {
+                    throw new Error('Cliente Supabase no disponible');
+                }
+                
+                const { data, error } = await supabaseClient
+                    .from('productos')
+                    .select('count(*)')
+                    .limit(1);
+                
+                if (error) throw error;
+                
+                testResults.connection = true;
+                log('✅ Conexión exitosa');
+                updateMetric('connectionStatus', '✅');
+                
+            } catch (error) {
+                testResults.connection = false;
+                log(`❌ Error de conexión: ${error.message}`);
+                updateMetric('connectionStatus', '❌');
+            }
+        }
+
+        // Cargar panel de administración
+        async function loadAdminPanel() {
+            log('🚀 Cargando panel de administración...');
+            
+            try {
+                // Verificar que la clase esté disponible
+                if (typeof AdminPanel === 'undefined') {
+                    throw new Error('Clase AdminPanel no disponible');
+                }
+                
+                // Crear instancia si no existe
+                if (!window.adminPanel) {
+                    window.adminPanel = new AdminPanel();
+                    log('✅ Panel de administración creado');
+                }
+                
+                // Esperar a que se inicialice
+                await new Promise(resolve => setTimeout(resolve, 2000));
+                
+                testResults.panel = true;
+                log('✅ Panel de administración cargado');
+                updateMetric('panelStatus', '✅');
+                
+                // Mostrar estado del panel
+                if (window.adminPanel) {
+                    log(`📊 Productos en panel: ${window.adminPanel.productos.length}`);
+                    log(`📊 Datos cargados: ${window.adminPanel.dataLoaded}`);
+                    log(`📊 Sección actual: ${window.adminPanel.currentSection}`);
+                }
+                
+            } catch (error) {
+                testResults.panel = false;
+                log(`❌ Error cargando panel: ${error.message}`);
+                updateMetric('panelStatus', '❌');
+            }
+        }
+
+        // Test de carga de productos
+        async function testProductsLoading() {
+            log('📦 Probando carga de productos...');
+            
+            try {
+                const startTime = Date.now();
+                
+                // Método 1: Servicio optimizado
+                if (typeof ProductosServiceOptimized !== 'undefined') {
+                    log('🔄 Usando ProductosServiceOptimized...');
+                    const products1 = await ProductosServiceOptimized.obtenerProductosOptimizado();
+                    log(`✅ Método 1: ${products1.length} productos cargados`);
+                    testResults.products = products1;
+                } else {
+                    log('⚠️ ProductosServiceOptimized no disponible');
+                }
+                
+                // Método 2: Panel de administración
+                if (window.adminPanel && typeof window.adminPanel.loadProductos === 'function') {
+                    log('🔄 Usando panel de administración...');
+                    await window.adminPanel.loadProductos();
+                    log(`✅ Método 2: ${window.adminPanel.productos.length} productos en panel`);
+                } else {
+                    log('⚠️ Panel de administración no disponible');
+                }
+                
+                // Método 3: Consulta directa
+                if (typeof supabaseClient !== 'undefined') {
+                    log('🔄 Consulta directa a base de datos...');
+                    const { data, error } = await supabaseClient
+                        .from('productos')
+                        .select('*')
+                        .limit(10);
+                    
+                    if (error) throw error;
+                    
+                    log(`✅ Método 3: ${data.length} productos (muestra) cargados`);
+                } else {
+                    log('⚠️ Cliente Supabase no disponible');
+                }
+                
+                const endTime = Date.now();
+                testResults.loadTime = endTime - startTime;
+                
+                log(`⏱️ Tiempo total: ${testResults.loadTime}ms`);
+                updateMetric('productsCount', testResults.products.length);
+                updateMetric('loadTime', testResults.loadTime);
+                
+                // Mostrar productos en vista previa
+                showProductsPreview(testResults.products);
+                
+            } catch (error) {
+                log(`❌ Error cargando productos: ${error.message}`);
+                updateMetric('productsCount', '❌');
+            }
+        }
+
+        // Mostrar productos en vista previa
+        function showProductsPreview(products) {
+            const preview = document.getElementById('adminPreview');
+            
+            if (!products || products.length === 0) {
+                preview.innerHTML = '<p>No se encontraron productos.</p>';
+                return;
+            }
+            
+            let html = `<h3>Productos encontrados (${products.length}):</h3>`;
+            
+            products.slice(0, 10).forEach(product => {
+                const imageUrl = product.imagen_principal || product.imagen || product.imagen_url || 'https://via.placeholder.com/50';
+                const hasImage = imageUrl && imageUrl !== 'null';
+                
+                html += `
+                    <div class="product-mini-card">
+                        <img src="${imageUrl}" alt="${product.nombre}" class="product-mini-image" 
+                             onerror="this.src='https://via.placeholder.com/50'">
+                        <div class="product-mini-info">
+                            <strong>${product.nombre || 'Sin nombre'}</strong><br>
+                            <small>${product.marca || 'Sin marca'} - $${product.precio || 0}</small><br>
+                            <small>
+                                <span class="status-indicator ${product.activo !== false ? 'status-success' : 'status-error'}"></span>
+                                ${product.categoria || 'Sin categoría'}
+                                ${hasImage ? '🖼️' : '❌'}
+                            </small>
+                        </div>
+                    </div>
+                `;
+            });
+            
+            if (products.length > 10) {
+                html += `<p><small>... y ${products.length - 10} productos más</small></p>`;
+            }
+            
+            preview.innerHTML = html;
+        }
+
+        // Test completo del flujo
+        async function testFullWorkflow() {
+            log('🔄 Iniciando test completo del flujo...');
+            
+            // Limpiar resultados anteriores
+            testResults = {
+                connection: false,
+                panel: false,
+                products: [],
+                loadTime: 0
+            };
+            
+            // Ejecutar tests en secuencia
+            await testConnection();
+            await new Promise(resolve => setTimeout(resolve, 500));
+            
+            await loadAdminPanel();
+            await new Promise(resolve => setTimeout(resolve, 500));
+            
+            await testProductsLoading();
+            await new Promise(resolve => setTimeout(resolve, 500));
+            
+            // Mostrar diagnóstico final
+            showDiagnostic();
+            
+            log('✅ Test completo finalizado');
+        }
+
+        // Mostrar diagnóstico
+        function showDiagnostic() {
+            const diagnosticResults = document.getElementById('diagnosticResults');
+            
+            const html = `
+                <h3>📋 Resultados del Diagnóstico</h3>
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 15px;">
+                    <div>
+                        <h4>🔗 Conexión a Base de Datos</h4>
+                        <p><span class="status-indicator ${testResults.connection ? 'status-success' : 'status-error'}"></span>
+                        ${testResults.connection ? 'Exitosa' : 'Fallida'}</p>
+                    </div>
+                    <div>
+                        <h4>🚀 Panel de Administración</h4>
+                        <p><span class="status-indicator ${testResults.panel ? 'status-success' : 'status-error'}"></span>
+                        ${testResults.panel ? 'Cargado' : 'No cargado'}</p>
+                    </div>
+                    <div>
+                        <h4>📦 Carga de Productos</h4>
+                        <p><span class="status-indicator ${testResults.products.length > 0 ? 'status-success' : 'status-error'}"></span>
+                        ${testResults.products.length} productos</p>
+                    </div>
+                    <div>
+                        <h4>⏱️ Rendimiento</h4>
+                        <p><span class="status-indicator ${testResults.loadTime < 2000 ? 'status-success' : 'status-warning'}"></span>
+                        ${testResults.loadTime}ms</p>
+                    </div>
+                </div>
+                
+                <h4>🔧 Dependencias</h4>
+                <ul>
+                    <li>Supabase: ${typeof window.supabase !== 'undefined' ? '✅' : '❌'}</li>
+                    <li>Cliente Supabase: ${typeof supabaseClient !== 'undefined' ? '✅' : '❌'}</li>
+                    <li>ProductosServiceOptimized: ${typeof ProductosServiceOptimized !== 'undefined' ? '✅' : '❌'}</li>
+                    <li>AdminPanel: ${typeof AdminPanel !== 'undefined' ? '✅' : '❌'}</li>
+                    <li>Instancia AdminPanel: ${typeof window.adminPanel !== 'undefined' ? '✅' : '❌'}</li>
+                </ul>
+                
+                <h4>📊 Estado General</h4>
+                <p style="font-size: 18px; font-weight: bold; color: ${testResults.connection && testResults.panel && testResults.products.length > 0 ? '#27ae60' : '#e74c3c'};">
+                    ${testResults.connection && testResults.panel && testResults.products.length > 0 ? '✅ FUNCIONANDO CORRECTAMENTE' : '❌ REQUIERE ATENCIÓN'}
+                </p>
+            `;
+            
+            diagnosticResults.innerHTML = html;
+        }
+
+        // Limpiar consola
+        function clearConsole() {
+            document.getElementById('consoleOutput').textContent = '';
+            log('🧹 Consola limpiada');
+        }
+
+        // Inicializar automáticamente
+        window.addEventListener('load', () => {
+            log('🚀 Test de panel admin iniciado');
+            
+            // Ejecutar test básico automáticamente
+            setTimeout(testFullWorkflow, 1000);
+        });
+    </script>
+</body>
+</html>

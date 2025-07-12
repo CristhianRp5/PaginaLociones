@@ -7,6 +7,7 @@
     <!-- Asegurarnos de que los estilos se cargan en el orden correcto -->
     <link rel="stylesheet" href="css/style.css">
     <link rel="stylesheet" href="css/navbar.css">
+    <link rel="stylesheet" href="css/cart.css">
 </head>
 <body>
     <!-- Contenedor para la navbar -->
@@ -44,6 +45,9 @@
     </section>
 
     <!-- Cargar los scripts en el orden correcto -->
+    <script src="js/cart.js"></script>
+    <script src="js/cart-error-fixes.js"></script>
+    <script src="js/limpiar-productos-prueba.js"></script>
     <script src="js/navbar.js"></script>
     <script src="js/app.js"></script>
     <script>
@@ -84,6 +88,42 @@
                     } else {
                         console.error('Error: función initNavbar no encontrada');
                     }
+                    
+                    // Inicializar el carrito después de cargar la navbar
+                    setTimeout(() => {
+                        // Usar función singleton para obtener/crear instancia única
+                        if (typeof window.getShoppingCartInstance === 'function') {
+                            console.log('🛒 Obteniendo instancia del carrito desde index.html...');
+                            window.getShoppingCartInstance();
+                        } else if (typeof window.shoppingCart === 'undefined') {
+                            console.log('🛒 Fallback: Inicializando carrito desde index.html...');
+                            if (typeof ShoppingCart !== 'undefined') {
+                                window.shoppingCart = new ShoppingCart();
+                            } else {
+                                console.warn('⚠️ Clase ShoppingCart no disponible');
+                            }
+                        }
+                        
+                        // Reconfigurar event listeners del carrito para el nuevo botón
+                        if (window.shoppingCart && typeof window.shoppingCart.reconfigureEventListeners === 'function') {
+                            window.shoppingCart.reconfigureEventListeners();
+                            console.log('🔄 Event listeners del carrito reconfigurados');
+                        }
+                        
+                        // Verificar que el carrito esté funcionando
+                        if (window.shoppingCart && typeof window.shoppingCart.debugCart === 'function') {
+                            window.shoppingCart.debugCart();
+                        }
+                        
+                        // Verificar específicamente el botón del carrito
+                        const cartButton = document.getElementById('cartButton');
+                        if (cartButton) {
+                            console.log('✅ Botón del carrito encontrado:', cartButton);
+                            console.log('🔧 Event listeners del botón:', getEventListeners ? getEventListeners(cartButton) : 'No disponible');
+                        } else {
+                            console.warn('⚠️ Botón del carrito NO encontrado después de cargar navbar');
+                        }
+                    }, 500);
                 })
                 .catch(error => {
                     console.error('Error:', error);

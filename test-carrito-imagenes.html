@@ -1,0 +1,215 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Carrito - Imágenes</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            background: #f5f5f5;
+        }
+        .test-container {
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background: white;
+            border-radius: 8px;
+        }
+        .test-section {
+            margin: 20px 0;
+            padding: 15px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+        }
+        .test-button {
+            padding: 10px 20px;
+            margin: 5px;
+            background: #007bff;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        .test-button:hover {
+            background: #0056b3;
+        }
+        .result {
+            margin: 10px 0;
+            padding: 10px;
+            background: #f8f9fa;
+            border-radius: 3px;
+        }
+        .success { background: #d4edda; color: #155724; }
+        .error { background: #f8d7da; color: #721c24; }
+        .warning { background: #fff3cd; color: #856404; }
+    </style>
+</head>
+<body>
+    <div class="test-container">
+        <h1>🧪 Test de Imágenes en el Carrito</h1>
+        <p>Este test verifica que las imágenes se cargan correctamente en el carrito desde ambas páginas.</p>
+
+        <div class="test-section">
+            <h3>📦 Estado del Sistema</h3>
+            <div id="systemStatus" class="result">Verificando...</div>
+            <button class="test-button" onclick="checkSystemStatus()">Verificar Sistema</button>
+        </div>
+
+        <div class="test-section">
+            <h3>🛒 Test de Carrito</h3>
+            <div id="cartStatus" class="result">No verificado</div>
+            <button class="test-button" onclick="testCart()">Test Carrito</button>
+            <button class="test-button" onclick="clearCart()">Limpiar Carrito</button>
+        </div>
+
+        <div class="test-section">
+            <h3>👩 Test Producto Para Ellas</h3>
+            <div id="ellasStatus" class="result">No probado</div>
+            <button class="test-button" onclick="testEllasProduct()">Agregar Producto Para Ellas</button>
+        </div>
+
+        <div class="test-section">
+            <h3>👨 Test Producto Para Ellos</h3>
+            <div id="ellosStatus" class="result">No probado</div>
+            <button class="test-button" onclick="testEllosProduct()">Agregar Producto Para Ellos</button>
+        </div>
+
+        <div class="test-section">
+            <h3>🖼️ Vista del Carrito</h3>
+            <div id="cartPreview" class="result">
+                <p>El carrito aparecerá aquí cuando agregues productos</p>
+            </div>
+            <button class="test-button" onclick="showCartContents()">Mostrar Contenido</button>
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <script src="js/cart.js"></script>
+    <script>
+        // Inicializar carrito si no existe
+        if (typeof window.shoppingCart === 'undefined') {
+            window.shoppingCart = new ShoppingCart();
+        }
+
+        function updateStatus(elementId, message, type = '') {
+            const element = document.getElementById(elementId);
+            element.textContent = message;
+            element.className = `result ${type}`;
+        }
+
+        function checkSystemStatus() {
+            let status = '✅ Sistema verificado:\n';
+            
+            status += `- ShoppingCart class: ${typeof ShoppingCart !== 'undefined' ? '✅' : '❌'}\n`;
+            status += `- window.shoppingCart: ${typeof window.shoppingCart !== 'undefined' ? '✅' : '❌'}\n`;
+            status += `- Cart items: ${window.shoppingCart ? window.shoppingCart.items.length : 0}\n`;
+            
+            updateStatus('systemStatus', status, 'success');
+        }
+
+        function testCart() {
+            try {
+                if (!window.shoppingCart) {
+                    updateStatus('cartStatus', '❌ Carrito no disponible', 'error');
+                    return;
+                }
+
+                const itemCount = window.shoppingCart.getTotalItems();
+                const total = window.shoppingCart.getTotal();
+                
+                updateStatus('cartStatus', `✅ Carrito funcional: ${itemCount} items, Total: $${window.shoppingCart.formatPrice(total)}`, 'success');
+            } catch (error) {
+                updateStatus('cartStatus', `❌ Error: ${error.message}`, 'error');
+            }
+        }
+
+        function clearCart() {
+            try {
+                if (window.shoppingCart) {
+                    window.shoppingCart.items = [];
+                    window.shoppingCart.saveToStorage();
+                    updateStatus('cartStatus', '🗑️ Carrito limpiado', 'warning');
+                    showCartContents();
+                }
+            } catch (error) {
+                updateStatus('cartStatus', `❌ Error limpiando: ${error.message}`, 'error');
+            }
+        }
+
+        function testEllasProduct() {
+            try {
+                const testProduct = {
+                    id: 'test-ellas-' + Date.now(),
+                    nombre: 'Test Perfume Femenino',
+                    marca: 'Test Brand',
+                    precio: 150000,
+                    categoria: 'para-ellas',
+                    imagen_url: '../IMAGENES/PARA_ELLAS.png',
+                    ml: 100
+                };
+
+                window.shoppingCart.addItem(testProduct);
+                updateStatus('ellasStatus', `✅ Producto para ellas agregado: ${testProduct.nombre}`, 'success');
+                showCartContents();
+            } catch (error) {
+                updateStatus('ellasStatus', `❌ Error: ${error.message}`, 'error');
+            }
+        }
+
+        function testEllosProduct() {
+            try {
+                const testProduct = {
+                    id: 'test-ellos-' + Date.now(),
+                    nombre: 'Test Perfume Masculino',
+                    marca: 'Test Brand',
+                    precio: 180000,
+                    categoria: 'para-ellos',
+                    imagen_url: '../IMAGENES/PARA_ELLOS.png',
+                    ml: 100
+                };
+
+                window.shoppingCart.addItem(testProduct);
+                updateStatus('ellosStatus', `✅ Producto para ellos agregado: ${testProduct.nombre}`, 'success');
+                showCartContents();
+            } catch (error) {
+                updateStatus('ellosStatus', `❌ Error: ${error.message}`, 'error');
+            }
+        }
+
+        function showCartContents() {
+            try {
+                if (!window.shoppingCart || window.shoppingCart.items.length === 0) {
+                    updateStatus('cartPreview', '🛒 Carrito vacío', 'warning');
+                    return;
+                }
+
+                let preview = '<h4>Contenido del carrito:</h4>';
+                window.shoppingCart.items.forEach((item, index) => {
+                    preview += `
+                        <div style="border: 1px solid #ddd; margin: 5px 0; padding: 10px; border-radius: 3px;">
+                            <strong>${item.nombre}</strong> (${item.marca})<br>
+                            <small>Categoría: ${item.categoria || 'N/A'}</small><br>
+                            <small>Imagen: ${item.imagen_url || item.imagen || 'Sin imagen'}</small><br>
+                            <small>Precio: $${window.shoppingCart.formatPrice(item.precio)} x ${item.quantity}</small>
+                        </div>
+                    `;
+                });
+
+                document.getElementById('cartPreview').innerHTML = preview;
+            } catch (error) {
+                updateStatus('cartPreview', `❌ Error mostrando carrito: ${error.message}`, 'error');
+            }
+        }
+
+        // Auto-verificar al cargar
+        document.addEventListener('DOMContentLoaded', function() {
+            setTimeout(() => {
+                checkSystemStatus();
+                testCart();
+            }, 500);
+        });
+    </script>
+</body>
+</html>

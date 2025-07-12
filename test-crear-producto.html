@@ -1,0 +1,419 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test - Crear/Actualizar Producto</title>
+    <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+        }
+        h1 {
+            color: #333;
+            text-align: center;
+        }
+        .form-group {
+            margin-bottom: 15px;
+        }
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+            color: #555;
+        }
+        input, textarea, select {
+            width: 100%;
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            box-sizing: border-box;
+        }
+        textarea {
+            height: 80px;
+            resize: vertical;
+        }
+        button {
+            background: #3498db;
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+            margin-right: 10px;
+        }
+        button:hover {
+            background: #2980b9;
+        }
+        .btn-success {
+            background: #27ae60;
+        }
+        .btn-success:hover {
+            background: #219a52;
+        }
+        .btn-warning {
+            background: #f39c12;
+        }
+        .btn-warning:hover {
+            background: #e67e22;
+        }
+        .status {
+            padding: 10px;
+            border-radius: 4px;
+            margin: 10px 0;
+            font-weight: bold;
+        }
+        .status.success {
+            background: #d4edda;
+            color: #155724;
+        }
+        .status.error {
+            background: #f8d7da;
+            color: #721c24;
+        }
+        .status.warning {
+            background: #fff3cd;
+            color: #856404;
+        }
+        .status.info {
+            background: #d1ecf1;
+            color: #0c5460;
+        }
+        .log-container {
+            background: #2c3e50;
+            color: #ecf0f1;
+            padding: 15px;
+            border-radius: 4px;
+            height: 300px;
+            overflow-y: auto;
+            font-family: monospace;
+            font-size: 12px;
+            line-height: 1.4;
+        }
+        .image-preview {
+            max-width: 200px;
+            max-height: 200px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            margin: 10px 0;
+            display: block;
+        }
+        .verification-section {
+            margin-top: 20px;
+            padding: 15px;
+            background: #f8f9fa;
+            border-radius: 4px;
+            border: 1px solid #dee2e6;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🧪 Test - Crear/Actualizar Producto</h1>
+        
+        <form id="productForm">
+            <div class="form-group">
+                <label for="nombre">Nombre del Producto:</label>
+                <input type="text" id="nombre" name="nombre" required>
+            </div>
+            
+            <div class="form-group">
+                <label for="precio">Precio:</label>
+                <input type="number" id="precio" name="precio" step="0.01" required>
+            </div>
+            
+            <div class="form-group">
+                <label for="descripcion">Descripción:</label>
+                <textarea id="descripcion" name="descripcion"></textarea>
+            </div>
+            
+            <div class="form-group">
+                <label for="imagen_url">URL de Imagen:</label>
+                <input type="url" id="imagen_url" name="imagen_url" placeholder="https://ejemplo.com/imagen.jpg">
+                <small>Ejemplos de URLs válidas:</small>
+                <ul>
+                    <li>https://via.placeholder.com/300x300/3498db/ffffff?text=Producto</li>
+                    <li>https://picsum.photos/300/300</li>
+                    <li>https://images.unsplash.com/photo-1560472354-b33ff0c44a43?w=300&h=300</li>
+                </ul>
+            </div>
+            
+            <div class="form-group">
+                <label for="activo">Estado:</label>
+                <select id="activo" name="activo">
+                    <option value="true">Activo</option>
+                    <option value="false">Inactivo</option>
+                </select>
+            </div>
+            
+            <button type="submit">💾 Crear Producto</button>
+            <button type="button" onclick="limpiarFormulario()">🧹 Limpiar</button>
+            <button type="button" onclick="probarURLs()">🔗 Probar URLs de Ejemplo</button>
+        </form>
+        
+        <div id="imagePreview" style="display: none;">
+            <h3>Vista previa de imagen:</h3>
+            <img id="previewImg" class="image-preview" alt="Vista previa">
+        </div>
+        
+        <div class="verification-section">
+            <h3>🔍 Verificación de Imagen</h3>
+            <div id="verificationResult"></div>
+        </div>
+    </div>
+
+    <div class="container">
+        <h2>📋 Log de Actividad</h2>
+        <button onclick="limpiarLog()">🧹 Limpiar Log</button>
+        <div id="logContainer" class="log-container"></div>
+    </div>
+
+    <script src="js/supabase-config-optimized.js"></script>
+    <script>
+        // Variables globales
+        let productosCreados = [];
+        
+        // Función de logging
+        function log(message, type = 'info') {
+            const timestamp = new Date().toLocaleTimeString();
+            const logElement = document.getElementById('logContainer');
+            const logEntry = document.createElement('div');
+            logEntry.innerHTML = `<span style="color: #7f8c8d;">[${timestamp}]</span> ${message}`;
+            logElement.appendChild(logEntry);
+            logElement.scrollTop = logElement.scrollHeight;
+            
+            console.log(`[${type.toUpperCase()}] ${message}`);
+        }
+        
+        // Función para limpiar log
+        function limpiarLog() {
+            document.getElementById('logContainer').innerHTML = '';
+            log('🧹 Log limpiado');
+        }
+        
+        // Función para limpiar formulario
+        function limpiarFormulario() {
+            document.getElementById('productForm').reset();
+            document.getElementById('imagePreview').style.display = 'none';
+            document.getElementById('verificationResult').innerHTML = '';
+            log('🧹 Formulario limpiado');
+        }
+        
+        // Función para probar URLs de ejemplo
+        function probarURLs() {
+            const urls = [
+                'https://via.placeholder.com/300x300/3498db/ffffff?text=Producto+Test',
+                'https://picsum.photos/300/300',
+                'https://images.unsplash.com/photo-1560472354-b33ff0c44a43?w=300&h=300&fit=crop'
+            ];
+            
+            const randomUrl = urls[Math.floor(Math.random() * urls.length)];
+            document.getElementById('imagen_url').value = randomUrl;
+            
+            // Generar datos de prueba
+            const timestamp = new Date().getTime();
+            document.getElementById('nombre').value = `Producto Test ${timestamp}`;
+            document.getElementById('precio').value = (Math.random() * 100 + 10).toFixed(2);
+            document.getElementById('descripcion').value = `Descripción del producto de prueba generado automáticamente`;
+            
+            log(`🔗 URL de prueba asignada: ${randomUrl}`);
+            
+            // Previsualizar imagen
+            previsualizarImagen(randomUrl);
+        }
+        
+        // Función para previsualizar imagen
+        function previsualizarImagen(url) {
+            const preview = document.getElementById('imagePreview');
+            const img = document.getElementById('previewImg');
+            
+            img.onload = function() {
+                preview.style.display = 'block';
+                log(`✅ Imagen cargada correctamente: ${url}`);
+            };
+            
+            img.onerror = function() {
+                preview.style.display = 'none';
+                log(`❌ Error cargando imagen: ${url}`, 'error');
+            };
+            
+            img.src = url;
+        }
+        
+        // Función para obtener imagen del producto (lógica de prioridad)
+        function obtenerImagenProducto(producto) {
+            if (!producto) return 'IMAGENES/placeholder-simple.svg';
+            
+            // 1. Priorizar imagen_url (campo nuevo)
+            if (producto.imagen_url && producto.imagen_url.trim() !== '') {
+                return producto.imagen_url;
+            }
+            
+            // 2. Usar imagen como fallback (campo legacy)
+            if (producto.imagen && producto.imagen.trim() !== '') {
+                return producto.imagen;
+            }
+            
+            // 3. Placeholder por defecto
+            return 'IMAGENES/placeholder-simple.svg';
+        }
+        
+        // Función para verificar imagen guardada
+        async function verificarImagenGuardada(productId, expectedUrl) {
+            try {
+                log(`🔍 Verificando imagen guardada para producto ID: ${productId}`);
+                
+                const { data: producto, error } = await supabaseClient
+                    .from('productos')
+                    .select('id, nombre, imagen, imagen_url')
+                    .eq('id', productId)
+                    .single();
+                
+                if (error) {
+                    throw error;
+                }
+                
+                const imagenFinal = obtenerImagenProducto(producto);
+                
+                const resultado = {
+                    producto: producto,
+                    imagenFinal: imagenFinal,
+                    esPlaceholder: imagenFinal === 'IMAGENES/placeholder-simple.svg',
+                    urlEsperada: expectedUrl,
+                    coincide: imagenFinal === expectedUrl
+                };
+                
+                log(`📊 Resultado de verificación:`, JSON.stringify(resultado, null, 2));
+                
+                // Mostrar resultado en la UI
+                const resultDiv = document.getElementById('verificationResult');
+                resultDiv.innerHTML = `
+                    <div class="status ${resultado.coincide ? 'success' : 'warning'}">
+                        <strong>Verificación ${resultado.coincide ? 'exitosa' : 'con advertencias'}</strong><br>
+                        <strong>Producto:</strong> ${producto.nombre}<br>
+                        <strong>Campo imagen:</strong> ${producto.imagen ? 'Presente' : 'Ausente'}<br>
+                        <strong>Campo imagen_url:</strong> ${producto.imagen_url ? 'Presente' : 'Ausente'}<br>
+                        <strong>Imagen final:</strong> ${imagenFinal}<br>
+                        <strong>URL esperada:</strong> ${expectedUrl}<br>
+                        <strong>Coincide:</strong> ${resultado.coincide ? 'Sí' : 'No'}
+                    </div>
+                `;
+                
+                return resultado;
+                
+            } catch (error) {
+                log(`❌ Error en verificación: ${error.message}`, 'error');
+                
+                const resultDiv = document.getElementById('verificationResult');
+                resultDiv.innerHTML = `
+                    <div class="status error">
+                        <strong>Error en verificación:</strong> ${error.message}
+                    </div>
+                `;
+                
+                return { error: error.message };
+            }
+        }
+        
+        // Manejar envío del formulario
+        document.getElementById('productForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            const formData = new FormData(e.target);
+            const productData = {
+                nombre: formData.get('nombre'),
+                precio: parseFloat(formData.get('precio')),
+                descripcion: formData.get('descripcion'),
+                imagen_url: formData.get('imagen_url'),
+                activo: formData.get('activo') === 'true'
+            };
+            
+            // También asignar a imagen para compatibilidad
+            if (productData.imagen_url) {
+                productData.imagen = productData.imagen_url;
+            }
+            
+            log('📦 Datos del producto a crear:', JSON.stringify(productData, null, 2));
+            
+            try {
+                log('💾 Guardando producto en base de datos...');
+                
+                const { data, error } = await supabaseClient
+                    .from('productos')
+                    .insert([productData])
+                    .select()
+                    .single();
+                
+                if (error) {
+                    throw error;
+                }
+                
+                log(`✅ Producto creado exitosamente con ID: ${data.id}`);
+                productosCreados.push(data);
+                
+                // Verificar imagen después de un momento
+                if (productData.imagen_url) {
+                    setTimeout(async () => {
+                        await verificarImagenGuardada(data.id, productData.imagen_url);
+                    }, 1000);
+                }
+                
+                // Limpiar formulario
+                limpiarFormulario();
+                
+                // Mostrar mensaje de éxito
+                const successDiv = document.createElement('div');
+                successDiv.className = 'status success';
+                successDiv.innerHTML = `<strong>✅ Producto creado exitosamente!</strong><br>ID: ${data.id}<br>Nombre: ${data.nombre}`;
+                document.querySelector('.container').appendChild(successDiv);
+                
+                // Remover mensaje después de 5 segundos
+                setTimeout(() => {
+                    successDiv.remove();
+                }, 5000);
+                
+            } catch (error) {
+                log(`❌ Error creando producto: ${error.message}`, 'error');
+                
+                const errorDiv = document.createElement('div');
+                errorDiv.className = 'status error';
+                errorDiv.innerHTML = `<strong>❌ Error:</strong> ${error.message}`;
+                document.querySelector('.container').appendChild(errorDiv);
+                
+                // Remover mensaje después de 5 segundos
+                setTimeout(() => {
+                    errorDiv.remove();
+                }, 5000);
+            }
+        });
+        
+        // Previsualizar imagen cuando cambie la URL
+        document.getElementById('imagen_url').addEventListener('change', function(e) {
+            const url = e.target.value;
+            if (url) {
+                previsualizarImagen(url);
+            } else {
+                document.getElementById('imagePreview').style.display = 'none';
+            }
+        });
+        
+        // Inicializar
+        window.addEventListener('load', () => {
+            log('🚀 Test de creación de productos iniciado');
+            log('📋 Completa el formulario y haz clic en "Crear Producto"');
+        });
+    </script>
+</body>
+</html>
