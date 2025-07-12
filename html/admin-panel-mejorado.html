@@ -1,0 +1,443 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Panel de Administración - Sistema de Lociones</title>
+    <link rel="stylesheet" href="../css/admin-panel-mejorado.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body>
+    <div class="admin-container">
+        <!-- Sidebar -->
+        <aside class="sidebar">
+            <div class="sidebar-header">
+                <h2><i class="fas fa-tachometer-alt"></i> Panel Admin</h2>
+            </div>
+            <nav class="sidebar-menu">
+                <a href="#dashboard" class="active">
+                    <i class="fas fa-chart-pie"></i>
+                    <span>Dashboard</span>
+                </a>
+                <a href="#productos">
+                    <i class="fas fa-box"></i>
+                    <span>Productos</span>
+                </a>
+                <a href="#agregar-producto">
+                    <i class="fas fa-plus-circle"></i>
+                    <span>Agregar Producto</span>
+                </a>
+                <a href="#categorias">
+                    <i class="fas fa-tags"></i>
+                    <span>Categorías</span>
+                </a>
+                <a href="#configuracion">
+                    <i class="fas fa-cog"></i>
+                    <span>Configuración</span>
+                </a>
+            </nav>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <!-- Header -->
+            <header class="content-header">
+                <div class="header-left">
+                    <h1>Panel de Administración</h1>
+                    <p class="subtitle">Sistema de Gestión de Lociones</p>
+                </div>
+                <div class="header-right">
+                    <button id="refreshData" class="btn btn-primary">
+                        <i class="fas fa-sync-alt"></i>
+                        Actualizar
+                    </button>
+                </div>
+            </header>
+
+            <!-- Loading Overlay -->
+            <div id="loadingOverlay" class="loading-overlay" style="display: none;">
+                <div class="loading-content">
+                    <div class="spinner"></div>
+                    <p>Cargando datos...</p>
+                </div>
+            </div>
+
+            <!-- Alert Container -->
+            <div id="alertContainer" class="alert-container"></div>
+
+            <!-- Dashboard Section -->
+            <section id="dashboard" class="content-section active">
+                <div class="dashboard-grid">
+                    <!-- Stats Cards -->
+                    <div class="stats-grid">
+                        <div class="stat-card" data-card="total-productos">
+                            <div class="stat-icon">
+                                <i class="fas fa-box"></i>
+                            </div>
+                            <div class="stat-content">
+                                <h3 class="number">0</h3>
+                                <p class="label">Total Productos</p>
+                            </div>
+                        </div>
+                        <div class="stat-card" data-card="productos-activos">
+                            <div class="stat-icon">
+                                <i class="fas fa-check-circle"></i>
+                            </div>
+                            <div class="stat-content">
+                                <h3 class="number">0</h3>
+                                <p class="label">Productos Activos</p>
+                            </div>
+                        </div>
+                        <div class="stat-card" data-card="total-categorias">
+                            <div class="stat-icon">
+                                <i class="fas fa-tags"></i>
+                            </div>
+                            <div class="stat-content">
+                                <h3 class="number">0</h3>
+                                <p class="label">Categorías</p>
+                            </div>
+                        </div>
+                        <div class="stat-card" data-card="total-marcas">
+                            <div class="stat-icon">
+                                <i class="fas fa-star"></i>
+                            </div>
+                            <div class="stat-content">
+                                <h3 class="number">0</h3>
+                                <p class="label">Marcas</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Recent Activities -->
+                    <div class="dashboard-card">
+                        <h3>Estado del Sistema</h3>
+                        <div class="system-info">
+                            <div class="info-item">
+                                <span class="label">Productos Cargados:</span>
+                                <span id="loadedProducts" class="value">0</span>
+                            </div>
+                            <div class="info-item">
+                                <span class="label">Estado Conexión:</span>
+                                <span id="connectionStatus" class="value status-unknown">Verificando...</span>
+                            </div>
+                            <div class="info-item">
+                                <span class="label">Última Actualización:</span>
+                                <span id="lastUpdate" class="value">--</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Products Section -->
+            <section id="productos" class="content-section">
+                <div class="section-header">
+                    <h2>Gestión de Productos</h2>
+                    <div class="section-actions">
+                        <div class="search-box">
+                            <i class="fas fa-search"></i>
+                            <input type="text" id="searchProducts" placeholder="Buscar productos...">
+                        </div>
+                        <button id="refreshProducts" class="btn btn-secondary">
+                            <i class="fas fa-sync-alt"></i>
+                            Recargar
+                        </button>
+                    </div>
+                </div>
+                <div id="productsContainer" class="products-container">
+                    <div class="products-grid">
+                        <!-- Products will be loaded here -->
+                    </div>
+                </div>
+            </section>
+
+            <!-- Add Product Section -->
+            <section id="agregar-producto" class="content-section">
+                <div class="section-header">
+                    <h2>Agregar/Editar Producto</h2>
+                </div>
+                <div class="form-container">
+                    <form id="productForm" class="product-form">
+                        <div class="form-grid">
+                            <div class="form-group">
+                                <label for="nombre">Nombre del Producto *</label>
+                                <input type="text" id="nombre" name="nombre" required>
+                            </div>
+                            
+                            <div class="form-group">
+                                <label for="marca">Marca *</label>
+                                <select id="marca" name="marca" required>
+                                    <option value="">Seleccionar marca...</option>
+                                    <option value="Carolina Herrera">Carolina Herrera</option>
+                                    <option value="Givenchy">Givenchy</option>
+                                    <option value="Montblanc">Montblanc</option>
+                                    <option value="Paco Rabanne">Paco Rabanne</option>
+                                    <option value="Versace">Versace</option>
+                                    <option value="Chanel">Chanel</option>
+                                    <option value="Dior">Dior</option>
+                                    <option value="Tom Ford">Tom Ford</option>
+                                    <option value="Hugo Boss">Hugo Boss</option>
+                                    <option value="Armani">Armani</option>
+                                </select>
+                            </div>
+                            
+                            <div class="form-group">
+                                <label for="categoria">Categoría *</label>
+                                <select id="categoria" name="categoria" required>
+                                    <option value="">Seleccionar categoría...</option>
+                                    <option value="para-ellos">Para Ellos</option>
+                                    <option value="para-ellas">Para Ellas</option>
+                                    <option value="unisex">Unisex</option>
+                                </select>
+                            </div>
+                            
+                            <div class="form-group">
+                                <label for="subcategoria">Subcategoría</label>
+                                <select id="subcategoria" name="subcategoria">
+                                    <option value="">Sin subcategoría</option>
+                                    <option value="luxury">Luxury</option>
+                                    <option value="clasico">Clásico</option>
+                                    <option value="nuevo">Nuevo</option>
+                                    <option value="limitado">Edición Limitada</option>
+                                </select>
+                            </div>
+                            
+                            <div class="form-group">
+                                <label for="ml">Tamaño (ml)</label>
+                                <select id="ml" name="ml">
+                                    <option value="30">30ml</option>
+                                    <option value="50">50ml</option>
+                                    <option value="75">75ml</option>
+                                    <option value="100" selected>100ml</option>
+                                    <option value="125">125ml</option>
+                                    <option value="150">150ml</option>
+                                    <option value="200">200ml</option>
+                                </select>
+                            </div>
+                            
+                            <div class="form-group">
+                                <label for="precio">Precio (USD) *</label>
+                                <input type="number" id="precio" name="precio" step="0.01" min="0" required>
+                                <div id="precioInfo" class="price-info" style="display: none;">
+                                    <div><strong>Precio original:</strong> $<span id="precioOriginal">0</span></div>
+                                    <div><strong>Precio con descuento:</strong> $<span id="precioConDescuento">0</span></div>
+                                </div>
+                            </div>
+                            
+                            <div class="form-group">
+                                <label for="estado">Estado *</label>
+                                <select id="estado" name="estado" required>
+                                    <option value="disponible">Disponible</option>
+                                    <option value="agotado">Agotado</option>
+                                    <option value="descontinuado">Descontinuado</option>
+                                    <option value="oferta">En Oferta</option>
+                                </select>
+                            </div>
+                            
+                            <div id="descuentoGroup" class="form-group" style="display: none;">
+                                <label for="descuento">Descuento (%)</label>
+                                <input type="number" id="descuento" name="descuento" step="1" min="0" max="90">
+                            </div>
+                            
+                            <div class="form-group full-width">
+                                <label for="descripcion">Descripción</label>
+                                <textarea id="descripcion" name="descripcion" rows="3"></textarea>
+                            </div>
+                            
+                            <div class="form-group full-width">
+                                <label for="notas">Notas Aromáticas</label>
+                                <textarea id="notas" name="notas" rows="2" placeholder="Ej: Notas cítricas, florales, amaderadas..."></textarea>
+                            </div>
+                            
+                            <div class="form-group full-width">
+                                <label for="imagen_url">URL de la Imagen</label>
+                                <input type="url" id="imagen_url" name="imagen_url" placeholder="https://ejemplo.com/imagen.jpg">
+                                <div id="imagePreview" class="image-preview" style="display: none;">
+                                    <img id="previewImg" src="" alt="Vista previa" style="max-width: 150px; max-height: 150px; border-radius: 8px; margin-top: 0.5rem;">
+                                </div>
+                            </div>
+                            
+                            <div class="form-group">
+                                <div class="checkbox-group">
+                                    <label class="checkbox-label">
+                                        <input type="checkbox" id="luxury" name="luxury">
+                                        <span class="checkmark"></span>
+                                        Producto Premium/Luxury
+                                    </label>
+                                </div>
+                            </div>
+                            
+                            <div class="form-group">
+                                <div class="checkbox-group">
+                                    <label class="checkbox-label">
+                                        <input type="checkbox" id="activo" name="activo" checked>
+                                        <span class="checkmark"></span>
+                                        Producto Activo
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="form-actions">
+                            <button type="submit" class="btn btn-primary">
+                                <i class="fas fa-save"></i>
+                                <span id="submitText">Guardar Producto</span>
+                            </button>
+                            <button type="reset" class="btn btn-secondary">
+                                <i class="fas fa-times"></i>
+                                Cancelar
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </section>
+
+            <!-- Categories Section -->
+            <section id="categorias" class="content-section">
+                <div class="section-header">
+                    <h2>Estadísticas por Categoría</h2>
+                </div>
+                <div class="category-stats">
+                    <div class="category-card">
+                        <h4>Para Ellos</h4>
+                        <div class="category-stats-list">
+                            <div class="stat-item">
+                                <span id="stats-para-ellos">0 productos</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="category-card">
+                        <h4>Para Ellas</h4>
+                        <div class="category-stats-list">
+                            <div class="stat-item">
+                                <span id="stats-para-ellas">0 productos</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="category-card">
+                        <h4>Unisex</h4>
+                        <div class="category-stats-list">
+                            <div class="stat-item">
+                                <span id="stats-unisex">0 productos</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Configuration Section -->
+            <section id="configuracion" class="content-section">
+                <div class="section-header">
+                    <h2>Configuración del Sistema</h2>
+                </div>
+                <div class="config-container">
+                    <div class="config-card">
+                        <h3>Conexión a Base de Datos</h3>
+                        <div class="config-content">
+                            <div class="status-indicator">
+                                <span class="label">Supabase:</span>
+                                <span id="supabaseStatus" class="status status-unknown">Verificando...</span>
+                            </div>
+                            <div class="status-indicator">
+                                <span class="label">Servicio de Productos:</span>
+                                <span id="productServiceStatus" class="status status-unknown">Verificando...</span>
+                            </div>
+                            <button id="testConnection" class="btn btn-primary">
+                                <i class="fas fa-plug"></i>
+                                Probar Conexión
+                            </button>
+                            <button onclick="adminPanel.clearCache()" class="btn btn-secondary">
+                                <i class="fas fa-trash"></i>
+                                Limpiar Cache
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <div class="config-card">
+                        <h3>Información del Sistema</h3>
+                        <div class="config-content">
+                            <div class="info-grid">
+                                <div class="info-item">
+                                    <span class="label">Versión:</span>
+                                    <span class="value">1.0.0</span>
+                                </div>
+                                <div class="info-item">
+                                    <span class="label">Última Sincronización:</span>
+                                    <span id="lastSync" class="value">--</span>
+                                </div>
+                                <div class="info-item">
+                                    <span class="label">Estado Conexión:</span>
+                                    <span id="connectionStatus" class="value status-unknown">Verificando...</span>
+                                </div>
+                                <div class="info-item">
+                                    <span class="label">Productos Cargados:</span>
+                                    <span id="loadedProducts" class="value">0</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <!-- Scripts -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="../js/supabase-config.js"></script>
+    <script src="../js/admin-panel-mejorado.js"></script>
+    
+    <script>
+        // Función para verificar dependencias
+        function checkDependencies() {
+            const checks = {
+                supabase: typeof window.supabase !== 'undefined',
+                supabaseClient: typeof window.supabaseClient !== 'undefined',
+                ProductosService: typeof window.ProductosService !== 'undefined',
+                ProductosServiceOptimized: typeof window.ProductosServiceOptimized !== 'undefined',
+                AdminPanel: typeof window.AdminPanel !== 'undefined'
+            };
+            
+            console.log('🔍 Verificando dependencias:', checks);
+            
+            const allLoaded = Object.values(checks).every(Boolean);
+            
+            if (allLoaded) {
+                console.log('✅ Todas las dependencias cargadas');
+                return true;
+            } else {
+                console.warn('⚠️ Faltan dependencias:', 
+                    Object.entries(checks).filter(([key, value]) => !value).map(([key]) => key)
+                );
+                return false;
+            }
+        }
+        
+        // Inicializar panel cuando el DOM esté listo
+        function initAdminPanel() {
+            if (checkDependencies()) {
+                console.log('🚀 Inicializando AdminPanel...');
+                window.adminPanel = new AdminPanel();
+            } else {
+                console.log('⏳ Esperando dependencias...');
+                setTimeout(initAdminPanel, 500);
+            }
+        }
+        
+        // Inicializar cuando el DOM esté listo
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', initAdminPanel);
+        } else {
+            initAdminPanel();
+        }
+        
+        // Manejar errores globales
+        window.addEventListener('error', (e) => {
+            console.error('❌ Error global:', e.error);
+        });
+        
+        window.addEventListener('unhandledrejection', (e) => {
+            console.error('❌ Promise rechazado:', e.reason);
+        });
+    </script>
+</body>
+</html>

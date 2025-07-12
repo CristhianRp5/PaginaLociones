@@ -1,0 +1,321 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test - Admin Panel Database Connection</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 2rem;
+            background-color: #f5f5f5;
+        }
+        .test-section {
+            background: white;
+            margin: 1rem 0;
+            padding: 1.5rem;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .test-section h3 {
+            margin-top: 0;
+            color: #333;
+        }
+        .status {
+            padding: 0.5rem 1rem;
+            border-radius: 4px;
+            margin: 0.5rem 0;
+            font-weight: bold;
+        }
+        .success { background-color: #d4edda; color: #155724; }
+        .error { background-color: #f8d7da; color: #721c24; }
+        .warning { background-color: #fff3cd; color: #856404; }
+        .info { background-color: #d1ecf1; color: #0c5460; }
+        button {
+            background-color: #007bff;
+            color: white;
+            border: none;
+            padding: 0.5rem 1rem;
+            border-radius: 4px;
+            cursor: pointer;
+            margin: 0.25rem;
+        }
+        button:hover { background-color: #0056b3; }
+        .btn-danger { background-color: #dc3545; }
+        .btn-danger:hover { background-color: #c82333; }
+        pre {
+            background-color: #f8f9fa;
+            padding: 1rem;
+            border-radius: 4px;
+            overflow-x: auto;
+            font-size: 0.875rem;
+        }
+    </style>
+</head>
+<body>
+    <h1>🧪 Test de Conexión - Panel de Administración</h1>
+    
+    <div class="test-section">
+        <h3>1. Verificación de Dependencias</h3>
+        <div id="dependencies-status"></div>
+        <button onclick="checkDependencies()">Verificar Dependencias</button>
+    </div>
+    
+    <div class="test-section">
+        <h3>2. Conexión a Supabase</h3>
+        <div id="connection-status"></div>
+        <button onclick="testConnection()">Probar Conexión</button>
+    </div>
+    
+    <div class="test-section">
+        <h3>3. Cargar Productos</h3>
+        <div id="products-status"></div>
+        <button onclick="loadProducts()">Cargar Productos</button>
+        <button onclick="loadProductsAdmin()">Cargar Productos (Admin)</button>
+    </div>
+    
+    <div class="test-section">
+        <h3>4. Operaciones CRUD</h3>
+        <div id="crud-status"></div>
+        <button onclick="testCreateProduct()">Crear Producto de Prueba</button>
+        <button onclick="testUpdateProduct()" id="updateBtn" disabled>Actualizar Producto</button>
+        <button onclick="testDeleteProduct()" id="deleteBtn" disabled>Eliminar Producto</button>
+    </div>
+    
+    <div class="test-section">
+        <h3>5. Lista de Productos</h3>
+        <div id="products-list"></div>
+    </div>
+
+    <!-- Scripts -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="../js/supabase-config.js"></script>
+    
+    <script>
+        let testProductId = null;
+        
+        // 1. Verificar dependencias
+        function checkDependencies() {
+            const container = document.getElementById('dependencies-status');
+            
+            const checks = {
+                'window.supabase': typeof window.supabase !== 'undefined',
+                'window.supabaseClient': typeof window.supabaseClient !== 'undefined',
+                'ProductosService': typeof window.ProductosService !== 'undefined',
+                'ProductosServiceOptimized': typeof window.ProductosServiceOptimized !== 'undefined',
+                'initSupabase function': typeof window.initSupabase === 'function'
+            };
+            
+            let html = '<h4>Estado de Dependencias:</h4>';
+            let allGood = true;
+            
+            Object.entries(checks).forEach(([name, status]) => {
+                const statusClass = status ? 'success' : 'error';
+                const statusText = status ? '✅ Disponible' : '❌ No disponible';
+                html += `<div class="status ${statusClass}">${name}: ${statusText}</div>`;
+                if (!status) allGood = false;
+            });
+            
+            if (allGood) {
+                html += '<div class="status success">🎉 Todas las dependencias están disponibles</div>';
+                
+                // Intentar inicializar Supabase si no está inicializado
+                if (!window.supabaseClient) {
+                    console.log('Inicializando Supabase...');
+                    window.initSupabase();
+                }
+            } else {
+                html += '<div class="status error">⚠️ Faltan dependencias críticas</div>';
+            }
+            
+            container.innerHTML = html;
+        }
+        
+        // 2. Probar conexión
+        async function testConnection() {
+            const container = document.getElementById('connection-status');
+            container.innerHTML = '<div class="status info">🔍 Probando conexión...</div>';
+            
+            try {
+                if (!window.supabaseClient) {
+                    const initialized = window.initSupabase();
+                    if (!initialized) {
+                        throw new Error('No se pudo inicializar Supabase');
+                    }
+                }
+                
+                // Probar una consulta simple
+                const { data, error } = await window.supabaseClient
+                    .from('productos')
+                    .select('count')
+                    .limit(1);
+                
+                if (error) {
+                    throw error;
+                }
+                
+                container.innerHTML = '<div class="status success">✅ Conexión exitosa a Supabase</div>';
+                
+            } catch (error) {
+                console.error('Error de conexión:', error);
+                container.innerHTML = `<div class="status error">❌ Error de conexión: ${error.message}</div>`;
+            }
+        }
+        
+        // 3. Cargar productos
+        async function loadProducts() {
+            const container = document.getElementById('products-status');
+            container.innerHTML = '<div class="status info">🔍 Cargando productos...</div>';
+            
+            try {
+                const productos = await ProductosService.obtenerProductos();
+                container.innerHTML = `<div class="status success">✅ ${productos.length} productos cargados</div>`;
+                displayProducts(productos);
+                
+            } catch (error) {
+                console.error('Error cargando productos:', error);
+                container.innerHTML = `<div class="status error">❌ Error: ${error.message}</div>`;
+            }
+        }
+        
+        async function loadProductsAdmin() {
+            const container = document.getElementById('products-status');
+            container.innerHTML = '<div class="status info">🔍 Cargando productos (Admin)...</div>';
+            
+            try {
+                const productos = await ProductosServiceOptimized.obtenerProductosOptimizado({ admin: true });
+                container.innerHTML = `<div class="status success">✅ ${productos.length} productos cargados (Admin)</div>`;
+                displayProducts(productos);
+                
+            } catch (error) {
+                console.error('Error cargando productos (admin):', error);
+                container.innerHTML = `<div class="status error">❌ Error: ${error.message}</div>`;
+            }
+        }
+        
+        // 4. Crear producto de prueba
+        async function testCreateProduct() {
+            const container = document.getElementById('crud-status');
+            container.innerHTML = '<div class="status info">🔍 Creando producto de prueba...</div>';
+            
+            const testProduct = {
+                nombre: 'Producto Test Admin ' + Date.now(),
+                marca: 'Test Brand',
+                categoria: 'para-ellos',
+                precio: 99.99,
+                ml: 100,
+                descripcion: 'Producto creado desde test del admin panel',
+                estado: 'disponible',
+                activo: true,
+                luxury: false
+            };
+            
+            try {
+                const result = await ProductosServiceOptimized.crearProducto(testProduct);
+                testProductId = result.id;
+                
+                container.innerHTML = `<div class="status success">✅ Producto creado: ID ${result.id}</div>`;
+                
+                // Habilitar botones de actualizar y eliminar
+                document.getElementById('updateBtn').disabled = false;
+                document.getElementById('deleteBtn').disabled = false;
+                
+                loadProducts(); // Recargar lista
+                
+            } catch (error) {
+                console.error('Error creando producto:', error);
+                container.innerHTML = `<div class="status error">❌ Error: ${error.message}</div>`;
+            }
+        }
+        
+        // 5. Actualizar producto
+        async function testUpdateProduct() {
+            if (!testProductId) return;
+            
+            const container = document.getElementById('crud-status');
+            container.innerHTML = '<div class="status info">🔍 Actualizando producto...</div>';
+            
+            const updateData = {
+                descripcion: 'Producto actualizado desde test - ' + new Date().toISOString(),
+                precio: 150.00,
+                estado: 'oferta',
+                descuento: 20
+            };
+            
+            try {
+                const result = await ProductosServiceOptimized.updateProduct(testProductId, updateData);
+                container.innerHTML = `<div class="status success">✅ Producto actualizado: ${result.nombre}</div>`;
+                loadProducts(); // Recargar lista
+                
+            } catch (error) {
+                console.error('Error actualizando producto:', error);
+                container.innerHTML = `<div class="status error">❌ Error: ${error.message}</div>`;
+            }
+        }
+        
+        // 6. Eliminar producto
+        async function testDeleteProduct() {
+            if (!testProductId) return;
+            
+            if (!confirm('¿Estás seguro de eliminar el producto de prueba?')) return;
+            
+            const container = document.getElementById('crud-status');
+            container.innerHTML = '<div class="status info">🔍 Eliminando producto...</div>';
+            
+            try {
+                await ProductosServiceOptimized.deleteProduct(testProductId);
+                container.innerHTML = `<div class="status success">✅ Producto eliminado exitosamente</div>`;
+                
+                // Deshabilitar botones
+                document.getElementById('updateBtn').disabled = true;
+                document.getElementById('deleteBtn').disabled = true;
+                testProductId = null;
+                
+                loadProducts(); // Recargar lista
+                
+            } catch (error) {
+                console.error('Error eliminando producto:', error);
+                container.innerHTML = `<div class="status error">❌ Error: ${error.message}</div>`;
+            }
+        }
+        
+        // Mostrar productos
+        function displayProducts(productos) {
+            const container = document.getElementById('products-list');
+            
+            if (!productos || productos.length === 0) {
+                container.innerHTML = '<div class="status warning">No hay productos para mostrar</div>';
+                return;
+            }
+            
+            let html = '<h4>Productos Cargados:</h4>';
+            html += '<div style="max-height: 400px; overflow-y: auto;">';
+            
+            productos.slice(0, 10).forEach(producto => {
+                html += `
+                    <div style="border: 1px solid #ddd; margin: 0.5rem 0; padding: 1rem; border-radius: 4px;">
+                        <strong>${producto.nombre}</strong> - ${producto.marca}<br>
+                        <small>ID: ${producto.id} | Categoría: ${producto.categoria} | Precio: $${producto.precio} | Estado: ${producto.estado}</small>
+                    </div>
+                `;
+            });
+            
+            if (productos.length > 10) {
+                html += `<div class="status info">... y ${productos.length - 10} productos más</div>`;
+            }
+            
+            html += '</div>';
+            container.innerHTML = html;
+        }
+        
+        // Auto-inicializar al cargar la página
+        window.addEventListener('load', () => {
+            setTimeout(() => {
+                checkDependencies();
+            }, 1000);
+        });
+    </script>
+</body>
+</html>

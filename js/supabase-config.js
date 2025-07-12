@@ -935,6 +935,221 @@ class ProductosService {
         }    }
 }
 
+// Servicio optimizado para el panel de administración
+class ProductosServiceOptimized extends ProductosService {
+    // Obtener productos optimizado para admin
+    static async obtenerProductosOptimizado(filtros = {}) {
+        try {
+            console.log('🔍 Obteniendo productos optimizado para admin...');
+            
+            // Si es para admin, obtener todos los productos sin límite
+            if (filtros.admin) {
+                const productos = await this.obtenerTodosLosProductos();
+                
+                // Si hay filtros adicionales, aplicarlos
+                if (filtros.categoria) {
+                    return productos.filter(p => p.categoria === filtros.categoria);
+                }
+                
+                if (filtros.busqueda) {
+                    const search = filtros.busqueda.toLowerCase();
+                    return productos.filter(p => 
+                        p.nombre?.toLowerCase().includes(search) ||
+                        p.marca?.toLowerCase().includes(search)
+                    );
+                }
+                
+                return productos;
+            }
+            
+            // Para uso normal, usar el método estándar
+            return await this.obtenerProductos(filtros);
+            
+        } catch (error) {
+            console.error('❌ Error en obtenerProductosOptimizado:', error);
+            throw error;
+        }
+    }
+    
+    // Obtener todos los productos sin límite para admin
+    static async obtenerTodosLosProductos() {
+        if (!supabaseClient) {
+            console.error('❌ Supabase no configurado');
+            throw new Error('Supabase no está configurado');
+        }
+
+        try {
+            console.log('🔍 Obteniendo TODOS los productos para admin...');
+            
+            const { data: productos, error } = await supabaseClient
+                .from('productos')
+                .select('*')
+                .order('created_at', { ascending: false });
+
+            if (error) {
+                console.error('❌ Error de Supabase:', error);
+                throw error;
+            }
+
+            console.log(`✅ ${productos?.length || 0} productos obtenidos para admin`);
+            return productos || [];
+
+        } catch (error) {
+            console.error('❌ Error obteniendo todos los productos:', error);
+            throw error;
+        }
+    }
+    
+    // Crear producto (wrapper para admin)
+    static async crearProducto(productData) {
+        try {
+            console.log('🔄 Creando producto desde admin...');
+            
+            // Limpiar y validar datos
+            const datosLimpios = this._limpiarDatosProducto(productData);
+            
+            // Usar el método padre
+            const result = await super.crearProducto(datosLimpios);
+            
+            // Limpiar cache
+            this.clearCache();
+            
+            return result;
+            
+        } catch (error) {
+            console.error('❌ Error en crearProducto (admin):', error);
+            throw error;
+        }
+    }
+    
+    // Actualizar producto (método específico para admin)
+    static async updateProduct(productId, productData) {
+        if (!supabaseClient) {
+            console.error('❌ Supabase no configurado');
+            throw new Error('Supabase no está configurado');
+        }
+
+        try {
+            console.log(`🔄 Actualizando producto ID: ${productId}`);
+            console.log('📝 Datos a actualizar:', productData);
+            
+            // Validar ID del producto
+            if (!productId || isNaN(productId)) {
+                throw new Error('ID de producto inválido');
+            }
+            
+            // Limpiar y validar datos
+            const datosLimpios = this._limpiarDatosProducto(productData);
+            
+            const { data, error } = await supabaseClient
+                .from('productos')
+                .update(datosLimpios)
+                .eq('id', productId)
+                .select()
+                .single();
+
+            if (error) {
+                console.error('❌ Error actualizando producto:', error);
+                throw error;
+            }
+
+            console.log('✅ Producto actualizado exitosamente:', data);
+            
+            // Limpiar cache
+            this.clearCache();
+            
+            return data;
+
+        } catch (error) {
+            console.error('❌ Error en updateProduct:', error);
+            throw error;
+        }
+    }
+    
+    // Eliminar producto
+    static async deleteProduct(productId) {
+        if (!supabaseClient) {
+            console.error('❌ Supabase no configurado');
+            throw new Error('Supabase no está configurado');
+        }
+
+        try {
+            console.log(`🗑️ Eliminando producto ID: ${productId}`);
+            
+            // Validar ID del producto
+            if (!productId || isNaN(productId)) {
+                throw new Error('ID de producto inválido');
+            }
+            
+            const { error } = await supabaseClient
+                .from('productos')
+                .delete()
+                .eq('id', productId);
+
+            if (error) {
+                console.error('❌ Error eliminando producto:', error);
+                throw error;
+            }
+
+            console.log('✅ Producto eliminado exitosamente');
+            
+            // Limpiar cache
+            this.clearCache();
+            
+            return true;
+
+        } catch (error) {
+            console.error('❌ Error en deleteProduct:', error);
+            throw error;
+        }
+    }
+    
+    // Limpiar datos del producto antes de enviar a la base de datos
+    static _limpiarDatosProducto(producto) {
+        const datosLimpios = {
+            nombre: (producto.nombre || '').trim(),
+            marca: (producto.marca || '').trim(),
+            categoria: producto.categoria || 'para-ellos',
+            subcategoria: producto.subcategoria || null,
+            precio: parseInt(producto.precio) || 0,
+            ml: parseInt(producto.ml) || 100,
+            descripcion: (producto.descripcion || '').trim(),
+            notas: (producto.notas || '').trim(),
+            estado: producto.estado || 'disponible',
+            descuento: producto.descuento ? parseInt(producto.descuento) : null,
+            luxury: Boolean(producto.luxury),
+            activo: producto.activo !== false // Por defecto true
+        };
+        
+        // Manejar imagen
+        if (producto.imagen_url && typeof producto.imagen_url === 'string') {
+            const imagenTrimmed = producto.imagen_url.trim();
+            if (imagenTrimmed) {
+                datosLimpios.imagen = imagenTrimmed;
+                datosLimpios.imagen_url = imagenTrimmed;
+            }
+        }
+        
+        // Validar precio
+        if (datosLimpios.precio > 2147483647) {
+            datosLimpios.precio = 2147483647;
+        }
+        if (datosLimpios.precio < 0) {
+            datosLimpios.precio = 0;
+        }
+        
+        return datosLimpios;
+    }
+    
+    // Limpiar cache
+    static clearCache() {
+        this._cache.productos = null;
+        this._cache.lastFetch = 0;
+        this._cache.pendingRequest = null;
+        console.log('🧹 Cache de productos limpiado');
+    }
+}
+
 // Funciones para manejo de Storage (imágenes)
 class ImageStorageService {
     // Subir imagen al storage de Supabase
@@ -1199,6 +1414,7 @@ async function debugSupabaseConnection() {
 
 // Exportar para uso global
 window.ProductosService = ProductosService;
+window.ProductosServiceOptimized = ProductosServiceOptimized;
 window.formatearPrecio = formatearPrecio;
 window.initSupabase = initSupabase;
 window.isSupabaseReady = isSupabaseReady;

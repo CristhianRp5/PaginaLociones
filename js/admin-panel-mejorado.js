@@ -62,11 +62,10 @@ class AdminPanel {
         let attempts = 0;
         
         while (attempts < maxAttempts) {
-            const hasSupabase = typeof window.supabase !== 'undefined';
-            const hasProductosService = typeof ProductosServiceOptimized !== 'undefined';
-            const hasSupabaseClient = typeof supabaseClient !== 'undefined';
+            // Usar la misma verificación que para_ellos.js
+            const dependencies = this.checkDependencies();
             
-            if (hasSupabase && hasProductosService && hasSupabaseClient) {
+            if (Object.values(dependencies).every(dep => dep)) {
                 console.log('✅ Todas las dependencias disponibles');
                 return;
             }
@@ -76,6 +75,24 @@ class AdminPanel {
         }
         
         console.warn('⚠️ Timeout esperando dependencias, continuando con funcionalidad limitada');
+    }
+    
+    // Verificar dependencias (igual que para_ellos.js)
+    checkDependencies() {
+        console.log('🔍 Verificando dependencias...');
+        
+        const dependencies = {
+            'Supabase JS': typeof window.supabase !== 'undefined',
+            'initSupabase': typeof initSupabase !== 'undefined',
+            'ProductosService': typeof ProductosService !== 'undefined',
+            'supabaseClient': typeof supabaseClient !== 'undefined'
+        };
+        
+        Object.entries(dependencies).forEach(([name, available]) => {
+            console.log(`${available ? '✅' : '❌'} ${name}: ${available ? 'Disponible' : 'NO DISPONIBLE'}`);
+        });
+        
+        return dependencies;
     }
 
     // Configurar navegación
@@ -255,18 +272,57 @@ class AdminPanel {
     // Cargar productos
     async loadProductos() {
         try {
-            if (typeof ProductosServiceOptimized !== 'undefined') {
-                console.log('🔄 Cargando productos con filtros admin...');
-                this.productos = await ProductosServiceOptimized.obtenerProductosOptimizado({ 
-                    admin: true,
-                    page: 0,
-                    forceRefresh: true 
-                });
-                console.log('✅ Productos cargados:', this.productos.length);
-            } else {
-                console.warn('⚠️ ProductosServiceOptimized no disponible');
+            console.log('🔄 Cargando productos para admin...');
+            
+            // Verificar que ProductosService esté disponible (igual que en para_ellos.js)
+            if (typeof ProductosService === 'undefined') {
+                console.error('❌ ProductosService no está disponible');
                 this.productos = [];
+                return;
             }
+            
+            // Usar el mismo método que para_ellos.js para obtener TODOS los productos
+            const startTime = performance.now();
+            
+            // Obtener productos de todas las categorías para el admin
+            const productosParaEllos = await ProductosService.obtenerProductosPorCategoria('para-ellos');
+            const productosParaEllas = await ProductosService.obtenerProductosPorCategoria('para-ellas');
+            const productosUnisex = await ProductosService.obtenerProductosPorCategoria('unisex');
+            
+            // Combinar todos los productos
+            this.productos = [
+                ...productosParaEllos,
+                ...productosParaEllas,
+                ...productosUnisex
+            ];
+            
+            // Remover duplicados por ID si los hay
+            const productosUnicos = this.productos.reduce((acc, current) => {
+                const exists = acc.find(item => item.id === current.id);
+                if (!exists) {
+                    acc.push(current);
+                }
+                return acc;
+            }, []);
+            
+            this.productos = productosUnicos;
+            
+            const endTime = performance.now();
+            const loadTime = endTime - startTime;
+            
+            console.log(`✅ ${this.productos.length} productos cargados para admin en ${loadTime.toFixed(2)}ms`);
+            
+            if (this.productos.length === 0) {
+                console.warn('⚠️ No se encontraron productos en la base de datos');
+            } else {
+                console.log(`📦 Productos por categoría:`, {
+                    'para-ellos': productosParaEllos.length,
+                    'para-ellas': productosParaEllas.length,
+                    'unisex': productosUnisex.length,
+                    'total': this.productos.length
+                });
+            }
+            
         } catch (error) {
             console.error('❌ Error cargando productos:', error);
             this.productos = [];
@@ -646,11 +702,11 @@ class AdminPanel {
     // Guardar producto
     async saveProduct(productData) {
         try {
-            if (typeof ProductosServiceOptimized === 'undefined') {
+            if (typeof ProductosService === 'undefined') {
                 throw new Error('Servicio de productos no disponible');
             }
             
-            const result = await ProductosServiceOptimized.crearProducto(productData);
+            const result = await ProductosService.crearProducto(productData);
             return result;
             
         } catch (error) {
@@ -662,12 +718,17 @@ class AdminPanel {
     // Actualizar producto
     async updateProduct(productId, productData) {
         try {
-            if (typeof ProductosServiceOptimized === 'undefined') {
+            if (typeof ProductosService === 'undefined') {
                 throw new Error('Servicio de productos no disponible');
             }
             
-            const result = await ProductosServiceOptimized.updateProduct(productId, productData);
-            return result;
+            // Usar updateProduct si existe en ProductosService
+            if (typeof ProductosService.updateProduct === 'function') {
+                const result = await ProductosService.updateProduct(productId, productData);
+                return result;
+            } else {
+                throw new Error('Método updateProduct no disponible en ProductosService');
+            }
             
         } catch (error) {
             console.error('❌ Error actualizando producto:', error);
