@@ -5,6 +5,7 @@ class ParaEllasManager {
         this.filteredProducts = [];
         this.currentPage = 1;
         this.productsPerPage = 12;
+        this.isAddingToCart = false; // Flag para prevenir clicks duplicados
         this.activeFilters = {
             category: '',
             search: '',
@@ -405,107 +406,298 @@ class ParaEllasManager {
     }
 
     createProductCard(product) {
-        const hasDiscount = product.estado === 'oferta' && product.descuento > 0;
-        const finalPrice = hasDiscount ? product.precio * (1 - product.descuento / 100) : product.precio;
+        // Generar etiqueta de estado
+        const estado = product.estado || 'disponible';
+        const isOnSale = estado === 'oferta';
+        
+        // Calcular precios si hay descuento
+        const precioInfo = this.getPrecioInfo(product);
+        
+        // Obtener imagen
+        const imageSrc = this.getImagePath(product.imagen_url || product.imagen);
+        const productName = product.nombre || 'Producto sin nombre';
+        
+        // Generar descripción corta
+        const description = this.generateDescription(product);
+        
+        // Generar opciones de tamaño (simuladas - puedes conectar con datos reales)
+        const sizeOptions = this.generateSizeOptions(product);
+        
+        // Generar etiquetas dinámicas
+        const badges = this.generateProductBadges(product);
         
         return `
-            <div class="product-card" data-product-id="${product.id}">
-                ${product.luxury ? '<div class="luxury-badge">LUXURY</div>' : ''}
-                ${hasDiscount ? `<div class="discount-badge">-${product.descuento}%</div>` : ''}
-                ${product.estado === 'agotado' ? '<div class="stock-badge out-of-stock">AGOTADO</div>' : ''}
-                ${product.estado === 'proximo' ? '<div class="stock-badge coming-soon">PRÓXIMAMENTE</div>' : ''}
+        <div class="index-item" data-product-id="${product.id}">
+            ${badges}
+            
+            <div class="item-image">
+                <img src="${imageSrc}" 
+                     alt="${productName}"
+                     loading="lazy"
+                     onerror="this.src='../IMAGENES/PARA_ELLAS.png';">
                 
-                <div class="product-image">
-                    <img src="${product.imagen_url || '../IMAGENES/PARA_ELLAS.png'}" 
-                         alt="${product.nombre}"
-                         onerror="this.src='../IMAGENES/PARA_ELLAS.png'">
-                </div>
+                ${sizeOptions}
                 
-                <div class="product-info">
-                    <h3 class="product-name">${product.nombre}</h3>
-                    <p class="product-brand">${product.marca}</p>
-                    ${product.subcategoria ? `<p class="product-subcategory">${product.subcategoria}</p>` : ''}
-                    
-                    <div class="product-price">
-                        ${hasDiscount ? `
-                            <span class="original-price">$${new Intl.NumberFormat('es-CO').format(product.precio)}</span>
-                            <span class="final-price">$${new Intl.NumberFormat('es-CO').format(finalPrice)}</span>
-                        ` : `
-                            <span class="final-price">$${new Intl.NumberFormat('es-CO').format(product.precio)}</span>
-                        `}
-                    </div>
-                    
-                    ${product.ml ? `<p class="product-size">${product.ml}ml</p>` : ''}
-                    
-                    <button class="add-to-cart-btn" 
-                            data-product-id="${product.id}"
-                            ${product.estado === 'agotado' || product.estado === 'proximo' ? 'disabled' : ''}>
-                        ${product.estado === 'agotado' ? 'Agotado' : 
-                          product.estado === 'proximo' ? 'Próximamente' : 
-                          'Agregar al Carrito'}
+                <div class="item-overlay">
+                    <button class="quick-view-btn" data-product-id="${product.id}">
+                        Vista Rápida
                     </button>
                 </div>
             </div>
+            
+            <div class="item-content">
+                <h3 class="item-title">${product.nombre || 'Sin nombre'}</h3>
+                <p class="item-size">${product.ml || 100} ML</p>
+                <p class="item-description">${description}</p>
+                
+                <div class="item-price">${precioInfo}</div>
+                
+                <button class="add-to-bag-btn" data-product-id="${product.id}">
+                    AGREGAR AL CARRITO
+                </button>
+            </div>
+            
+            <div class="product-badges">
+                ${badges}
+            </div>
+        </div>
         `;
     }
 
     setupProductCardEvents() {
-        // Event listeners para agregar al carrito
-        const addToCartButtons = document.querySelectorAll('.add-to-cart-btn');
-        addToCartButtons.forEach(btn => {
-            btn.addEventListener('click', (e) => {
-                e.stopPropagation();
-                const productId = btn.dataset.productId;
-                this.addToCart(productId);
-            });
-        });
+        // Remover event listeners existentes del contenedor
+        const container = document.querySelector('.index-grid');
+        if (!container) return;
         
-        // Event listeners para ver detalles
-        const productCards = document.querySelectorAll('.product-card');
-        productCards.forEach(card => {
-            card.addEventListener('click', () => {
-                const productId = card.dataset.productId;
+        // Remover event listeners anteriores clonando el contenedor (más eficiente que remover uno por uno)
+        const newContainer = container.cloneNode(true);
+        container.parentNode.replaceChild(newContainer, container);
+        
+        // Usar event delegation para manejar eventos
+        newContainer.addEventListener('click', (e) => {
+            // Event listener para agregar al carrito
+            if (e.target.classList.contains('add-to-bag-btn')) {
+                e.stopPropagation();
+                const productId = e.target.dataset.productId;
+                console.log('🛒 Botón carrito clickeado para producto:', productId);
+                this.addToCart(productId);
+                return;
+            }
+            
+            // Event listener para vista rápida
+            if (e.target.classList.contains('quick-view-btn')) {
+                e.stopPropagation();
+                const productId = e.target.dataset.productId;
+                console.log('👁️ Botón vista rápida clickeado para producto:', productId);
+                this.showQuickView(productId);
+                return;
+            }
+            
+            // Event listener para ver detalles al hacer click en la tarjeta
+            const productCard = e.target.closest('.index-item');
+            if (productCard && !e.target.closest('button')) {
+                const productId = productCard.dataset.productId;
+                console.log('📄 Tarjeta clickeada para producto:', productId);
                 this.showProductDetails(productId);
-            });
+            }
         });
     }
 
     addToCart(productId) {
+        // Prevenir múltiples ejecuciones rápidas
+        if (this.isAddingToCart) {
+            console.warn('⚠️ Ya se está agregando un producto al carrito, ignorando click duplicado');
+            return;
+        }
+        
+        this.isAddingToCart = true;
+        setTimeout(() => { this.isAddingToCart = false; }, 1000); // Reset después de 1 segundo
+        
+        const product = this.productos.find(p => p.id == productId);
+        if (!product) {
+            console.error('❌ Producto no encontrado:', productId);
+            this.isAddingToCart = false;
+            return;
+        }
+        
+        if (product.estado === 'agotado' || product.estado === 'proximo') {
+            console.warn('⚠️ Producto no disponible para agregar al carrito');
+            this.isAddingToCart = false;
+            return;
+        }
+
+        console.log('🛒 [ParaEllas] Agregando producto al carrito:', product.nombre, '(ID:', productId, ')');
+
+        // Función para agregar el producto de forma segura
+        const addProductSafely = () => {
+            if (window.shoppingCart && window.shoppingCart.isInitialized) {
+                console.log('✅ [ParaEllas] Carrito disponible y inicializado');
+                
+                // Asegurar que la imagen tenga la ruta correcta
+                const productForCart = {
+                    ...product,
+                    imagen_url: this.getImagePath(product.imagen_url || product.imagen),
+                    imagen: this.getImagePath(product.imagen_url || product.imagen)
+                };
+                
+                window.shoppingCart.addItem(productForCart);
+                console.log('✅ [ParaEllas] Producto agregado exitosamente al carrito');
+                
+                // Verificar que se agregó correctamente
+                setTimeout(() => {
+                    const cartStatus = window.shoppingCart.getCartStatus();
+                    console.log(`🔍 [ParaEllas] Verificación post-agregado: ${cartStatus.totalItems} items en carrito`);
+                }, 200);
+                
+            } else {
+                console.warn('⚠️ [ParaEllas] Carrito no disponible o no inicializado');
+                console.log('🔧 [ParaEllas] Estado del carrito:', {
+                    exists: !!window.shoppingCart,
+                    initialized: window.shoppingCart ? window.shoppingCart.isInitialized : false,
+                    singleton: !!window.getShoppingCartInstance
+                });
+                
+                // Intentar obtener/inicializar usando singleton
+                if (window.getShoppingCartInstance) {
+                    console.log('🔄 [ParaEllas] Usando función singleton...');
+                    const cart = window.getShoppingCartInstance();
+                    if (cart && cart.isInitialized) {
+                        console.log('✅ [ParaEllas] Carrito obtenido via singleton');
+                        const productForCart = {
+                            ...product,
+                            imagen_url: this.getImagePath(product.imagen_url || product.imagen),
+                            imagen: this.getImagePath(product.imagen_url || product.imagen)
+                        };
+                        cart.addItem(productForCart);
+                    } else {
+                        console.error('❌ [ParaEllas] Singleton no funcionó');
+                        this.showTemporaryMessage('Error: Carrito no disponible');
+                    }
+                } else {
+                    console.error('❌ [ParaEllas] Función singleton no disponible');
+                    this.showTemporaryMessage('Error: Sistema de carrito no disponible');
+                }
+            }
+            this.isAddingToCart = false;
+        };
+
+        // Verificar si el carrito está disponible inmediatamente
+        if (window.shoppingCart && window.shoppingCart.isInitialized) {
+            addProductSafely();
+        } else {
+            // Esperar un poco y reintentar
+            console.log('⏳ [ParaEllas] Esperando inicialización del carrito...');
+            let attempts = 0;
+            const maxAttempts = 5;
+            
+            const checkAndAdd = () => {
+                attempts++;
+                console.log(`🔄 [ParaEllas] Intento ${attempts}/${maxAttempts} de agregar producto`);
+                
+                if (window.shoppingCart && window.shoppingCart.isInitialized) {
+                    console.log('✅ [ParaEllas] Carrito listo después de esperar');
+                    addProductSafely();
+                } else if (attempts < maxAttempts) {
+                    console.log(`⏳ [ParaEllas] Reintentando en 500ms...`);
+                    setTimeout(checkAndAdd, 500);
+                } else {
+                    console.error('❌ [ParaEllas] Carrito no se inicializó después de múltiples intentos');
+                    // Último recurso: forzar inicialización
+                    if (window.forceInitCart) {
+                        console.log('🔧 [ParaEllas] Forzando inicialización del carrito...');
+                        window.forceInitCart();
+                        setTimeout(() => {
+                            if (window.shoppingCart) {
+                                addProductSafely();
+                            } else {
+                                this.showTemporaryMessage('Error: No se pudo inicializar el carrito');
+                                this.isAddingToCart = false;
+                            }
+                        }, 1000);
+                    } else {
+                        this.showTemporaryMessage('El sistema de carrito no está disponible en este momento');
+                        this.isAddingToCart = false;
+                    }
+                }
+            };
+            
+            checkAndAdd();
+        }
+    }
+
+    showProductDetails(productId) {
         const product = this.productos.find(p => p.id == productId);
         if (!product) {
             console.error('❌ Producto no encontrado:', productId);
             return;
         }
         
-        if (product.estado === 'agotado' || product.estado === 'proximo') {
-            console.warn('⚠️ Producto no disponible para agregar al carrito');
-            return;
-        }
+        console.log('👁️ Mostrando detalles del producto:', product.nombre);
         
-        // Usar el carrito global si está disponible
-        if (window.shoppingCart && typeof window.shoppingCart.addItem === 'function') {
-            console.log('🛒 Agregando producto al carrito:', product.nombre);
-            window.shoppingCart.addItem({
-                id: product.id,
-                nombre: product.nombre,
-                marca: product.marca,
-                precio: product.precio,
-                imagen: product.imagen_url || '../IMAGENES/PARA_ELLAS.png',
-                ml: product.ml
-            });
-        } else {
-            console.error('❌ Sistema de carrito no disponible');
-            alert('El sistema de carrito no está disponible en este momento');
-        }
+        // Usar el método showQuickView existente
+        this.showQuickView(productId);
     }
 
-    showProductDetails(productId) {
+    showQuickView(productId) {
         const product = this.productos.find(p => p.id == productId);
         if (!product) return;
+
+        const modal = document.querySelector('.quick-view-modal');
+        const modalBody = modal.querySelector('.modal-body');
         
-        // Implementar modal de detalles del producto
-        console.log('👁️ Mostrando detalles del producto:', product.nombre);
-        // TODO: Implementar modal de detalles
+        const imageSrc = this.getImagePath(product.imagen_url || product.imagen);
+        const productName = product.nombre || 'Producto sin nombre';
+
+        modalBody.innerHTML = `
+            <div class="quick-view-content">
+                <div class="quick-view-image">
+                    <img src="${imageSrc}" 
+                         alt="${productName}"
+                         onerror="this.src='../IMAGENES/PARA_ELLAS.png'"
+                         loading="lazy">
+                </div>
+                <div class="quick-view-info">
+                    <h2>${product.nombre}</h2>
+                    <p class="brand">${product.marca || ''}</p>
+                    <div class="price">${this.getPrecioInfo(product)}</div>
+                    ${product.descripcion ? `<p class="description">${product.descripcion}</p>` : ''}
+                    ${product.notas ? `
+                        <div class="notes">
+                            <h4>Notas:</h4>
+                            <p>${Array.isArray(product.notas) ? product.notas.join(', ') : product.notas}</p>
+                        </div>
+                    ` : ''}
+                    <div class="actions">
+                        <button class="add-to-cart-btn" onclick="window.paraEllasManager.addToCart(${product.id})">
+                            Agregar al Carrito
+                        </button>
+                    </div>
+                </div>
+            </div>
+        `;
+
+        modal.style.display = 'flex';
+        document.body.style.overflow = 'hidden';
+
+        // Cerrar modal
+        const closeBtn = modal.querySelector('.close-modal');
+        if (closeBtn) {
+            closeBtn.onclick = () => this.closeQuickView();
+        }
+
+        modal.onclick = (e) => {
+            if (e.target === modal) {
+                this.closeQuickView();
+            }
+        };
+    }
+
+    closeQuickView() {
+        const modal = document.querySelector('.quick-view-modal');
+        if (modal) {
+            modal.style.display = 'none';
+            document.body.style.overflow = 'auto';
+        }
     }
 
     setupPaginationEvents() {
@@ -609,6 +801,221 @@ class ParaEllasManager {
                 this.addToCart(testProduct.id);
             }
         }
+    }
+
+    // Función auxiliar para generar información de precio
+    getPrecioInfo(product) {
+        const precio = product.precio || 0;
+        const estado = product.estado || 'disponible';
+        const descuento = product.descuento || 0;
+        
+        if (estado === 'oferta' && descuento > 0) {
+            const precioConDescuento = precio - (precio * descuento / 100);
+            return `
+                <div class="precio-con-descuento">
+                    <span class="precio-original">$${this.formatPrice(precio)}</span>
+                    <span class="precio-oferta">$${this.formatPrice(precioConDescuento)}</span>
+                    <span class="descuento-badge">-${descuento}%</span>
+                </div>
+            `;
+        } else {
+            return `$${this.formatPrice(precio)}`;
+        }
+    }
+
+    // Función auxiliar para obtener la ruta correcta de imagen placeholder
+    getPlaceholderImagePath() {
+        // Detectar si estamos en la carpeta html/ o en la raíz
+        const currentPath = window.location.pathname;
+        const isInHtmlFolder = currentPath.includes('/html/') || currentPath.includes('\\html\\');
+        
+        if (isInHtmlFolder) {
+            return '../IMAGENES/PARA_ELLAS.png';
+        } else {
+            return 'IMAGENES/PARA_ELLAS.png';
+        }
+    }
+
+    // Función auxiliar para obtener la ruta correcta de cualquier imagen
+    getImagePath(imagePath) {
+        if (!imagePath) return this.getPlaceholderImagePath();
+        
+        // Limpiar espacios y caracteres extraños
+        imagePath = imagePath.trim();
+        
+        // Si es una URL completa (http/https), usarla tal como está
+        if (imagePath.startsWith('http://') || imagePath.startsWith('https://')) {
+            console.log(`🌐 Usando URL externa: ${imagePath}`);
+            return imagePath;
+        }
+        
+        // Si es data URL (base64), usarla tal como está
+        if (imagePath.startsWith('data:image/')) {
+            console.log(`📄 Usando imagen base64: ${imagePath.substring(0, 50)}...`);
+            return imagePath;
+        }
+        
+        // Si es una ruta relativa que empieza con ../, usarla tal como está
+        if (imagePath.startsWith('../')) {
+            console.log(`📂 Usando ruta relativa: ${imagePath}`);
+            return imagePath;
+        }
+        
+        // Para rutas locales, determinar el contexto actual
+        const currentPath = window.location.pathname;
+        const isInHtmlFolder = currentPath.includes('/html/') || currentPath.includes('\\html\\');
+        
+        let finalPath;
+        
+        if (isInHtmlFolder && !imagePath.startsWith('../')) {
+            // Estamos en html/ y la imagen no tiene ../, agregar ../
+            finalPath = `../${imagePath}`;
+        } else {
+            finalPath = imagePath;
+        }
+        
+        console.log(`🖼️ Ruta de imagen local procesada: ${imagePath} → ${finalPath}`);
+        return finalPath;
+    }
+
+    // Métodos auxiliares para el diseño Tom Ford
+    generateDescription(product) {
+        // Usar la descripción real del producto si existe, sino generar una basada en las notas
+        if (product.descripcion && product.descripcion.trim()) {
+            return product.descripcion.trim();
+        }
+        
+        // Si tiene notas, usar las notas como descripción
+        if (product.notas && product.notas.trim()) {
+            const notas = product.notas.trim();
+            return `Con notas de ${notas}`;
+        }
+        
+        // Solo como último recurso, usar descripciones genéricas por marca
+        const descriptions = {
+            'Chanel': 'Una fragancia elegante y sofisticada con notas florales y especiadas.',
+            'Dior': 'Un aroma floral y feminino con notas delicadas.',
+            'Versace': 'Una fragancia fresca y vibrante con notas mediterráneas.',
+            'Armani': 'Una composición moderna y femenina con notas florales.',
+            'Givenchy': 'Una fragancia intensa y elegante con notas orientales.',
+            'Paco Rabanne': 'Un perfume audaz y seductor con notas florales.',
+            'Calvin Klein': 'Una fragancia fresca y contemporánea.',
+            'Hugo Boss': 'Un aroma elegante y sofisticado.',
+            'Carolina Herrera': 'Una fragancia sofisticada con notas florales y especiadas.'
+        };
+        
+        const marca = product.marca || 'Fragancia';
+        return descriptions[marca] || 'Una fragancia única y cautivadora con notas distintivas.';
+    }
+    
+    generateSizeOptions(product) {
+        // Generar opciones de tamaño comunes
+        const sizes = ['30 ml', '50 ml', '100 ml'];
+        const availableSizes = sizes.slice(0, Math.floor(Math.random() * 3) + 1); // 1-3 tamaños
+        
+        if (availableSizes.length <= 1) return '';
+        
+        const sizeHTML = availableSizes.map(size => 
+            `<a href="#" class="size-option" onclick="window.paraEllasManager.selectSize('${size}', ${product.id}); return false;">${size}</a>`
+        ).join('');
+        
+        return `<div class="size-options">${sizeHTML}</div>`;
+    }
+    
+    // Método para manejar selección de tamaño
+    selectSize(size, productId) {
+        console.log(`Tamaño seleccionado: ${size} para producto ${productId}`);
+        // Aquí puedes agregar lógica para manejar la selección de tamaño
+        // Por ejemplo, actualizar el precio o mostrar disponibilidad
+    }
+    
+    // Generar etiquetas dinámicas para todos los productos
+    generateProductBadges(product) {
+        const badges = [];
+        
+        // Etiqueta por estado (SALE, AGOTADO, etc.)
+        const estado = product.estado || 'disponible';
+        switch (estado) {
+            case 'oferta':
+                badges.push({ text: 'SALE', class: 'sale-badge' });
+                break;
+            case 'agotado':
+                badges.push({ text: 'AGOTADO', class: 'sold-out-badge' });
+                break;
+            case 'proximo':
+                badges.push({ text: 'PRÓXIMAMENTE', class: 'coming-soon-badge' });
+                break;
+            case 'nuevo':
+                badges.push({ text: 'NUEVO', class: 'new-badge' });
+                break;
+        }
+
+        // Etiqueta por marca premium
+        const marca = product.marca || '';
+        const marcasPremium = ['Chanel', 'Dior', 'Tom Ford', 'Creed', 'Maison Margiela'];
+        if (marcasPremium.includes(marca)) {
+            badges.push({ text: 'PREMIUM', class: 'premium-badge' });
+        }
+        
+        // Etiqueta LUXURY - priorizar campo luxury de BD sobre precio alto
+        if (product.luxury === true) {
+            badges.push({ text: 'LUXURY', class: 'luxury-badge' });
+        } else {
+            // Solo si no está marcado como luxury en BD, usar precio como criterio
+            const precio = product.precio || 0;
+            if (precio > 500000) {
+                badges.push({ text: 'LUXURY', class: 'luxury-badge' });
+            }
+        }
+        
+        // Etiqueta de descuento
+        if (product.descuento && product.descuento > 0) {
+            badges.push({ text: `-${product.descuento}%`, class: 'discount-badge' });
+        }
+        
+        // Etiqueta especial para productos destacados (basado en popularidad simulada)
+        const isPopular = (product.id % 7) === 0; // Cada 7mo producto
+        if (isPopular) {
+            badges.push({ text: 'POPULAR', class: 'popular-badge' });
+        }
+        
+        // Etiqueta por edición limitada (simulada)
+        const isLimited = marca === 'Chanel' && (product.id % 10) === 0;
+        if (isLimited) {
+            badges.push({ text: 'LIMITED', class: 'limited-badge' });
+        }
+        
+        // Generar HTML para las etiquetas (máximo 2 para no sobrecargar)
+        const maxBadges = badges.slice(0, 2);
+        return maxBadges.map((badge, index) => 
+            `<div class="${badge.class}" style="top: ${10 + (index * 35)}px;">${badge.text}</div>`
+        ).join('');
+    }
+
+    formatPrice(price) {
+        return new Intl.NumberFormat('es-CO', {
+            minimumFractionDigits: 0,
+            maximumFractionDigits: 0
+        }).format(price);
+    }
+
+    showTemporaryMessage(message) {
+        const notification = document.createElement('div');
+        notification.style.cssText = `
+            position: fixed; top: 80px; right: 20px; z-index: 10000;
+            background: #2c2c2c; color: white; padding: 12px 20px;
+            border-radius: 8px; font-family: 'Montserrat', sans-serif;
+            font-size: 14px; box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+        `;
+        notification.textContent = message;
+        
+        document.body.appendChild(notification);
+        
+        setTimeout(() => {
+            if (document.body.contains(notification)) {
+                document.body.removeChild(notification);
+            }
+        }, 3000);
     }
 }
 

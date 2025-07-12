@@ -4,19 +4,69 @@
 
 class ShoppingCart {
     constructor() {
-        this.items = [];
+        // Solo inicializar items como array vacío, no sobrescribir si ya existen
+        if (!this.items) {
+            this.items = [];
+        }
         this.isInitialized = false;
+        
+        // Verificar si ya hay una instancia con datos cargados para no perderlos
+        const existingData = this.getExistingCartData();
+        if (existingData && existingData.length > 0) {
+            console.log(`🔄 Preservando ${existingData.length} items existentes en el carrito`);
+            this.items = existingData;
+        }
+        
         this.init();
+    }
+    
+    // Método para obtener datos existentes del carrito sin reinicializar
+    getExistingCartData() {
+        try {
+            const saved = localStorage.getItem('shopping_cart');
+            if (!saved) {
+                return null;
+            }
+
+            const cartData = JSON.parse(saved);
+            
+            // Verificar si es formato antiguo (solo array de items)
+            if (Array.isArray(cartData)) {
+                return cartData;
+            }
+            
+            // Verificar formato nuevo con timestamp
+            if (cartData.timestamp && cartData.expiresIn) {
+                const now = Date.now();
+                const expirationTime = cartData.timestamp + cartData.expiresIn;
+                
+                if (now > expirationTime) {
+                    console.log('⏰ Datos existentes expirados');
+                    return null;
+                }
+                
+                return cartData.items || [];
+            }
+            
+            return null;
+        } catch (error) {
+            console.warn('⚠️ Error verificando datos existentes:', error);
+            return null;
+        }
     }
 
     async init() {
-        if (this.isInitialized) return;
+        if (this.isInitialized) {
+            console.log('🛒 Carrito ya inicializado, saltando init()');
+            return;
+        }
         
         console.log('🛒 Inicializando carrito de compras...');
         
         try {
-            // Cargar items del localStorage
+            // Cargar items del localStorage PRIMERO
             this.loadFromStorage();
+            console.log(`📦 Items cargados del localStorage: ${this.items.length}`);
             
             // Insertar HTML del carrito
             await this.insertCartHTML();
@@ -26,6 +76,9 @@ class ShoppingCart {
             
             // Actualizar UI
             this.updateCartUI();
+            
+            // Iniciar verificación periódica del tiempo del carrito
+            this.startPeriodicTimeCheck();
             
             this.isInitialized = true;
             console.log('✅ Carrito inicializado correctamente');
@@ -140,6 +193,11 @@ class ShoppingCart {
     }    // Métodos públicos para agregar/quitar productos
     addItem(product) {
         console.log('🛒 Agregando producto al carrito:', product);
+        console.log('🔍 Estado del carrito antes de agregar:', {
+            initialized: this.isInitialized,
+            itemCount: this.items.length,
+            items: this.items.map(i => i.id)
+        });
         
         // Normalizar ID como string para consistencia
         const productId = String(product.id);
@@ -150,22 +208,68 @@ class ShoppingCart {
             existingItem.quantity += 1;
             console.log(`✅ Cantidad incrementada. Nueva cantidad: ${existingItem.quantity}`);
         } else {
+            // Asegurar que la imagen se guarde correctamente
+            let imagenFinal = product.imagen_url || product.imagen;
+            
+            // Si no hay imagen, usar placeholder apropiado según categoría
+            if (!imagenFinal) {
+                if (product.categoria === 'para-ellas') {
+                    imagenFinal = '../IMAGENES/PARA_ELLAS.png';
+                } else if (product.categoria === 'para-ellos') {
+                    imagenFinal = '../IMAGENES/PARA_ELLOS.png';
+                } else {
+                    imagenFinal = '../IMAGENES/placeholder.png';
+                }
+            }
+            
             this.items.push({
                 id: productId, // Guardar como string
                 nombre: product.nombre,
                 marca: product.marca,
                 precio: product.precio,
-                imagen: product.imagen_url || product.imagen,
+                categoria: product.categoria, // Guardar categoría para el placeholder
+                imagen_url: imagenFinal,
+                imagen: imagenFinal, // Mantener ambos por compatibilidad
                 quantity: 1
             });
             console.log(`✅ Nuevo producto agregado con ID: ${productId}`);
         }
         
-        this.saveToStorage();
+        console.log('💾 Intentando guardar en storage...');
+        try {
+            this.saveToStorage();
+            console.log('✅ Guardado en storage exitoso');
+        } catch (error) {
+            console.error('❌ Error guardando en storage:', error);
+        }
+        
+        console.log('🔄 Actualizando UI...');
         this.updateCartUI();
+        
+        console.log('📢 Mostrando notificación...');
         this.showAddedNotification(product.nombre);
         
-        console.log(`✅ Total items en carrito: ${this.getTotalItems()}`);
+        // Extender tiempo del carrito por actividad
+        console.log('⏲️ Extendiendo tiempo del carrito...');
+        this.extendCartTime();
+        
+        console.log(`✅ Total items en carrito después de agregar: ${this.getTotalItems()}`);
+        
+        // Verificación adicional: revisar que se guardó correctamente
+        setTimeout(() => {
+            const savedData = this.getSavedCartData();
+            if (savedData) {
+                const savedItems = this.extractItemsFromSavedData(savedData);
+                console.log(`🔍 Verificación post-guardado: ${savedItems.length} items en storage`);
+                if (savedItems.length !== this.items.length) {
+                    console.warn('⚠️ Discrepancia detectada entre memoria y storage!');
+                    console.log('Memoria:', this.items.map(i => i.id));
+                    console.log('Storage:', savedItems.map(i => i.id));
+                }
+            } else {
+                console.warn('⚠️ No se encontraron datos guardados después de agregar item');
+            }
+        }, 100);
     }    removeItem(productId) {
         console.log('🗑️ Eliminando producto del carrito:', productId, typeof productId);
         
@@ -182,6 +286,11 @@ class ShoppingCart {
         
         this.saveToStorage();
         this.updateCartUI();
+        
+        // Extender tiempo del carrito por actividad si quedan items
+        if (this.items.length > 0) {
+            this.extendCartTime();
+        }
     }
 
     updateQuantity(productId, newQuantity) {
@@ -213,6 +322,9 @@ class ShoppingCart {
             
             this.saveToStorage();
             this.updateCartUI();
+            
+            // Extender tiempo del carrito por actividad
+            this.extendCartTime();
             
             console.log(`✅ Cantidad actualizada de ${oldQuantity} a ${item.quantity}`);
         } else {
@@ -318,12 +430,21 @@ class ShoppingCart {
         const cartItems = document.getElementById('cartItems');
         if (!cartItems) return;
         
-        cartItems.innerHTML = this.items.map(item => `
+        cartItems.innerHTML = this.items.map(item => {
+            // Determinar placeholder correcto según la categoría del producto
+            let placeholder = '../IMAGENES/placeholder.png';
+            if (item.categoria === 'para-ellas') {
+                placeholder = '../IMAGENES/PARA_ELLAS.png';
+            } else if (item.categoria === 'para-ellos') {
+                placeholder = '../IMAGENES/PARA_ELLOS.png';
+            }
+            
+            return `
             <div class="cart-item" data-id="${item.id}">
                 <div class="cart-item-image">
-                    <img src="${item.imagen || '../images/placeholder.jpg'}" 
+                    <img src="${item.imagen_url || item.imagen || placeholder}" 
                          alt="${item.nombre}"
-                         onerror="this.src='../images/placeholder.jpg'">
+                         onerror="this.src='${placeholder}'">
                 </div>
                 
                 <div class="cart-item-details">
@@ -348,7 +469,8 @@ class ShoppingCart {
                     </div>
                 </div>
             </div>
-        `).join('');
+            `;
+        }).join('');
     }
 
     updateCartTotal() {
@@ -376,25 +498,393 @@ class ShoppingCart {
         }).format(price);
     }
 
-    // Persistencia
+    // Persistencia con timestamp y expiración
     saveToStorage() {
+        console.log('💾 [saveToStorage] Iniciando guardado...');
+        console.log('💾 [saveToStorage] Items a guardar:', this.items.length);
+        console.log('💾 [saveToStorage] Items:', this.items.map(i => `${i.id}:${i.nombre}`));
+        
         try {
-            localStorage.setItem('shopping_cart', JSON.stringify(this.items));
+            // Crear versión optimizada de los datos (sin campos innecesarios)
+            const optimizedItems = this.items.map(item => ({
+                id: item.id,
+                nombre: item.nombre,
+                marca: item.marca,
+                precio: item.precio,
+                categoria: item.categoria,
+                imagen_url: item.imagen_url || item.imagen,
+                quantity: item.quantity
+            }));
+            
+            const cartData = {
+                items: optimizedItems,
+                timestamp: Date.now(),
+                expiresIn: 60 * 60 * 1000, // 1 hora
+                version: '1.0'
+            };
+            
+            const dataString = JSON.stringify(cartData);
+            
+            // Verificar tamaño antes de guardar
+            const sizeInBytes = new Blob([dataString]).size;
+            const sizeInMB = (sizeInBytes / (1024 * 1024)).toFixed(2);
+            
+            console.log(`📦 [saveToStorage] Intentando guardar carrito: ${sizeInMB}MB, ${this.items.length} items`);
+            
+            localStorage.setItem('shopping_cart', dataString);
+            
+            // Verificar que se guardó correctamente
+            const verification = localStorage.getItem('shopping_cart');
+            if (verification) {
+                const parsedVerification = JSON.parse(verification);
+                console.log(`✅ [saveToStorage] Carrito guardado y verificado: ${parsedVerification.items.length} items`);
+            } else {
+                console.error('❌ [saveToStorage] Verificación falló: no se encontraron datos después de guardar');
+            }
+            
+            console.log(`💾 [saveToStorage] Carrito guardado exitosamente (${sizeInMB}MB)`);
+            
         } catch (error) {
-            console.warn('⚠️ No se pudo guardar el carrito en localStorage:', error);
+            console.error('❌ [saveToStorage] Error guardando en localStorage:', error.name, error.message);
+            console.error('❌ [saveToStorage] Stack trace:', error.stack);
+            
+            if (error.name === 'QuotaExceededError') {
+                console.warn('⚠️ [saveToStorage] Ejecutando manejo de cuota excedida...');
+                this.handleQuotaExceeded();
+            } else {
+                console.error('❌ [saveToStorage] Error desconocido en localStorage:', error);
+            }
         }
+    }
+    
+    // Manejar cuando se excede la cuota de localStorage
+    handleQuotaExceeded() {
+        console.group('💾 MANEJANDO CUOTA EXCEDIDA');
+        
+        try {
+            // 1. Obtener información de uso de localStorage
+            const storageInfo = this.getLocalStorageInfo();
+            console.log('📊 Uso de localStorage:', storageInfo);
+            
+            // 2. Limpiar datos antiguos o innecesarios
+            this.cleanupLocalStorage();
+            
+            // 3. Intentar guardar una versión más compacta
+            const compactData = this.createCompactCartData();
+            
+            try {
+                localStorage.setItem('shopping_cart', JSON.stringify(compactData));
+                console.log('✅ Carrito guardado en formato compacto');
+            } catch (compactError) {
+                console.warn('⚠️ Aún así no se puede guardar, usando sessionStorage');
+                
+                // 4. Fallback a sessionStorage
+                try {
+                    sessionStorage.setItem('shopping_cart_session', JSON.stringify(compactData));
+                    console.log('✅ Carrito guardado en sessionStorage como fallback');
+                } catch (sessionError) {
+                    console.error('❌ No se puede guardar en ningún storage:', sessionError);
+                    
+                    // 5. Último recurso: mantener solo en memoria
+                    console.warn('⚠️ Carrito funcionará solo en memoria durante esta sesión');
+                }
+            }
+            
+        } catch (error) {
+            console.error('❌ Error en handleQuotaExceeded:', error);
+        }
+        
+        console.groupEnd();
+    }
+    
+    // Crear versión compacta de los datos del carrito
+    createCompactCartData() {
+        const compactItems = this.items.map(item => ({
+            i: item.id,                    // id -> i
+            n: item.nombre,                // nombre -> n
+            m: item.marca,                 // marca -> m
+            p: item.precio,                // precio -> p
+            c: item.categoria,             // categoria -> c
+            img: item.imagen_url || item.imagen, // imagen -> img
+            q: item.quantity               // quantity -> q
+        }));
+        
+        return {
+            i: compactItems,              // items -> i
+            t: Date.now(),                // timestamp -> t
+            e: 60 * 60 * 1000,           // expiresIn -> e
+            v: '1.1'                      // version -> v (indica formato compacto)
+        };
+    }
+    
+    // Obtener información del uso de localStorage
+    getLocalStorageInfo() {
+        let totalSize = 0;
+        let itemCount = 0;
+        const items = [];
+        
+        for (let key in localStorage) {
+            if (localStorage.hasOwnProperty(key)) {
+                const value = localStorage.getItem(key);
+                const size = new Blob([value]).size;
+                totalSize += size;
+                itemCount++;
+                
+                items.push({
+                    key: key,
+                    size: (size / 1024).toFixed(2) + 'KB'
+                });
+            }
+        }
+        
+        return {
+            totalSize: (totalSize / (1024 * 1024)).toFixed(2) + 'MB',
+            itemCount: itemCount,
+            items: items.sort((a, b) => parseFloat(b.size) - parseFloat(a.size))
+        };
+    }
+    
+    // Limpiar localStorage de datos antiguos
+    cleanupLocalStorage() {
+        console.log('🧹 Iniciando limpieza de localStorage...');
+        
+        const keysToCheck = [];
+        for (let key in localStorage) {
+            if (localStorage.hasOwnProperty(key)) {
+                keysToCheck.push(key);
+            }
+        }
+        
+        let cleanedCount = 0;
+        
+        keysToCheck.forEach(key => {
+            try {
+                // Limpiar datos que no sean del carrito y parezcan antiguos/temporales
+                if (key.includes('temp') || 
+                    key.includes('cache') || 
+                    key.includes('old') ||
+                    key.startsWith('_') ||
+                    key.includes('debug')) {
+                    
+                    localStorage.removeItem(key);
+                    cleanedCount++;
+                    console.log(`🗑️ Eliminado: ${key}`);
+                }
+            } catch (error) {
+                console.warn(`⚠️ No se pudo eliminar ${key}:`, error);
+            }
+        });
+        
+        console.log(`✅ Limpieza completada: ${cleanedCount} elementos eliminados`);
     }
 
     loadFromStorage() {
         try {
-            const saved = localStorage.getItem('shopping_cart');
-            if (saved) {
-                this.items = JSON.parse(saved);
-                console.log(`📦 Carrito cargado: ${this.items.length} items`);
+            // Si ya tenemos items cargados en el constructor, no sobrescribir
+            if (this.items && this.items.length > 0) {
+                console.log(`🔄 Items ya cargados en memoria (${this.items.length}), verificando con localStorage...`);
+                
+                // Verificar si localStorage tiene datos más actuales
+                const savedData = this.getSavedCartData();
+                if (savedData) {
+                    let storageItems = this.extractItemsFromSavedData(savedData);
+                    
+                    // Solo usar storage si tiene más items
+                    if (storageItems.length > this.items.length) {
+                        console.log(`📦 Storage tiene más items (${storageItems.length} vs ${this.items.length}), actualizando...`);
+                        this.items = storageItems;
+                    } else {
+                        console.log(`✅ Manteniendo items en memoria (${this.items.length})`);
+                        return;
+                    }
+                } else {
+                    console.log(`✅ Manteniendo items en memoria, no hay datos en storage`);
+                    return;
+                }
+            }
+
+            const savedData = this.getSavedCartData();
+            if (!savedData) {
+                console.log('📦 No hay carrito guardado en ningún storage');
+                this.items = [];
+                return;
+            }
+
+            const cartData = savedData.data;
+            const source = savedData.source;
+            
+            console.log(`📦 Cargando carrito desde ${source}`);
+
+            // Verificar si es formato antiguo (solo array de items)
+            if (Array.isArray(cartData)) {
+                console.log('🔄 Migrando formato antiguo...');
+                this.items = cartData;
+                this.saveToStorage(); // Guardar en nuevo formato
+                console.log(`📦 Carrito migrado: ${this.items.length} items`);
+                return;
+            }
+            
+            // Verificar timestamp y expiración
+            const timestamp = cartData.t || cartData.timestamp;
+            const expiresIn = cartData.e || cartData.expiresIn;
+            
+            if (timestamp && expiresIn) {
+                const now = Date.now();
+                const expirationTime = timestamp + expiresIn;
+                
+                if (now > expirationTime) {
+                    console.log('⏰ Carrito expirado, limpiando...');
+                    this.clearExpiredCart();
+                    return;
+                }
+                
+                // Extraer items según el formato
+                let items = this.extractItemsFromSavedData(savedData);
+                this.items = items;
+                
+                const remainingTime = Math.round((expirationTime - now) / (1000 * 60));
+                console.log(`📦 Carrito cargado desde ${source}: ${this.items.length} items, expira en ${remainingTime} minutos`);
+                
+                // Programar limpieza automática cuando expire
+                this.scheduleCartExpiration(expirationTime - now);
+                
+            } else {
+                // Formato desconocido, limpiar
+                console.warn('⚠️ Formato de carrito desconocido, limpiando...');
+                this.clearExpiredCart();
+            }
+            
+        } catch (error) {
+            console.warn('⚠️ No se pudo cargar el carrito desde storage:', error);
+            this.items = [];
+            this.clearExpiredCart();
+        }
+    }
+    
+    // Obtener datos del carrito desde localStorage o sessionStorage
+    getSavedCartData() {
+        // Intentar localStorage primero
+        try {
+            const localData = localStorage.getItem('shopping_cart');
+            if (localData) {
+                return {
+                    data: JSON.parse(localData),
+                    source: 'localStorage'
+                };
             }
         } catch (error) {
-            console.warn('⚠️ No se pudo cargar el carrito desde localStorage:', error);
-            this.items = [];
+            console.warn('⚠️ Error leyendo localStorage:', error);
+        }
+        
+        // Fallback a sessionStorage
+        try {
+            const sessionData = sessionStorage.getItem('shopping_cart_session');
+            if (sessionData) {
+                console.log('📦 Usando datos de sessionStorage como fallback');
+                return {
+                    data: JSON.parse(sessionData),
+                    source: 'sessionStorage'
+                };
+            }
+        } catch (error) {
+            console.warn('⚠️ Error leyendo sessionStorage:', error);
+        }
+        
+        return null;
+    }
+    
+    // Extraer items de los datos guardados (maneja formato normal y compacto)
+    extractItemsFromSavedData(savedData) {
+        const cartData = savedData.data;
+        const version = cartData.v || cartData.version;
+        
+        // Formato compacto (v1.1)
+        if (version === '1.1') {
+            console.log('📦 Leyendo formato compacto');
+            return (cartData.i || []).map(item => ({
+                id: item.i,
+                nombre: item.n,
+                marca: item.m,
+                precio: item.p,
+                categoria: item.c,
+                imagen_url: item.img,
+                imagen: item.img,
+                quantity: item.q
+            }));
+        }
+        
+        // Formato normal (v1.0 o sin versión)
+        return cartData.items || cartData.i || [];
+    }
+    
+    // Limpiar carrito expirado
+    clearExpiredCart() {
+        this.items = [];
+        localStorage.removeItem('shopping_cart');
+        console.log('🧹 Carrito expirado eliminado');
+        
+        // Solo actualizar UI si el carrito está inicializado
+        if (this.isInitialized) {
+            this.updateCartUI();
+        }
+    }
+    
+    // Programar limpieza automática del carrito
+    scheduleCartExpiration(timeUntilExpiration) {
+        if (this.expirationTimeout) {
+            clearTimeout(this.expirationTimeout);
+        }
+        
+        this.expirationTimeout = setTimeout(() => {
+            console.log('⏰ Carrito expirado automáticamente');
+            this.clearExpiredCart();
+            this.showExpirationNotification();
+        }, timeUntilExpiration);
+        
+        console.log(`⏲️ Carrito programado para expirar en ${Math.round(timeUntilExpiration / (1000 * 60))} minutos`);
+    }
+    
+    // Mostrar notificación de expiración
+    showExpirationNotification() {
+        const notification = document.createElement('div');
+        notification.style.cssText = `
+            position: fixed;
+            top: 80px;
+            right: 20px;
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+            padding: 12px 20px;
+            border-radius: 8px;
+            z-index: 10000;
+            font-family: 'Montserrat', sans-serif;
+            font-size: 14px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+            max-width: 300px;
+        `;
+        
+        notification.innerHTML = `
+            <div>⏰ <strong>Carrito expirado</strong></div>
+            <div style="font-size: 12px; margin-top: 4px;">Los productos han sido removidos por inactividad</div>
+        `;
+        
+        document.body.appendChild(notification);
+        
+        setTimeout(() => {
+            if (document.body.contains(notification)) {
+                document.body.removeChild(notification);
+            }
+        }, 5000);
+    }
+    
+    // Extender tiempo del carrito (reiniciar timer)
+    extendCartTime() {
+        if (this.items.length > 0) {
+            console.log('🔄 Extendiendo tiempo del carrito...');
+            this.saveToStorage(); // Actualiza timestamp
+            
+            // Reprogramar expiración
+            this.scheduleCartExpiration(60 * 60 * 1000); // 1 hora más
         }
     }
 
@@ -485,6 +975,80 @@ class ShoppingCart {
         // this.clearCart();
     }
 
+    // Obtener información del tiempo restante del carrito
+    getCartTimeInfo() {
+        try {
+            const saved = localStorage.getItem('shopping_cart');
+            if (!saved) return null;
+            
+            const cartData = JSON.parse(saved);
+            if (!cartData.timestamp || !cartData.expiresIn) return null;
+            
+            const now = Date.now();
+            const expirationTime = cartData.timestamp + cartData.expiresIn;
+            const remainingTime = expirationTime - now;
+            
+            if (remainingTime <= 0) return { expired: true };
+            
+            return {
+                expired: false,
+                remainingMinutes: Math.round(remainingTime / (1000 * 60)),
+                expirationTime: new Date(expirationTime).toLocaleTimeString()
+            };
+        } catch (error) {
+            console.warn('⚠️ Error obteniendo información de tiempo del carrito:', error);
+            return null;
+        }
+    }
+    
+    // Mostrar tiempo restante del carrito al usuario (opcional)
+    showCartTimeInfo() {
+        const timeInfo = this.getCartTimeInfo();
+        if (!timeInfo) return;
+        
+        if (timeInfo.expired) {
+            console.log('⏰ El carrito ha expirado');
+            return;
+        }
+        
+        if (timeInfo.remainingMinutes <= 10) {
+            // Mostrar advertencia si quedan menos de 10 minutos
+            const notification = document.createElement('div');
+            notification.style.cssText = `
+                position: fixed;
+                top: 80px;
+                right: 20px;
+                background: #fff3cd;
+                color: #856404;
+                border: 1px solid #ffeaa7;
+                padding: 12px 20px;
+                border-radius: 8px;
+                z-index: 10000;
+                font-family: 'Montserrat', sans-serif;
+                font-size: 14px;
+                box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+                max-width: 300px;
+            `;
+            
+            notification.innerHTML = `
+                <div>⏰ <strong>Carrito expirando</strong></div>
+                <div style="font-size: 12px; margin-top: 4px;">
+                    Los productos se eliminarán en ${timeInfo.remainingMinutes} minutos
+                </div>
+            `;
+            
+            document.body.appendChild(notification);
+            
+            setTimeout(() => {
+                if (document.body.contains(notification)) {
+                    document.body.removeChild(notification);
+                }
+            }, 5000);
+        }
+        
+        console.log(`⏲️ Carrito expira en ${timeInfo.remainingMinutes} minutos (${timeInfo.expirationTime})`);
+    }
+
     // Método de validación y depuración
     validateCart() {
         console.log('🔍 Validando carrito...');
@@ -523,23 +1087,52 @@ class ShoppingCart {
         return this.items.length;
     }
 
-    // Método para obtener información detallada del carrito
+    // Método para obtener información del estado del carrito de forma segura
     getCartStatus() {
         return {
             totalItems: this.getTotalItems(),
-            totalValue: this.getTotal(),
-            itemCount: this.items.length,
-            items: this.items.map(item => ({
+            totalAmount: this.getTotal(),
+            isInitialized: this.isInitialized,
+            itemsList: this.items.map(item => ({
                 id: item.id,
                 nombre: item.nombre,
                 quantity: item.quantity,
-                precio: item.precio,
-                subtotal: item.precio * item.quantity
-            })),
-            isValid: this.items.every(item => 
-                item.id && item.quantity > 0 && item.nombre && item.precio
-            )
+                precio: item.precio
+            }))
         };
+    }
+    
+    // Método para verificar integridad del carrito
+    verifyCartIntegrity() {
+        const localStorageData = this.getExistingCartData();
+        const memoryItems = this.items || [];
+        
+        console.group('🔍 VERIFICACIÓN DE INTEGRIDAD DEL CARRITO');
+        console.log('Items en memoria:', memoryItems.length);
+        console.log('Items en localStorage:', localStorageData ? localStorageData.length : 0);
+        
+        if (localStorageData && localStorageData.length !== memoryItems.length) {
+            console.warn('⚠️ Discrepancia detectada entre memoria y localStorage');
+            console.log('Memoria:', memoryItems.map(i => i.id));
+            console.log('LocalStorage:', localStorageData.map(i => i.id));
+            
+            // Usar los datos más completos
+            if (localStorageData.length > memoryItems.length) {
+                console.log('🔄 Sincronizando desde localStorage a memoria');
+                this.items = localStorageData;
+                this.updateCartUI();
+                return 'localStorage_to_memory';
+            } else if (memoryItems.length > localStorageData.length) {
+                console.log('🔄 Sincronizando desde memoria a localStorage');
+                this.saveToStorage();
+                return 'memory_to_localStorage';
+            }
+        } else {
+            console.log('✅ Integridad verificada: memoria y localStorage están sincronizados');
+        }
+        
+        console.groupEnd();
+        return 'synchronized';
     }
 
     // Método de emergencia para reinicializar el carrito
@@ -577,6 +1170,23 @@ class ShoppingCart {
         });
         console.log('LocalStorage:', localStorage.getItem('shopping_cart'));
         console.log('Inicializado:', this.isInitialized);
+        
+        // Información de tiempo del carrito
+        const timeInfo = this.getCartTimeInfo();
+        if (timeInfo) {
+            if (timeInfo.expired) {
+                console.log('⏰ Tiempo del carrito: EXPIRADO');
+            } else {
+                console.log('⏰ Tiempo del carrito:', {
+                    remainingMinutes: timeInfo.remainingMinutes,
+                    expirationTime: timeInfo.expirationTime,
+                    status: timeInfo.remainingMinutes <= 10 ? 'Expirando pronto' : 'Activo'
+                });
+            }
+        } else {
+            console.log('⏰ Tiempo del carrito: No disponible');
+        }
+        
         console.groupEnd();
     }    // Métodos mejorados para manejo de cantidades
     increaseQuantity(productId) {
@@ -590,6 +1200,10 @@ class ShoppingCart {
             item.quantity += 1;
             this.saveToStorage();
             this.updateCartUI();
+            
+            // Extender tiempo del carrito por actividad
+            this.extendCartTime();
+            
             console.log(`✅ Nueva cantidad: ${item.quantity}`);
         } else {
             console.error('❌ Producto no encontrado en carrito:', productId);
@@ -609,6 +1223,10 @@ class ShoppingCart {
                 item.quantity -= 1;
                 this.saveToStorage();
                 this.updateCartUI();
+                
+                // Extender tiempo del carrito por actividad
+                this.extendCartTime();
+                
                 console.log(`✅ Nueva cantidad: ${item.quantity}`);
             } else {
                 // Si cantidad es 1, preguntar si quiere eliminar
@@ -627,30 +1245,179 @@ class ShoppingCart {
     reconfigureEventListeners() {
         console.log('🔄 Reconfigurando event listeners del carrito...');
         
+        // Verificar si ya se reconfiguró recientemente para evitar duplicados
+        if (this._lastReconfigure && (Date.now() - this._lastReconfigure) < 1000) {
+            console.log('⏭️ Reconfiguración saltada - muy reciente');
+            return;
+        }
+        this._lastReconfigure = Date.now();
+        
         // Reconfigurar botón del carrito
         const cartButton = document.getElementById('cartButton');
         if (cartButton) {
             try {
-                // Remover event listener existente si lo hay
+                // Crear un nuevo event listener único
+                const cartClickHandler = (event) => {
+                    event.preventDefault();
+                    event.stopPropagation();
+                    console.log('🛒 Botón del carrito clickeado - handler único');
+                    this.toggleCart();
+                };
+                
+                // Remover todos los event listeners existentes clonando el elemento
                 const newCartButton = cartButton.cloneNode(true);
                 cartButton.parentNode.replaceChild(newCartButton, cartButton);
                 
-                // Asegurar que el nuevo botón tenga el event listener
-                const refreshedButton = document.getElementById('cartButton');
-                if (refreshedButton) {
-                    refreshedButton.addEventListener('click', () => this.toggleCart());
-                    console.log('✅ Event listener del botón del carrito reconfigurado');
+                // Agregar el nuevo event listener al botón reemplazado
+                const freshCartButton = document.getElementById('cartButton');
+                if (freshCartButton) {
+                    freshCartButton.addEventListener('click', cartClickHandler);
+                    console.log('✅ Event listener único configurado para el botón del carrito');
                 } else {
-                    console.log('⚠️ No se pudo reconfigurar el botón del carrito');
+                    console.warn('⚠️ No se pudo obtener el botón del carrito después del reemplazo');
                 }
+                
             } catch (error) {
-                console.log('⚠️ Error reconfigurando botón del carrito:', error.message);
-                // Fallback: simplemente agregar el event listener
-                cartButton.addEventListener('click', () => this.toggleCart());
+                console.warn('⚠️ Error reconfigurando botón del carrito:', error.message);
+                // Fallback: agregar event listener directamente
+                cartButton.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    console.log('🛒 Botón del carrito clickeado (fallback)');
+                    this.toggleCart();
+                });
+                console.log('✅ Event listener del carrito configurado (fallback)');
             }
         } else {
-            console.log('⚠️ Botón del carrito no encontrado durante reconfiguración');
+            console.warn('⚠️ Botón del carrito no encontrado durante reconfiguración');
         }
+        
+        // También reconfigurar otros elementos del carrito si existen
+        this.reconfigureCartElements();
+    }
+    
+    // Método auxiliar para reconfigurar elementos del carrito
+    reconfigureCartElements() {
+        // Crear handlers únicos para cada elemento
+        const closeCartHandler = (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            this.closeCart();
+        };
+        
+        const checkoutHandler = (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            this.proceedToCheckout();
+        };
+        
+        // Cerrar carrito - clonar para remover listeners
+        const cartClose = document.getElementById('cartClose');
+        if (cartClose) {
+            const newCartClose = cartClose.cloneNode(true);
+            cartClose.parentNode.replaceChild(newCartClose, cartClose);
+            document.getElementById('cartClose').addEventListener('click', closeCartHandler);
+        }
+        
+        const cartOverlay = document.getElementById('cartOverlay');
+        if (cartOverlay) {
+            const newCartOverlay = cartOverlay.cloneNode(true);
+            cartOverlay.parentNode.replaceChild(newCartOverlay, cartOverlay);
+            document.getElementById('cartOverlay').addEventListener('click', closeCartHandler);
+        }
+
+        // Botones del footer
+        const checkoutBtn = document.getElementById('checkoutBtn');
+        if (checkoutBtn) {
+            const newCheckoutBtn = checkoutBtn.cloneNode(true);
+            checkoutBtn.parentNode.replaceChild(newCheckoutBtn, checkoutBtn);
+            document.getElementById('checkoutBtn').addEventListener('click', checkoutHandler);
+        }
+        
+        const continueShoppingBtn = document.getElementById('continueShoppingBtn');
+        if (continueShoppingBtn) {
+            const newContinueBtn = continueShoppingBtn.cloneNode(true);
+            continueShoppingBtn.parentNode.replaceChild(newContinueBtn, continueShoppingBtn);
+            document.getElementById('continueShoppingBtn').addEventListener('click', closeCartHandler);
+        }
+        
+        console.log('✅ Elementos del carrito reconfigurados sin duplicados');
+    }
+
+    // Iniciar verificación periódica del tiempo del carrito
+    startPeriodicTimeCheck() {
+        // Verificar cada 5 minutos
+        this.timeCheckInterval = setInterval(() => {
+            if (this.items.length > 0) {
+                const timeInfo = this.getCartTimeInfo();
+                if (timeInfo) {
+                    if (timeInfo.expired) {
+                        console.log('⏰ Verificación periódica: carrito expirado');
+                        this.clearExpiredCart();
+                    } else if (timeInfo.remainingMinutes <= 10) {
+                        console.log(`⏰ Verificación periódica: carrito expira en ${timeInfo.remainingMinutes} minutos`);
+                        this.showCartTimeInfo();
+                    }
+                }
+                
+                // Verificar integridad cada vez
+                this.verifyCartIntegrity();
+            }
+        }, 5 * 60 * 1000); // 5 minutos
+        
+        console.log('⏲️ Verificación periódica del carrito iniciada (cada 5 minutos)');
+        
+        // Verificación inicial de integridad después de 2 segundos
+        setTimeout(() => {
+            if (this.items.length > 0) {
+                this.verifyCartIntegrity();
+            }
+        }, 2000);
+    }
+
+    // Método para debuggear el localStorage específicamente
+    debugLocalStorage() {
+        console.group('💾 DEBUG DEL LOCALSTORAGE');
+        
+        const cartData = localStorage.getItem('shopping_cart');
+        if (!cartData) {
+            console.log('📦 No hay datos en localStorage');
+            console.groupEnd();
+            return;
+        }
+        
+        try {
+            const parsed = JSON.parse(cartData);
+            console.log('📦 Datos guardados:', parsed);
+            
+            if (parsed.timestamp) {
+                const now = Date.now();
+                const age = now - parsed.timestamp;
+                const ageMinutes = Math.round(age / (1000 * 60));
+                const expirationTime = parsed.timestamp + (parsed.expiresIn || 0);
+                const remainingTime = Math.round((expirationTime - now) / (1000 * 60));
+                
+                console.log('⏰ Información de tiempo:', {
+                    'Guardado hace (minutos)': ageMinutes,
+                    'Tiempo restante (minutos)': remainingTime,
+                    'Expira el': new Date(expirationTime).toLocaleString(),
+                    'Estado': remainingTime > 0 ? 'Válido' : 'Expirado'
+                });
+            }
+            
+            if (parsed.items) {
+                console.log('🛒 Items en localStorage:', parsed.items.length);
+                parsed.items.forEach((item, index) => {
+                    console.log(`  ${index + 1}. ${item.nombre} (${item.marca}) - Cantidad: ${item.quantity}`);
+                });
+            }
+            
+        } catch (error) {
+            console.error('❌ Error parseando localStorage:', error);
+            console.log('🔧 Datos raw:', cartData.substring(0, 200) + '...');
+        }
+        
+        console.groupEnd();
     }
 }
 
@@ -679,7 +1446,8 @@ window.checkCartStatus = function() {
         console.error('❌ window.shoppingCart no existe');
         console.log('Intentando crear nueva instancia...');
         try {
-            window.shoppingCart = new ShoppingCart();
+            // Usar función singleton en lugar de crear directamente
+            window.getShoppingCartInstance();
             console.log('✅ Nueva instancia creada');
         } catch (error) {
             console.error('❌ Error creando instancia:', error);
@@ -693,7 +1461,12 @@ window.checkCartStatus = function() {
 window.forceInitCart = function() {
     console.log('🔄 Forzando reinicialización del carrito...');
     try {
-        window.shoppingCart = new ShoppingCart();
+        // Limpiar instancia existente
+        if (window.shoppingCart) {
+            window.shoppingCart = null;
+        }
+        // Usar función singleton para crear nueva instancia
+        window.shoppingCart = window.getShoppingCartInstance();
         console.log('✅ Carrito reinicializado');
         return true;
     } catch (error) {
@@ -702,40 +1475,270 @@ window.forceInitCart = function() {
     }
 };
 
-// Inicializar carrito cuando el DOM esté listo
-document.addEventListener('DOMContentLoaded', function() {
-    console.log('🚀 DOM cargado, inicializando carrito...');
-    
-    // Inicialización inmediata
-    if (!window.shoppingCart) {
-        window.shoppingCart = new ShoppingCart();
-        console.log('🛒 Carrito creado inmediatamente');
+// SINGLETON: Función para obtener o crear la instancia única del carrito
+window.getShoppingCartInstance = function() {
+    // Si ya existe y está correctamente inicializado, devolverlo
+    if (window.shoppingCart && window.shoppingCart.isInitialized) {
+        console.log('✅ Reutilizando instancia existente del carrito');
+        return window.shoppingCart;
     }
     
-    // Verificación adicional después de un delay
-    setTimeout(() => {
-        if (!window.shoppingCart || typeof window.shoppingCart.increaseQuantity !== 'function') {
-            console.warn('⚠️ Carrito no inicializado correctamente, reintentando...');
-            window.shoppingCart = new ShoppingCart();
+    // Si existe pero no está inicializado, inicializarlo preservando datos
+    if (window.shoppingCart && !window.shoppingCart.isInitialized) {
+        console.log('🔄 Inicializando carrito existente...');
+        
+        // Preservar cualquier dato ya cargado antes de init
+        const existingItems = window.shoppingCart.items || [];
+        window.shoppingCart.init();
+        
+        // Si init sobrescribió los datos, restaurarlos
+        if (existingItems.length > 0 && window.shoppingCart.items.length === 0) {
+            console.log(`🔄 Restaurando ${existingItems.length} items después de init`);
+            window.shoppingCart.items = existingItems;
+            window.shoppingCart.saveToStorage();
+            window.shoppingCart.updateCartUI();
         }
         
-        // Verificación final
-        if (window.shoppingCart && typeof window.shoppingCart.increaseQuantity === 'function') {
-            console.log('✅ Carrito inicializado correctamente con todas las funciones');
-            console.log('🔧 Funciones disponibles:', Object.getOwnPropertyNames(Object.getPrototypeOf(window.shoppingCart)).filter(name => typeof window.shoppingCart[name] === 'function'));
+        return window.shoppingCart;
+    }
+    
+    // Si no existe, crear nueva instancia
+    console.log('🛒 Creando nueva instancia única del carrito...');
+    window.shoppingCart = new ShoppingCart();
+    return window.shoppingCart;
+};
+
+// Inicializar carrito cuando el DOM esté listo
+document.addEventListener('DOMContentLoaded', function() {
+    console.log('🚀 DOM cargado, obteniendo instancia del carrito...');
+    
+    // Usar función singleton para obtener/crear instancia
+    const cart = window.getShoppingCartInstance();
+    
+    // Verificación final después de un delay mínimo
+    setTimeout(() => {
+        if (window.shoppingCart && typeof window.shoppingCart.getTotalItems === 'function') {
+            const itemCount = window.shoppingCart.getTotalItems();
+            console.log(`✅ Carrito verificado: ${itemCount} items`);
+            
+            // Mostrar información de tiempo si hay items
+            if (itemCount > 0) {
+                const timeInfo = window.shoppingCart.getCartTimeInfo();
+                if (timeInfo && !timeInfo.expired) {
+                    console.log(`⏲️ Carrito expira en ${timeInfo.remainingMinutes} minutos`);
+                }
+            }
         } else {
-            console.error('❌ Error crítico: carrito no se inicializó correctamente');
+            console.error('❌ Error crítico: carrito no funciona correctamente');
         }
-    }, 1000);
+    }, 500);
 });
 
-// También inicializar cuando la ventana se carga completamente
+// También verificar cuando la ventana se carga completamente (solo como backup)
 window.addEventListener('load', function() {
-    if (!window.shoppingCart) {
-        console.log('🔄 Inicializando carrito en window.load...');
-        window.shoppingCart = new ShoppingCart();
-    }
+    // Usar función singleton en lugar de crear directamente
+    window.getShoppingCartInstance();
 });
+
+// Función global para verificar tiempo del carrito
+window.checkCartTime = function() {
+    if (!window.shoppingCart) {
+        console.log('❌ Carrito no disponible');
+        return;
+    }
+    
+    const timeInfo = window.shoppingCart.getCartTimeInfo();
+    if (!timeInfo) {
+        console.log('📦 No hay carrito guardado o sin información de tiempo');
+        return;
+    }
+    
+    if (timeInfo.expired) {
+        console.log('⏰ El carrito ha expirado');
+        return;
+    }
+    
+    console.group('⏲️ INFORMACIÓN DEL CARRITO');
+    console.log(`Items en carrito: ${window.shoppingCart.getTotalItems()}`);
+    console.log(`Tiempo restante: ${timeInfo.remainingMinutes} minutos`);
+    console.log(`Expira a las: ${timeInfo.expirationTime}`);
+    console.log(`Estado: ${timeInfo.remainingMinutes <= 10 ? '⚠️ Expirando pronto' : '✅ Activo'}`);
+    console.groupEnd();
+    
+    return timeInfo;
+};
+
+// Función para extender manualmente el tiempo del carrito
+window.extendCartTime = function() {
+    if (!window.shoppingCart) {
+        console.log('❌ Carrito no disponible');
+        return false;
+    }
+    
+    if (window.shoppingCart.items.length === 0) {
+        console.log('📦 Carrito vacío, no hay nada que extender');
+        return false;
+    }
+    
+    window.shoppingCart.extendCartTime();
+    console.log('✅ Tiempo del carrito extendido por 1 hora más');
+    return true;
+};
 
 // Hacer disponible globalmente
 window.ShoppingCart = ShoppingCart;
+
+// Función global para debug del localStorage
+window.debugCartLocalStorage = function() {
+    if (!window.shoppingCart || !window.shoppingCart.debugLocalStorage) {
+        console.log('❌ Método debugLocalStorage no disponible');
+        
+        // Fallback manual
+        console.group('💾 DEBUG DEL LOCALSTORAGE (Fallback)');
+        const cartData = localStorage.getItem('shopping_cart');
+        if (!cartData) {
+            console.log('📦 No hay datos en localStorage');
+        } else {
+            try {
+                const parsed = JSON.parse(cartData);
+                console.log('📦 Datos guardados:', parsed);
+            } catch (error) {
+                console.error('❌ Error parseando:', error);
+                console.log('🔧 Datos raw:', cartData);
+            }
+        }
+        console.groupEnd();
+        return;
+    }
+    
+    window.shoppingCart.debugLocalStorage();
+};
+
+// Función global adicional para verificar integridad
+window.verifyCartIntegrity = function() {
+    if (!window.shoppingCart || !window.shoppingCart.verifyCartIntegrity) {
+        console.log('❌ Método verifyCartIntegrity no disponible');
+        return false;
+    }
+    
+    return window.shoppingCart.verifyCartIntegrity();
+};
+
+// Función para simular navegación y verificar persistencia
+window.simulateNavigation = function() {
+    console.group('🚀 SIMULACIÓN DE NAVEGACIÓN');
+    
+    if (!window.shoppingCart) {
+        console.log('❌ No hay carrito para simular');
+        console.groupEnd();
+        return;
+    }
+    
+    const beforeItems = window.shoppingCart.items.length;
+    console.log(`📦 Items antes de simular navegación: ${beforeItems}`);
+    
+    // Simular que el carrito se "reinicializa" (como pasaría en navegación)
+    const currentItems = [...window.shoppingCart.items];
+    
+    // Forzar reinicialización
+    window.shoppingCart.isInitialized = false;
+    
+    // Obtener instancia (debería preservar datos)
+    const cart = window.getShoppingCartInstance();
+    
+    const afterItems = cart.items.length;
+    console.log(`📦 Items después de reinicialización: ${afterItems}`);
+    
+    if (beforeItems === afterItems) {
+        console.log('✅ Navegación simulada exitosa - datos preservados');
+    } else {
+        console.log('❌ Datos perdidos durante navegación simulada');
+        console.log('Antes:', currentItems.map(i => i.id));
+        console.log('Después:', cart.items.map(i => i.id));
+    }
+    
+    console.groupEnd();
+    return beforeItems === afterItems;
+};
+
+// Función global para diagnosticar problemas de guardado
+window.debugCartSave = function() {
+    console.group('🔍 DIAGNÓSTICO DE GUARDADO DEL CARRITO');
+    
+    if (!window.shoppingCart) {
+        console.error('❌ window.shoppingCart no existe');
+        console.groupEnd();
+        return;
+    }
+    
+    console.log('✅ Carrito existe');
+    console.log('🔧 Estado de inicialización:', window.shoppingCart.isInitialized);
+    console.log('📦 Items en memoria:', window.shoppingCart.items.length);
+    
+    if (window.shoppingCart.items.length > 0) {
+        console.log('📋 Lista de items:');
+        window.shoppingCart.items.forEach((item, i) => {
+            console.log(`  ${i+1}. ${item.nombre} (ID: ${item.id})`);
+        });
+    }
+    
+    // Verificar localStorage
+    const localData = localStorage.getItem('shopping_cart');
+    if (localData) {
+        try {
+            const parsed = JSON.parse(localData);
+            let savedItems = [];
+            
+            if (Array.isArray(parsed)) {
+                savedItems = parsed;
+            } else if (parsed.items) {
+                savedItems = parsed.items;
+            } else if (parsed.i) {
+                savedItems = parsed.i;
+            }
+            
+            console.log('💾 Items en localStorage:', savedItems.length);
+            if (savedItems.length > 0) {
+                console.log('💾 Lista de items guardados:');
+                savedItems.forEach((item, i) => {
+                    const name = item.nombre || item.n;
+                    const id = item.id || item.i;
+                    console.log(`  ${i+1}. ${name} (ID: ${id})`);
+                });
+            }
+            
+            // Comparar memoria vs localStorage
+            if (window.shoppingCart.items.length !== savedItems.length) {
+                console.warn('⚠️ DISCREPANCIA DETECTADA:');
+                console.warn(`   Memoria: ${window.shoppingCart.items.length} items`);
+                console.warn(`   LocalStorage: ${savedItems.length} items`);
+            } else {
+                console.log('✅ Memoria y localStorage coinciden');
+            }
+            
+        } catch (error) {
+            console.error('❌ Error parseando localStorage:', error);
+        }
+    } else {
+        console.warn('⚠️ No hay datos en localStorage');
+    }
+    
+    // Verificar sessionStorage como fallback
+    const sessionData = sessionStorage.getItem('shopping_cart_session');
+    if (sessionData) {
+        console.log('📱 Datos encontrados en sessionStorage (fallback)');
+    }
+    
+    // Test de guardado
+    console.log('🧪 Probando capacidad de guardado...');
+    try {
+        const testData = JSON.stringify({test: 'cart_save_test', timestamp: Date.now()});
+        localStorage.setItem('cart_save_test', testData);
+        localStorage.removeItem('cart_save_test');
+        console.log('✅ LocalStorage funciona correctamente');
+    } catch (error) {
+        console.error('❌ Error en localStorage:', error.name, error.message);
+    }
+    
+    console.groupEnd();
+};

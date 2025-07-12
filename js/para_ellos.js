@@ -451,22 +451,85 @@ class ParaEllosManager {
             return;
         }
 
-        console.log('🛒 Agregando producto al carrito:', product.nombre);
+        console.log('🛒 [ParaEllos] Agregando producto al carrito:', product.nombre, product.id);
 
-        // Verificar que el carrito esté disponible
-        if (typeof window.shoppingCart !== 'undefined' && window.shoppingCart) {
-            window.shoppingCart.addItem(product);
-        } else {
-            console.warn('⚠️ Carrito no disponible, intentando inicializar...');
-            // Fallback: intentar inicializar carrito
-            setTimeout(() => {
-                if (typeof window.shoppingCart !== 'undefined' && window.shoppingCart) {
-                    window.shoppingCart.addItem(product);
+        // Función para agregar el producto de forma segura
+        const addProductSafely = () => {
+            if (window.shoppingCart && window.shoppingCart.isInitialized) {
+                console.log('✅ [ParaEllos] Carrito disponible y inicializado');
+                window.shoppingCart.addItem(product);
+                
+                // Verificar que se agregó correctamente
+                setTimeout(() => {
+                    const cartStatus = window.shoppingCart.getCartStatus();
+                    console.log(`🔍 [ParaEllos] Verificación post-agregado: ${cartStatus.totalItems} items en carrito`);
+                }, 200);
+                
+            } else {
+                console.warn('⚠️ [ParaEllos] Carrito no disponible o no inicializado');
+                console.log('🔧 [ParaEllos] Estado del carrito:', {
+                    exists: !!window.shoppingCart,
+                    initialized: window.shoppingCart ? window.shoppingCart.isInitialized : false,
+                    singleton: !!window.getShoppingCartInstance
+                });
+                
+                // Intentar obtener/inicializar usando singleton
+                if (window.getShoppingCartInstance) {
+                    console.log('🔄 [ParaEllos] Usando función singleton...');
+                    const cart = window.getShoppingCartInstance();
+                    if (cart && cart.isInitialized) {
+                        console.log('✅ [ParaEllos] Carrito obtenido via singleton');
+                        cart.addItem(product);
+                    } else {
+                        console.error('❌ [ParaEllos] Singleton no funcionó');
+                        this.showTemporaryMessage('Error: Carrito no disponible');
+                    }
                 } else {
-                    // Fallback final: mostrar mensaje
-                    this.showTemporaryMessage('Producto agregado: ' + product.nombre);
+                    console.error('❌ [ParaEllos] Función singleton no disponible');
+                    this.showTemporaryMessage('Error: Sistema de carrito no disponible');
                 }
-            }, 500);
+            }
+        };
+
+        // Verificar si el carrito está disponible inmediatamente
+        if (window.shoppingCart && window.shoppingCart.isInitialized) {
+            addProductSafely();
+        } else {
+            // Esperar un poco y reintentar
+            console.log('⏳ [ParaEllos] Esperando inicialización del carrito...');
+            let attempts = 0;
+            const maxAttempts = 5;
+            
+            const checkAndAdd = () => {
+                attempts++;
+                console.log(`🔄 [ParaEllos] Intento ${attempts}/${maxAttempts} de agregar producto`);
+                
+                if (window.shoppingCart && window.shoppingCart.isInitialized) {
+                    console.log('✅ [ParaEllos] Carrito listo después de esperar');
+                    addProductSafely();
+                } else if (attempts < maxAttempts) {
+                    console.log(`⏳ [ParaEllos] Reintentando en 500ms...`);
+                    setTimeout(checkAndAdd, 500);
+                } else {
+                    console.error('❌ [ParaEllos] Carrito no se inicializó después de múltiples intentos');
+                    // Último recurso: forzar inicialización
+                    if (window.forceInitCart) {
+                        console.log('🔧 [ParaEllos] Forzando inicialización del carrito...');
+                        window.forceInitCart();
+                        setTimeout(() => {
+                            if (window.shoppingCart) {
+                                addProductSafely();
+                            } else {
+                                this.showTemporaryMessage('Error: No se pudo inicializar el carrito');
+                            }
+                        }, 1000);
+                    } else {
+                        this.showTemporaryMessage('Producto agregado: ' + product.nombre + ' (Solo en memoria)');
+                    }
+                }
+            };
+            
+            checkAndAdd();
         }
     }
 

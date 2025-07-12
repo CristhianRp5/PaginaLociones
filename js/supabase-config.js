@@ -209,12 +209,6 @@ class ProductosService {
             if (error) {
                 console.error('❌ Error obteniendo productos de Supabase:', error);
                 
-                // Si falla por columnas faltantes, intentar sin las columnas estado y descuento
-                if (error.message && (error.message.includes('column') || error.code === '42703')) {
-                    console.log('🔧 Intentando consulta sin columnas estado/descuento...');
-                    return await this.obtenerProductosSinNuevasColumnas(filtros);
-                }
-                
                 // Si es timeout específico, lanzar error para que se maneje arriba
                 if (error.code === '57014') {
                     console.error('⏰ Timeout de base de datos detectado');
@@ -239,80 +233,8 @@ class ProductosService {
         } catch (error) {
             console.error('❌ Error en _obtenerProductosQuery:', error);
             
-            // Si hay error de columna faltante, intentar sin esas columnas
-            if (error.message && (error.message.includes('column') || error.code === '42703')) {
-                console.log('🔧 Intentando consulta sin columnas estado/descuento...');
-                return await this.obtenerProductosSinNuevasColumnas(filtros);
-            }
-            
             // Relanzar el error para que se maneje en el nivel superior
             throw error;
-        }
-    }    // Método auxiliar para obtener productos sin las columnas nuevas
-    static async obtenerProductosSinNuevasColumnas(filtros = {}) {
-        try {
-            console.log('🔧 Ejecutando consulta sin columnas estado/descuento...');
-            
-            let query = supabaseClient
-                .from('productos')
-                .select('id, nombre, descripcion, precio, imagen_url, imagen, marca, categoria, subcategoria, activo, created_at, updated_at')
-                .eq('activo', true)
-                .limit(100) // Limitar resultados para mejorar performance
-                .order('created_at', { ascending: false });
-
-            // Aplicar filtros básicos
-            if (filtros.categoria) {
-                query = query.eq('categoria', filtros.categoria);
-            }
-            
-            if (filtros.busqueda) {
-                query = query.or(
-                    `nombre.ilike.%${filtros.busqueda}%,` +
-                    `descripcion.ilike.%${filtros.busqueda}%,` +
-                    `marca.ilike.%${filtros.busqueda}%`
-                );
-            }
-            
-            if (filtros.precioMin) {
-                query = query.gte('precio', filtros.precioMin);
-            }
-            
-            if (filtros.precioMax) {
-                query = query.lte('precio', filtros.precioMax);
-            }
-
-            const { data, error } = await query;
-            
-            if (error) {
-                console.error('❌ Error obteniendo productos (sin columnas nuevas):', error);
-                
-                // Si es timeout específico, lanzar error para manejo superior
-                if (error.code === '57014') {
-                    throw new Error('Database timeout - la consulta tardó demasiado');
-                }
-                
-                // Para otros errores de BD, lanzar error
-                throw new Error(`Error de base de datos: ${error.message}`);
-            }
-            
-            console.log(`✅ Consulta sin columnas nuevas exitosa: ${data?.length || 0} productos`);
-            
-            // Agregar valores por defecto para estado y descuento
-            const productosNormalizados = (data || []).map(producto => ({
-                ...producto,
-                estado: 'disponible',
-                descuento: 0
-            }));
-            
-            console.log('⚠️ Productos obtenidos sin columnas estado/descuento. Agregue las columnas ejecutando el script SQL.');
-            
-            return productosNormalizados;
-              } catch (error) {
-            console.error('❌ Error en obtenerProductosSinNuevasColumnas:', error);
-            
-            // SIN FALLBACK - Solo Supabase
-            console.error('❌ NO hay fallback local disponible');
-            throw new Error(`Error en consulta alternativa: ${error.message}`);
         }
     }
 
@@ -373,31 +295,7 @@ class ProductosService {
         }
     }
 
-    // Método auxiliar para obtener producto por ID sin las columnas nuevas
-    static async obtenerProductoPorIdSinNuevasColumnas(id) {
-        try {
-            const { data, error } = await supabaseClient
-                .from('productos')
-                .select('id, nombre, descripcion, precio, imagen_url, imagen, marca, categoria, subcategoria, activo, created_at, updated_at')
-                .eq('id', id)
-                .single();
-
-            if (error) {
-                console.error('Error obteniendo producto (sin columnas nuevas):', error);
-                return this.obtenerProductoLocalPorId(id);
-            }
-
-            // Agregar valores por defecto para estado y descuento
-            return {
-                ...data,
-                estado: 'disponible',
-                descuento: 0
-            };
-        } catch (error) {
-            console.error('Error en obtenerProductoPorIdSinNuevasColumnas:', error);
-            return this.obtenerProductoLocalPorId(id);
-        }
-    }    // Obtener productos por categoría
+    // Obtener productos por categoría
     static async obtenerProductosPorCategoria(categoria) {
         console.log(`🔍 Buscando productos para categoría: "${categoria}"`);
           if (!supabaseClient) {
@@ -413,10 +311,10 @@ class ProductosService {
             
             if (allError) {                console.error('Error obteniendo productos:', allError);
                 
-                // Si falla por columnas faltantes, intentar sin estado/descuento
+                // Si falla por columnas faltantes, devolver array vacío
                 if (allError.message && allError.message.includes('column')) {
-                    console.log('🔧 Intentando consulta sin columnas estado/descuento...');
-                    return await this.obtenerProductosPorCategoriaSinNuevasColumnas(categoria);
+                    console.warn('⚠️ Columnas faltantes detectadas - devolviendo array vacío');
+                    return [];
                 }
                 
                 throw new Error(`Error obteniendo productos de categoría: ${allError.message}`);
@@ -478,63 +376,13 @@ class ProductosService {
               } catch (error) {
             console.error('Error en obtenerProductosPorCategoria:', error);
             
-            // Si hay error de columna faltante, intentar sin esas columnas
+            // Si hay error de columna faltante, devolver array vacío
             if (error.message && error.message.includes('column')) {
-                console.log('🔧 Intentando consulta sin columnas estado/descuento...');
-                return await this.obtenerProductosPorCategoriaSinNuevasColumnas(categoria);
+                console.warn('⚠️ Columnas faltantes detectadas - devolviendo array vacío');
+                return [];
             }
             
             throw new Error(`Error obteniendo productos por categoría: ${error.message}`);
-        }
-    }
-
-    // Método auxiliar para obtener productos por categoría sin las columnas nuevas
-    static async obtenerProductosPorCategoriaSinNuevasColumnas(categoria) {
-        try {
-            const { data: allData, error: allError } = await supabaseClient
-                .from('productos')
-                .select('id, nombre, descripcion, precio, imagen_url, imagen, marca, categoria, subcategoria, activo, created_at, updated_at')
-                .eq('activo', true);
-              if (allError) {
-                console.error('Error obteniendo productos (sin columnas nuevas):', allError);
-                throw new Error(`Error en consulta alternativa: ${allError.message}`);
-            }
-            
-            // Agregar valores por defecto para estado y descuento
-            const productosNormalizados = allData.map(producto => ({
-                ...producto,
-                estado: 'disponible',
-                descuento: 0
-            }));
-            
-            // Filtrar por categoría
-            let filteredData = productosNormalizados.filter(product => {
-                const normalize = (str) => str ? str.toLowerCase().trim() : '';
-                const targetCategory = normalize(categoria);
-                
-                const matchCategory = normalize(product.categoria) === targetCategory;
-                const matchSubcategory = normalize(product.subcategoria) === targetCategory;
-                const matchTipo = normalize(product.tipo) === targetCategory;
-                
-                if (targetCategory === 'para-ellos') {
-                    const isForMen = normalize(product.categoria).includes('ellos') ||
-                                   normalize(product.categoria).includes('hombre') ||
-                                   normalize(product.categoria).includes('masculino') ||
-                                   normalize(product.subcategoria).includes('ellos') ||
-                                   normalize(product.subcategoria).includes('hombre') ||
-                                   normalize(product.subcategoria).includes('masculino');
-                    
-                    return matchCategory || matchSubcategory || matchTipo || isForMen;
-                }
-                
-                return matchCategory || matchSubcategory || matchTipo;
-            });
-            
-            console.log('⚠️ Productos obtenidos sin columnas estado/descuento. Agregue las columnas ejecutando el script SQL.');
-            
-            return filteredData;        } catch (error) {
-            console.error('Error en obtenerProductosPorCategoriaSinNuevasColumnas:', error);
-            throw new Error(`Error en método alternativo: ${error.message}`);
         }
     }
 
@@ -1084,176 +932,7 @@ class ProductosService {
         } catch (error) {
             console.error('❌ Error en deleteProductSimple:', error);
             throw error;
-        }
-    }    // Datos locales eliminados - SOLO Supabase
-
-    // Función para forzar carga SOLO desde Supabase (sin fallback)
-    static async obtenerProductosSupabaseOnly(filtros = {}) {
-        console.log('🎯 FORZANDO carga SOLO desde Supabase (sin fallback local)');
-        
-        if (!supabaseClient) {
-            throw new Error('Supabase no está disponible. No se puede cargar datos sin fallback.');
-        }
-        
-        try {
-            const productos = await this._obtenerProductosQuery(filtros);
-            console.log(`✅ Productos cargados exitosamente desde Supabase: ${productos.length}`);
-            
-            // Verificar que realmente son datos de Supabase
-            if (productos.length > 0) {
-                const firstProduct = productos[0];
-                console.log('🔍 Verificando origen de datos:');
-                console.log(`   - ID: ${firstProduct.id} (${typeof firstProduct.id})`);
-                console.log(`   - Imagen: ${firstProduct.imagen_url}`);
-                
-                // Si detectamos características de datos locales, lanzar error
-                if (firstProduct.imagen_url?.includes('LOCIONES_PARA') || 
-                    (typeof firstProduct.id === 'number' && firstProduct.id < 20)) {
-                    throw new Error('Los datos obtenidos parecen ser locales en lugar de Supabase');
-                }
-            }
-            
-            return productos;
-        } catch (error) {
-            console.error('❌ Error cargando SOLO desde Supabase:', error);
-            throw new Error(`Error cargando desde Supabase: ${error.message}`);
-        }
-    }
-
-    // Función de diagnóstico de performance
-    static async diagnosticarPerformance() {
-        console.log('🔬 Iniciando diagnóstico de performance...');
-        const results = {
-            timestamp: new Date().toISOString(),
-            tests: [],
-            recommendations: []
-        };
-        
-        try {
-            // Test 1: Conexión a Supabase
-            const connectStart = performance.now();
-            const isConnected = !!supabaseClient;
-            const connectEnd = performance.now();
-            
-            results.tests.push({
-                name: 'Conexión Supabase',
-                duration: connectEnd - connectStart,
-                success: isConnected,
-                details: isConnected ? 'Cliente conectado' : 'Cliente no inicializado'
-            });
-            
-            if (!isConnected) {
-                results.recommendations.push('Verificar configuración de Supabase y conexión a internet');
-                return results;
-            }
-            
-            // Test 2: Query simple
-            const simpleQueryStart = performance.now();
-            try {
-                const { data, error } = await supabaseClient
-                    .from('productos')
-                    .select('count', { count: 'exact' })
-                    .eq('activo', true)
-                    .limit(1);
-                
-                const simpleQueryEnd = performance.now();
-                results.tests.push({
-                    name: 'Query simple (count)',
-                    duration: simpleQueryEnd - simpleQueryStart,
-                    success: !error,
-                    details: error ? error.message : `${data?.[0]?.count || 0} productos activos`
-                });
-                
-                if (simpleQueryEnd - simpleQueryStart > 2000) {
-                    results.recommendations.push('Conexión lenta detectada - verificar red o servidor');
-                }
-            } catch (queryError) {
-                results.tests.push({
-                    name: 'Query simple (count)',
-                    duration: performance.now() - simpleQueryStart,
-                    success: false,
-                    details: queryError.message
-                });
-                results.recommendations.push('Error en consulta básica - revisar permisos de base de datos');
-            }
-            
-            // Test 3: Query completa
-            const fullQueryStart = performance.now();
-            try {
-                const { data, error } = await supabaseClient
-                    .from('productos')
-                    .select('id, nombre, precio, categoria')
-                    .eq('activo', true)
-                    .limit(10);
-                
-                const fullQueryEnd = performance.now();
-                results.tests.push({
-                    name: 'Query productos (10 registros)',
-                    duration: fullQueryEnd - fullQueryStart,
-                    success: !error,
-                    details: error ? error.message : `${data?.length || 0} productos obtenidos`
-                });
-                
-                if (fullQueryEnd - fullQueryStart > 1500) {
-                    results.recommendations.push('Consulta de productos lenta - considerar índices en BD');
-                }
-            } catch (queryError) {
-                results.tests.push({
-                    name: 'Query productos (10 registros)',
-                    duration: performance.now() - fullQueryStart,
-                    success: false,
-                    details: queryError.message
-                });
-            }
-            
-            // Test 4: Procesamiento local
-            const processStart = performance.now();
-            const testData = Array.from({ length: 100 }, (_, i) => ({
-                id: i,
-                nombre: `Producto ${i}`,
-                precio: Math.random() * 1000000,
-                categoria: i % 2 === 0 ? 'para-ellos' : 'para-ellas'
-            }));
-            
-            const filtered = testData.filter(p => p.categoria === 'para-ellos');
-            const processEnd = performance.now();
-            
-            results.tests.push({
-                name: 'Procesamiento local (100 registros)',
-                duration: processEnd - processStart,
-                success: true,
-                details: `${filtered.length} productos filtrados`
-            });
-            
-            // Generar recomendaciones
-            const totalDuration = results.tests.reduce((sum, test) => sum + test.duration, 0);
-            if (totalDuration > 5000) {
-                results.recommendations.push('Performance general lenta - revisar conexión de red');
-            }
-            
-            const failedTests = results.tests.filter(test => !test.success);
-            if (failedTests.length > 0) {
-                results.recommendations.push(`${failedTests.length} pruebas fallaron - revisar configuración`);
-            }
-            
-            if (results.recommendations.length === 0) {
-                results.recommendations.push('Performance normal - no se detectaron problemas');
-            }
-            
-        } catch (error) {
-            console.error('❌ Error en diagnóstico:', error);
-            results.tests.push({
-                name: 'Diagnóstico general',
-                duration: 0,
-                success: false,
-                details: error.message
-            });
-            results.recommendations.push('Error crítico en diagnóstico - revisar configuración completa');
-        }
-        
-        console.log('📊 Resultados de diagnóstico:', results);
-        return results;
-    }
+        }    }
 }
 
 // Funciones para manejo de Storage (imágenes)
